@@ -1,0 +1,71 @@
+package com.inkflow.crm.common.exception;
+
+import com.inkflow.crm.common.dto.ApiResponse;
+import com.inkflow.crm.common.dto.ErrorResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ApiResponse<Void>> handleApiException(ApiException ex) {
+        log.error("API Exception: {} - {}", ex.getErrorCode(), ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.of(
+                ex.getErrorCode().getCode(),
+                ex.getMessage()
+        );
+        
+        return ResponseEntity
+                .status(ex.getErrorCode().getHttpStatus())
+                .body(ApiResponse.error(errorResponse));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException ex) {
+        List<ErrorResponse.FieldError> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
+                .map(this::mapFieldError)
+                .collect(Collectors.toList());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+                ErrorCode.VALIDATION_ERROR.getCode(),
+                "Validation failed",
+                fieldErrors
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(errorResponse));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
+        log.error("Unexpected error", ex);
+        
+        ErrorResponse errorResponse = ErrorResponse.of(
+                ErrorCode.INTERNAL_ERROR.getCode(),
+                "An unexpected error occurred"
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(errorResponse));
+    }
+
+    private ErrorResponse.FieldError mapFieldError(FieldError fieldError) {
+        return ErrorResponse.FieldError.builder()
+                .field(fieldError.getField())
+                .message(fieldError.getDefaultMessage())
+                .build();
+    }
+}

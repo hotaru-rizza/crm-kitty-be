@@ -1,0 +1,108 @@
+{
+  "info": {
+    "name": "InkFlow CRM API",
+    "description": "API collection for InkFlow CRM - Tattoo Salon Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8080/api"},
+    {"key": "token", "value": ""}
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {"method": "GET", "url": "{{baseUrl}}/auth/me"}
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {"name": "List Locations", "request": {"method": "GET", "url": "{{baseUrl}}/locations"}},
+        {"name": "Get Location", "request": {"method": "GET", "url": "{{baseUrl}}/locations/{{locationId}}"}},
+        {"name": "Create Location", "request": {"method": "POST", "url": "{{baseUrl}}/locations", "body": {"mode": "raw", "raw": "{\"name\":\"New Location\",\"address\":\"Address\",\"color\":\"#6366f1\"}", "options": {"raw": {"language": "json"}}}}},
+        {"name": "Update Location", "request": {"method": "PATCH", "url": "{{baseUrl}}/locations/{{locationId}}", "body": {"mode": "raw", "raw": "{\"name\":\"Updated Name\"}", "options": {"raw": {"language": "json"}}}}},
+        {"name": "Delete Location", "request": {"method": "DELETE", "url": "{{baseUrl}}/locations/{{locationId}}"}}
+      ]
+    },
+    {
+      "name": "Staff",
+      "item": [
+        {"name": "List Staff", "request": {"method": "GET", "url": "{{baseUrl}}/staff"}},
+        {"name": "Get Staff", "request": {"method": "GET", "url": "{{baseUrl}}/staff/{{staffId}}"}},
+        {"name": "Create Staff", "request": {"method": "POST", "url": "{{baseUrl}}/staff", "body": {"mode": "raw", "raw": "{\"firstName\":\"John\",\"lastName\":\"Doe\",\"email\":\"john@example.com\",\"role\":\"artist\",\"calendarColor\":\"#22c55e\",\"locationIds\":[\"{{locationId}}\"]}", "options": {"raw": {"language": "json"}}}}},
+        {"name": "Update Schedule", "request": {"method": "PUT", "url": "{{baseUrl}}/staff/{{staffId}}/schedule", "body": {"mode": "raw", "raw": "{\"schedule\":[{\"dayOfWeek\":\"monday\",\"isWorking\":true,\"startTime\":\"10:00\",\"endTime\":\"19:00\"}]}", "options": {"raw": {"language": "json"}}}}},
+        {"name": "Invite Staff", "request": {"method": "POST", "url": "{{baseUrl}}/staff/invite", "body": {"mode": "raw", "raw": "{\"email\":\"new@example.com\",\"role\":\"artist\",\"calendarColor\":\"#3b82f6\",\"locationIds\":[\"{{locationId}}\"]}", "options": {"raw": {"language": "json"}}}}}
+      ]
+    },
+    {
+      "name": "Clients",
+      "item": [
+        {"name": "List Clients", "request": {"method": "GET", "url": "{{baseUrl}}/clients"}},
+        {"name": "Search Clients", "request": {"method": "GET", "url": "{{baseUrl}}/clients?search=ivan"}},
+        {"name": "Get Client", "request": {"method": "GET", "url": "{{baseUrl}}/clients/{{clientId}}"}},
+        {"name": "Create Client", "request": {"method": "POST", "url": "{{baseUrl}}/clients", "body": {"mode": "raw", "raw": "{\"firstName\":\"New\",\"lastName\":\"Client\",\"phone\":\"+380991234567\",\"source\":\"instagram\"}", "options": {"raw": {"language": "json"}}}}},
+        {"name": "Update Client", "request": {"method": "PATCH", "url": "{{baseUrl}}/clients/{{clientId}}", "body": {"mode": "raw", "raw": "{\"tags\":[\"VIP\"]}", "options": {"raw": {"language": "json"}}}}},
+        {"name": "Client Projects", "request": {"method": "GET", "url": "{{baseUrl}}/clients/{{clientId}}/projects"}}
+      ]
+    },
+    {
+      "name": "Services",
+      "item": [
+        {"name": "List Services", "request": {"method": "GET", "url": "{{baseUrl}}/services"}},
+        {"name": "Get Service", "request": {"method": "GET", "url": "{{baseUrl}}/services/{{serviceId}}"}},
+        {"name": "Get Service Price", "request": {"method": "GET", "url": "{{baseUrl}}/services/{{serviceId}}/price?artistId={{artistId}}"}},
+        {"name": "Create Service", "request": {"method": "POST", "url": "{{baseUrl}}/services", "body": {"mode": "raw", "raw": "{\"title\":\"New Service\",\"pricingType\":\"fixed\",\"price\":2000,\"duration\":60,\"color\":\"#8b5cf6\"}", "options": {"raw": {"language": "json"}}}}}
+      ]
+    },
+    {
+      "name": "Appointments",
+      "item": [
+        {"name": "List Appointments", "request": {"method": "GET", "url": "{{baseUrl}}/appointments"}},
+        {"name": "Calendar", "request": {"method": "GET", "url": "{{baseUrl}}/appointments/calendar?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z"}},
+        {"name": "Get Appointment", "request": {"method": "GET", "url": "{{baseUrl}}/appointments/{{appointmentId}}"}},
+        {"name": "Create Appointment", "request": {"method": "POST", "url": "{{baseUrl}}/appointments", "body": {"mode": "raw", "raw": "{\"clientId\":\"{{clientId}}\",\"artistId\":\"{{artistId}}\",\"serviceId\":\"{{serviceId}}\",\"locationId\":\"{{locationId}}\",\"startTime\":\"2026-02-01T10:00:00Z\",\"endTime\":\"2026-02-01T12:00:00Z\",\"price\":3500}", "options": {"raw": {"language": "json"}}}}},
+        {"name": "Update Status", "request": {"method": "PATCH", "url": "{{baseUrl}}/appointments/{{appointmentId}}", "body": {"mode": "raw", "raw": "{\"status\":\"confirmed\"}", "options": {"raw": {"language": "json"}}}}}
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {"name": "List Projects", "request": {"method": "GET", "url": "{{baseUrl}}/projects"}},
+        {"name": "Get Project", "request": {"method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}"}},
+        {"name": "Create Project", "request": {"method": "POST", "url": "{{baseUrl}}/projects", "body": {"mode": "raw", "raw": "{\"title\":\"New Project\",\"clientId\":\"{{clientId}}\",\"artistId\":\"{{artistId}}\",\"estimatedCost\":20000,\"totalSessions\":4}", "options": {"raw": {"language": "json"}}}}}
+      ]
+    },
+    {
+      "name": "Requests",
+      "item": [
+        {"name": "List Requests", "request": {"method": "GET", "url": "{{baseUrl}}/requests"}},
+        {"name": "Create Request", "request": {"method": "POST", "url": "{{baseUrl}}/requests", "body": {"mode": "raw", "raw": "{\"source\":\"instagram\",\"clientName\":\"New Lead\",\"message\":\"I want a tattoo\"}", "options": {"raw": {"language": "json"}}}}},
+        {"name": "Update Status", "request": {"method": "PATCH", "url": "{{baseUrl}}/requests/{{requestId}}/status", "body": {"mode": "raw", "raw": "{\"status\":\"replied\"}", "options": {"raw": {"language": "json"}}}}},
+        {"name": "Convert to Client", "request": {"method": "POST", "url": "{{baseUrl}}/requests/{{requestId}}/convert", "body": {"mode": "raw", "raw": "{\"firstName\":\"Converted\",\"lastName\":\"Client\",\"phone\":\"+380999999999\"}", "options": {"raw": {"language": "json"}}}}}
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {"name": "List Transactions", "request": {"method": "GET", "url": "{{baseUrl}}/transactions"}},
+        {"name": "Finance Stats", "request": {"method": "GET", "url": "{{baseUrl}}/transactions/stats?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z"}},
+        {"name": "Create Transaction", "request": {"method": "POST", "url": "{{baseUrl}}/transactions", "body": {"mode": "raw", "raw": "{\"type\":\"income\",\"category\":\"service\",\"amount\":5000,\"paymentMethod\":\"card\",\"locationId\":\"{{locationId}}\",\"date\":\"2026-01-26T10:00:00Z\"}", "options": {"raw": {"language": "json"}}}}}
+      ]
+    },
+    {
+      "name": "Settings",
+      "item": [
+        {"name": "Get Settings", "request": {"method": "GET", "url": "{{baseUrl}}/settings"}},
+        {"name": "Update Settings", "request": {"method": "PATCH", "url": "{{baseUrl}}/settings", "body": {"mode": "raw", "raw": "{\"emailReminders\":true,\"reminderHoursBefore\":24}", "options": {"raw": {"language": "json"}}}}}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+package com.inkflow.crm.module.project.controller;
+
+import com.inkflow.crm.common.dto.ApiResponse;
+import com.inkflow.crm.common.dto.PageRequest;
+import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.module.project.dto.*;
+import com.inkflow.crm.module.project.service.ProjectService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/projects")
+@RequiredArgsConstructor
+public class ProjectController {
+
+    private final ProjectService projectService;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<ProjectDto>>> getAllProjects(
+            @ModelAttribute PageRequest pageRequest,
+            @RequestParam(required = false) String status) {
+        List<ProjectDto> projects = projectService.getAllProjects(pageRequest, status);
+        PaginationDto pagination = projectService.getPagination(pageRequest, status);
+        return ResponseEntity.ok(ApiResponse.success(projects, pagination));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<ProjectDto>> getProject(@PathVariable UUID id) {
+        ProjectDto project = projectService.getProjectById(id);
+        return ResponseEntity.ok(ApiResponse.success(project));
+    }
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<ProjectDto>> createProject(@Valid @RequestBody CreateProjectRequest request) {
+        ProjectDto project = projectService.createProject(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(project));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<ProjectDto>> updateProject(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateProjectRequest request) {
+        ProjectDto project = projectService.updateProject(id, request);
+        return ResponseEntity.ok(ApiResponse.success(project));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteProject(@PathVariable UUID id) {
+        projectService.deleteProject(id);
+        return ResponseEntity.ok(ApiResponse.empty());
+    }
+}
