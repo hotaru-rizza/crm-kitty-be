@@ -1,8 +1,9 @@
 package com.inkflow.crm.module.settings.controller;
 
 import com.inkflow.crm.common.dto.ApiResponse;
-import com.inkflow.crm.module.settings.dto.CompanySettingsDto;
-import com.inkflow.crm.module.settings.dto.UpdateCompanySettingsRequest;
+import com.inkflow.crm.module.settings.dto.*;
+
+import java.util.List;
 import com.inkflow.crm.module.settings.service.SettingsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,5 +28,22 @@ public class SettingsController {
             @Valid @RequestBody UpdateCompanySettingsRequest request) {
         CompanySettingsDto settings = settingsService.updateCompanySettings(request);
         return ResponseEntity.ok(ApiResponse.success(settings));
+    }
+
+    @GetMapping("/permissions")
+    public ResponseEntity<ApiResponse<List<PermissionDto>>> getAllPermissions() {
+        return ResponseEntity.ok(ApiResponse.success(settingsService.getAllPermissions()));
+    }
+
+    @GetMapping("/roles")
+    public ResponseEntity<ApiResponse<List<RolePermissionsDto>>> getAllRolePermissions() {
+        return ResponseEntity.ok(ApiResponse.success(settingsService.getAllRolePermissions()));
+    }
+
+    @PutMapping("/roles/{role}")
+    public ResponseEntity<ApiResponse<RolePermissionsDto>> updateRolePermissions(
+            @PathVariable String role,
+            @Valid @RequestBody UpdateRolePermissionsRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(settingsService.updateRolePermissions(role, request)));
     }
 }

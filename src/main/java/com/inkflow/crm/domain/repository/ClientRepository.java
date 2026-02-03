@@ -26,4 +26,23 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
            "c.phone LIKE CONCAT('%', :search, '%') OR " +
            "LOWER(c.email) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Client> searchClients(@Param("tenantId") UUID tenantId, @Param("search") String search, Pageable pageable);
+
+    @Query("SELECT DISTINCT c FROM Client c " +
+           "LEFT JOIN Project p ON p.client.id = c.id AND p.deletedAt IS NULL " +
+           "WHERE c.tenantId = :tenantId AND c.deletedAt IS NULL " +
+           "AND (COALESCE(:search, '') = '' OR " +
+           "     LOWER(c.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "     LOWER(c.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "     c.phone LIKE CONCAT('%', :search, '%') OR " +
+           "     LOWER(c.email) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "AND (:status IS NULL OR c.status = :status) " +
+           "AND (:artistId IS NULL OR p.artist.id = :artistId) " +
+           "AND (:locationId IS NULL OR c.location.id = :locationId)")
+    Page<Client> findWithFilters(
+            @Param("tenantId") UUID tenantId,
+            @Param("search") String search,
+            @Param("status") ClientStatus status,
+            @Param("artistId") UUID artistId,
+            @Param("locationId") UUID locationId,
+            Pageable pageable);
 }

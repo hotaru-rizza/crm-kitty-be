@@ -32,36 +32,24 @@ public class ClientService {
     private final ClientMapper clientMapper;
 
     @Transactional(readOnly = true)
-    public List<ClientDto> getAllClients(PageRequest pageRequest, String search, String status) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Client> page;
-
-        if (search != null && !search.isBlank()) {
-            page = clientRepository.searchClients(tenantId, search, pageRequest.toPageable());
-        } else if (status != null) {
-            page = clientRepository.findByTenantIdAndStatusAndDeletedAtIsNull(
-                    tenantId, ClientStatus.fromValue(status), pageRequest.toPageable());
-        } else {
-            page = clientRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
-        }
-
+    public List<ClientDto> getAllClients(PageRequest pageRequest, String search, String status, Boolean onlyMine, UUID locationId) {
+        Page<Client> page = getClientsPage(pageRequest, search, status, onlyMine, locationId);
         return clientMapper.toDtoList(page.getContent());
     }
 
-    public PaginationDto getPagination(PageRequest pageRequest, String search, String status) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Client> page;
-
-        if (search != null && !search.isBlank()) {
-            page = clientRepository.searchClients(tenantId, search, pageRequest.toPageable());
-        } else if (status != null) {
-            page = clientRepository.findByTenantIdAndStatusAndDeletedAtIsNull(
-                    tenantId, ClientStatus.fromValue(status), pageRequest.toPageable());
-        } else {
-            page = clientRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
-        }
-
+    public PaginationDto getPagination(PageRequest pageRequest, String search, String status, Boolean onlyMine, UUID locationId) {
+        Page<Client> page = getClientsPage(pageRequest, search, status, onlyMine, locationId);
         return PaginationDto.from(page);
+    }
+
+    private Page<Client> getClientsPage(PageRequest pageRequest, String search, String status, Boolean onlyMine, UUID locationId) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        ClientStatus clientStatus = status != null ? ClientStatus.fromValue(status) : null;
+        
+        // If onlyMine is true, get current user's ID to filter clients who have projects with this artist
+        UUID artistId = Boolean.TRUE.equals(onlyMine) ? SecurityUtils.getCurrentUserId() : null;
+
+        return clientRepository.findWithFilters(tenantId, search, clientStatus, artistId, locationId, pageRequest.toPageable());
     }
 
     @Transactional(readOnly = true)

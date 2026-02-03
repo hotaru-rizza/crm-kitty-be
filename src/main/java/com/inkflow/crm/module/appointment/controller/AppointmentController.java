@@ -22,9 +22,11 @@ public class AppointmentController {
     private final AppointmentService appointmentService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAllAppointments(@ModelAttribute PageRequest pageRequest) {
-        List<AppointmentDto> appointments = appointmentService.getAllAppointments(pageRequest);
-        PaginationDto pagination = appointmentService.getPagination(pageRequest);
+    public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAllAppointments(
+            @ModelAttribute PageRequest pageRequest,
+            @RequestParam(required = false) UUID locationId) {
+        List<AppointmentDto> appointments = appointmentService.getAllAppointments(pageRequest, locationId);
+        PaginationDto pagination = appointmentService.getPagination(pageRequest, locationId);
         return ResponseEntity.ok(ApiResponse.success(appointments, pagination));
     }
 

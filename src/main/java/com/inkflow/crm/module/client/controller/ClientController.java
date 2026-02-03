@@ -26,9 +26,11 @@ public class ClientController {
     public ResponseEntity<ApiResponse<List<ClientDto>>> getAllClients(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String status) {
-        List<ClientDto> clients = clientService.getAllClients(pageRequest, search, status);
-        PaginationDto pagination = clientService.getPagination(pageRequest, search, status);
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Boolean onlyMine,
+            @RequestParam(required = false) UUID locationId) {
+        List<ClientDto> clients = clientService.getAllClients(pageRequest, search, status, onlyMine, locationId);
+        PaginationDto pagination = clientService.getPagination(pageRequest, search, status, onlyMine, locationId);
         return ResponseEntity.ok(ApiResponse.success(clients, pagination));
     }
 

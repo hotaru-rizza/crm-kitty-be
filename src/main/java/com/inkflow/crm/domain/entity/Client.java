@@ -66,6 +66,10 @@ public class Client extends BaseEntity {
     @Column(name = "status", nullable = false)
     private ClientStatus status = ClientStatus.ACTIVE;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "location_id")
+    private Location location;
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 

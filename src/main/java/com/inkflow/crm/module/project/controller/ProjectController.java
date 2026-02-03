@@ -24,9 +24,13 @@ public class ProjectController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<ProjectDto>>> getAllProjects(
             @ModelAttribute PageRequest pageRequest,
-            @RequestParam(required = false) String status) {
-        List<ProjectDto> projects = projectService.getAllProjects(pageRequest, status);
-        PaginationDto pagination = projectService.getPagination(pageRequest, status);
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) UUID artistId,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Boolean onlyMine,
+            @RequestParam(required = false) UUID locationId) {
+        List<ProjectDto> projects = projectService.getAllProjects(pageRequest, status, artistId, search, onlyMine, locationId);
+        PaginationDto pagination = projectService.getPagination(pageRequest, status, artistId, search, onlyMine, locationId);
         return ResponseEntity.ok(ApiResponse.success(projects, pagination));
     }
 

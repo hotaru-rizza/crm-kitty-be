@@ -33,32 +33,27 @@ public class ProjectService {
     private final StaffRepository staffRepository;
 
     @Transactional(readOnly = true)
-    public List<ProjectDto> getAllProjects(PageRequest pageRequest, String status) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Project> page;
-
-        if (status != null) {
-            page = projectRepository.findByTenantIdAndStatusAndDeletedAtIsNull(
-                    tenantId, ProjectStatus.fromValue(status), pageRequest.toPageable());
-        } else {
-            page = projectRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
-        }
-
+    public List<ProjectDto> getAllProjects(PageRequest pageRequest, String status, UUID artistId, String search, Boolean onlyMine, UUID locationId) {
+        Page<Project> page = getProjectsPage(pageRequest, status, artistId, search, onlyMine, locationId);
         return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
-    public PaginationDto getPagination(PageRequest pageRequest, String status) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Project> page;
+    public PaginationDto getPagination(PageRequest pageRequest, String status, UUID artistId, String search, Boolean onlyMine, UUID locationId) {
+        Page<Project> page = getProjectsPage(pageRequest, status, artistId, search, onlyMine, locationId);
+        return PaginationDto.from(page);
+    }
 
-        if (status != null) {
-            page = projectRepository.findByTenantIdAndStatusAndDeletedAtIsNull(
-                    tenantId, ProjectStatus.fromValue(status), pageRequest.toPageable());
-        } else {
-            page = projectRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
+    private Page<Project> getProjectsPage(PageRequest pageRequest, String status, UUID artistId, String search, Boolean onlyMine, UUID locationId) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        ProjectStatus projectStatus = status != null ? ProjectStatus.fromValue(status) : null;
+        
+        // If onlyMine is true, use current user's ID as artistId
+        UUID effectiveArtistId = artistId;
+        if (Boolean.TRUE.equals(onlyMine)) {
+            effectiveArtistId = SecurityUtils.getCurrentUserId();
         }
 
-        return PaginationDto.from(page);
+        return projectRepository.findWithFilters(tenantId, projectStatus, effectiveArtistId, search, locationId, pageRequest.toPageable());
     }
 
     @Transactional(readOnly = true)

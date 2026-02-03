@@ -36,6 +36,10 @@ public class Project extends BaseEntity {
     @Column(name = "status", nullable = false)
     private ProjectStatus status = ProjectStatus.IN_PROGRESS;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "location_id")
+    private Location location;
+
     @Column(name = "estimated_cost", nullable = false, precision = 12, scale = 2)
     private BigDecimal estimatedCost;
 

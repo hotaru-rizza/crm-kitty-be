@@ -25,9 +25,11 @@ public class StaffController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<StaffDto>>> getAllStaff(
             @ModelAttribute PageRequest pageRequest,
-            @RequestParam(required = false) String role) {
-        List<StaffDto> staff = staffService.getAllStaff(pageRequest, role);
-        PaginationDto pagination = staffService.getPagination(pageRequest);
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) UUID locationId) {
+        List<StaffDto> staff = staffService.getAllStaff(pageRequest, search, role, locationId);
+        PaginationDto pagination = staffService.getPagination(pageRequest, search, role, locationId);
         return ResponseEntity.ok(ApiResponse.success(staff, pagination));
     }
 

@@ -27,4 +27,20 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
 
     @Query("SELECT s FROM Staff s WHERE s.tenantId = :tenantId AND s.role = 'ARTIST' AND s.deletedAt IS NULL")
     List<Staff> findArtistsByTenantId(@Param("tenantId") UUID tenantId);
+
+    @Query("SELECT DISTINCT s FROM Staff s " +
+           "LEFT JOIN s.locations l " +
+           "WHERE s.tenantId = :tenantId AND s.deletedAt IS NULL " +
+           "AND (COALESCE(:search, '') = '' OR " +
+           "     LOWER(s.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "     LOWER(s.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "     LOWER(s.email) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "AND (:role IS NULL OR s.role = :role) " +
+           "AND (:locationId IS NULL OR l.id = :locationId)")
+    Page<Staff> findWithFilters(
+            @Param("tenantId") UUID tenantId,
+            @Param("search") String search,
+            @Param("role") UserRole role,
+            @Param("locationId") UUID locationId,
+            Pageable pageable);
 }

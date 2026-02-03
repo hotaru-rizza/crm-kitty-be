@@ -33,24 +33,22 @@ public class StaffService {
     private final StaffMapper staffMapper;
 
     @Transactional(readOnly = true)
-    public List<StaffDto> getAllStaff(PageRequest pageRequest, String role) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Staff> page;
-
-        if (role != null) {
-            page = staffRepository.findByTenantIdAndRoleAndDeletedAtIsNull(
-                    tenantId, com.inkflow.crm.domain.enums.UserRole.fromValue(role), pageRequest.toPageable());
-        } else {
-            page = staffRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
-        }
-
+    public List<StaffDto> getAllStaff(PageRequest pageRequest, String search, String role, UUID locationId) {
+        Page<Staff> page = getStaffPage(pageRequest, search, role, locationId);
         return staffMapper.toDtoList(page.getContent());
     }
 
-    public PaginationDto getPagination(PageRequest pageRequest) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Staff> page = staffRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
+    public PaginationDto getPagination(PageRequest pageRequest, String search, String role, UUID locationId) {
+        Page<Staff> page = getStaffPage(pageRequest, search, role, locationId);
         return PaginationDto.from(page);
+    }
+
+    private Page<Staff> getStaffPage(PageRequest pageRequest, String search, String role, UUID locationId) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        com.inkflow.crm.domain.enums.UserRole userRole = role != null 
+            ? com.inkflow.crm.domain.enums.UserRole.fromValue(role) 
+            : null;
+        return staffRepository.findWithFilters(tenantId, search, userRole, locationId, pageRequest.toPageable());
     }
 
     @Transactional(readOnly = true)

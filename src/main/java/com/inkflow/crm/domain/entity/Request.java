@@ -52,6 +52,10 @@ public class Request {
     private RequestStatus status = RequestStatus.NEW;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "location_id")
+    private Location location;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "converted_client_id")
     private Client convertedClient;
 

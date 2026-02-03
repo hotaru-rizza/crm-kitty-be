@@ -8,10 +8,12 @@ import com.inkflow.crm.module.request.dto.*;
 import com.inkflow.crm.module.request.service.RequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,9 +28,12 @@ public class RequestController {
     public ResponseEntity<ApiResponse<List<RequestDto>>> getAllRequests(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String source) {
-        List<RequestDto> requests = requestService.getAllRequests(pageRequest, status, source);
-        PaginationDto pagination = requestService.getPagination(pageRequest, status, source);
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required = false) UUID locationId) {
+        List<RequestDto> requests = requestService.getAllRequests(pageRequest, status, source, from, to, locationId);
+        PaginationDto pagination = requestService.getPagination(pageRequest, status, source, from, to, locationId);
         return ResponseEntity.ok(ApiResponse.success(requests, pagination));
     }
 

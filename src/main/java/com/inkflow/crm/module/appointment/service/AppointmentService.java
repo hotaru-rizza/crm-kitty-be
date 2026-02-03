@@ -33,15 +33,29 @@ public class AppointmentService {
     private final ProjectRepository projectRepository;
 
     @Transactional(readOnly = true)
-    public List<AppointmentDto> getAllAppointments(PageRequest pageRequest) {
+    public List<AppointmentDto> getAllAppointments(PageRequest pageRequest, UUID locationId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Appointment> page = appointmentRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
+        Page<Appointment> page;
+        
+        if (locationId != null) {
+            page = appointmentRepository.findByTenantIdAndLocationIdAndDeletedAtIsNull(tenantId, locationId, pageRequest.toPageable());
+        } else {
+            page = appointmentRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
+        }
+        
         return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
-    public PaginationDto getPagination(PageRequest pageRequest) {
+    public PaginationDto getPagination(PageRequest pageRequest, UUID locationId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Appointment> page = appointmentRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
+        Page<Appointment> page;
+        
+        if (locationId != null) {
+            page = appointmentRepository.findByTenantIdAndLocationIdAndDeletedAtIsNull(tenantId, locationId, pageRequest.toPageable());
+        } else {
+            page = appointmentRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
+        }
+        
         return PaginationDto.from(page);
     }
 

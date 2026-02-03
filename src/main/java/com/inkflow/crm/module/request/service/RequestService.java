@@ -34,34 +34,21 @@ public class RequestService {
     private final ClientMapper clientMapper;
 
     @Transactional(readOnly = true)
-    public List<RequestDto> getAllRequests(PageRequest pageRequest, String status, String source) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Request> page;
-
-        if (status != null) {
-            page = requestRepository.findByTenantIdAndStatus(tenantId, RequestStatus.fromValue(status), pageRequest.toPageable());
-        } else if (source != null) {
-            page = requestRepository.findByTenantIdAndSource(tenantId, RequestSource.fromValue(source), pageRequest.toPageable());
-        } else {
-            page = requestRepository.findByTenantId(tenantId, pageRequest.toPageable());
-        }
-
+    public List<RequestDto> getAllRequests(PageRequest pageRequest, String status, String source, java.time.Instant from, java.time.Instant to, UUID locationId) {
+        Page<Request> page = getRequestsPage(pageRequest, status, source, from, to, locationId);
         return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
-    public PaginationDto getPagination(PageRequest pageRequest, String status, String source) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Request> page;
-
-        if (status != null) {
-            page = requestRepository.findByTenantIdAndStatus(tenantId, RequestStatus.fromValue(status), pageRequest.toPageable());
-        } else if (source != null) {
-            page = requestRepository.findByTenantIdAndSource(tenantId, RequestSource.fromValue(source), pageRequest.toPageable());
-        } else {
-            page = requestRepository.findByTenantId(tenantId, pageRequest.toPageable());
-        }
-
+    public PaginationDto getPagination(PageRequest pageRequest, String status, String source, java.time.Instant from, java.time.Instant to, UUID locationId) {
+        Page<Request> page = getRequestsPage(pageRequest, status, source, from, to, locationId);
         return PaginationDto.from(page);
+    }
+
+    private Page<Request> getRequestsPage(PageRequest pageRequest, String status, String source, java.time.Instant from, java.time.Instant to, UUID locationId) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        RequestStatus requestStatus = status != null ? RequestStatus.fromValue(status) : null;
+        RequestSource requestSource = source != null ? RequestSource.fromValue(source) : null;
+        return requestRepository.findWithFilters(tenantId, requestStatus, requestSource, from, to, locationId, pageRequest.toPageable());
     }
 
     @Transactional(readOnly = true)

@@ -72,6 +72,10 @@ public class Staff extends BaseEntity {
     @Builder.Default
     private List<ArtistServicePricing> servicePricings = new ArrayList<>();
 
+    @OneToMany(mappedBy = "staff", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<LeaveRequest> leaveRequests = new ArrayList<>();
+
     @Column(name = "auth_user_id")
     private String authUserId;
 

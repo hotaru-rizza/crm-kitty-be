@@ -3,6 +3,7 @@ package com.inkflow.crm.security;
 import com.inkflow.crm.common.exception.AccessDeniedException;
 import com.inkflow.crm.common.exception.ApiException;
 import com.inkflow.crm.common.exception.ErrorCode;
+import com.inkflow.crm.domain.enums.UserRole;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -37,6 +38,11 @@ public final class SecurityUtils {
     public static UUID getCurrentUserId() {
         UserPrincipal user = getCurrentUserOrThrow();
         return user.getId();
+    }
+
+    public static UserRole getCurrentUserRole() {
+        UserPrincipal user = getCurrentUserOrThrow();
+        return user.getRole();
     }
 
     public static void requireOwner() {
