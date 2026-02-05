@@ -37,6 +37,7 @@ public class ClientService {
         return clientMapper.toDtoList(page.getContent());
     }
 
+    @Transactional(readOnly = true)
     public PaginationDto getPagination(PageRequest pageRequest, String search, String status, Boolean onlyMine, UUID locationId) {
         Page<Client> page = getClientsPage(pageRequest, search, status, onlyMine, locationId);
         return PaginationDto.from(page);

@@ -38,7 +38,8 @@ public class SecurityConfig {
                                 "/actuator/**",
                                 "/staff/accept-invite",
                                 "/requests",
-                                "/onboarding"
+                                "/onboarding",
+                                "/public/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

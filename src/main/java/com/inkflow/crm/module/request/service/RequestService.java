@@ -39,6 +39,7 @@ public class RequestService {
         return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public PaginationDto getPagination(PageRequest pageRequest, String status, String source, java.time.Instant from, java.time.Instant to, UUID locationId) {
         Page<Request> page = getRequestsPage(pageRequest, status, source, from, to, locationId);
         return PaginationDto.from(page);

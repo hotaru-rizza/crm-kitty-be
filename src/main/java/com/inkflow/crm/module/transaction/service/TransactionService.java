@@ -45,6 +45,7 @@ public class TransactionService {
         return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public PaginationDto getPagination(PageRequest pageRequest, String type, String category) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Page<Transaction> page;

@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/leaves")
+@RequestMapping("/leaves")
 @RequiredArgsConstructor
 public class LeaveController {
 
@@ -47,7 +47,7 @@ public class LeaveController {
     public ResponseEntity<ApiResponse<LeaveRequestDto>> createLeave(
             @Valid @RequestBody CreateLeaveRequest request) {
         LeaveRequestDto leave = leaveService.createLeave(request);
-        return ResponseEntity.ok(ApiResponse.success(leave, "Leave request created successfully"));
+        return ResponseEntity.ok(ApiResponse.success(leave));
     }
 
     @PatchMapping("/{id}/status")
@@ -55,13 +55,13 @@ public class LeaveController {
             @PathVariable UUID id,
             @Valid @RequestBody UpdateLeaveStatusRequest request) {
         LeaveRequestDto leave = leaveService.updateLeaveStatus(id, request);
-        return ResponseEntity.ok(ApiResponse.success(leave, "Leave status updated successfully"));
+        return ResponseEntity.ok(ApiResponse.success(leave));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteLeave(@PathVariable UUID id) {
         leaveService.deleteLeave(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Leave request deleted successfully"));
+        return ResponseEntity.ok(ApiResponse.empty());
     }
 
     @GetMapping("/staff/{staffId}/check")

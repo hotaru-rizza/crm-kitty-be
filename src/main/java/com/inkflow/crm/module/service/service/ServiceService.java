@@ -39,6 +39,7 @@ public class ServiceService {
         }
     }
 
+    @Transactional(readOnly = true)
     public PaginationDto getPagination(PageRequest pageRequest) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Page<Service> page = serviceRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());

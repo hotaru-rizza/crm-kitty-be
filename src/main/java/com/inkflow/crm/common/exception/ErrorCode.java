@@ -31,6 +31,7 @@ public enum ErrorCode {
     LOCATION_NOT_FOUND("LOCATION_NOT_FOUND", "Location not found", HttpStatus.NOT_FOUND),
     REQUEST_NOT_FOUND("REQUEST_NOT_FOUND", "Request not found", HttpStatus.NOT_FOUND),
     TRANSACTION_NOT_FOUND("TRANSACTION_NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND),
+    WAIVER_TEMPLATE_NOT_FOUND("WAIVER_TEMPLATE_NOT_FOUND", "Waiver template not found", HttpStatus.NOT_FOUND),
     
     // Conflicts
     PHONE_ALREADY_EXISTS("PHONE_ALREADY_EXISTS", "Phone number already exists", HttpStatus.CONFLICT),

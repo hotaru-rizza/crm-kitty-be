@@ -1,8 +1,9 @@
 package com.inkflow.crm.module.leave.service;
 
-import com.inkflow.crm.common.exception.BadRequestException;
-import com.inkflow.crm.common.exception.NotFoundException;
-import com.inkflow.crm.common.util.SecurityUtils;
+import com.inkflow.crm.common.exception.BusinessRuleException;
+import com.inkflow.crm.common.exception.ErrorCode;
+import com.inkflow.crm.common.exception.ResourceNotFoundException;
+import com.inkflow.crm.security.SecurityUtils;
 import com.inkflow.crm.domain.entity.LeaveRequest;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.LeaveStatus;
@@ -29,18 +30,21 @@ public class LeaveService {
     private final LeaveRequestRepository leaveRequestRepository;
     private final StaffRepository staffRepository;
 
+    @Transactional(readOnly = true)
     public List<LeaveRequestDto> getLeavesByStaffId(UUID staffId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         List<LeaveRequest> leaves = leaveRequestRepository.findByStaffId(tenantId, staffId);
         return leaves.stream().map(this::toDto).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<LeaveRequestDto> getLeavesByStaffIdAndDateRange(UUID staffId, LocalDate startDate, LocalDate endDate) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         List<LeaveRequest> leaves = leaveRequestRepository.findByStaffIdAndDateRange(tenantId, staffId, startDate, endDate);
         return leaves.stream().map(this::toDto).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public LeaveRequestDto getLeaveById(UUID id) {
         LeaveRequest leave = findLeaveById(id);
         return toDto(leave);
@@ -51,25 +55,25 @@ public class LeaveService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         
         Staff staff = staffRepository.findById(request.getStaffId())
-                .orElseThrow(() -> new NotFoundException("Staff not found"));
+                .orElseThrow(() -> ResourceNotFoundException.staff(request.getStaffId().toString()));
 
         // Validate dates
         if (request.getEndDate().isBefore(request.getStartDate())) {
-            throw new BadRequestException("End date cannot be before start date");
+            throw new BusinessRuleException("End date cannot be before start date");
         }
 
         // Check for overlapping leaves
         List<LeaveRequest> overlapping = leaveRequestRepository.findOverlappingLeaves(
                 tenantId, request.getStaffId(), request.getStartDate(), request.getEndDate());
         if (!overlapping.isEmpty()) {
-            throw new BadRequestException("Leave request overlaps with existing approved leave");
+            throw new BusinessRuleException("Leave request overlaps with existing approved leave");
         }
 
         LeaveType leaveType;
         try {
             leaveType = LeaveType.valueOf(request.getLeaveType().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid leave type: " + request.getLeaveType());
+            throw new BusinessRuleException("Invalid leave type: " + request.getLeaveType());
         }
 
         LeaveRequest leave = LeaveRequest.builder()
@@ -96,30 +100,31 @@ public class LeaveService {
         try {
             newStatus = LeaveStatus.valueOf(request.getStatus().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid status: " + request.getStatus());
+            throw new BusinessRuleException("Invalid status: " + request.getStatus());
         }
 
         if (newStatus == LeaveStatus.PENDING) {
-            throw new BadRequestException("Cannot set status back to PENDING");
+            throw new BusinessRuleException("Cannot set status back to PENDING");
         }
 
         // Check for overlapping leaves when approving
         if (newStatus == LeaveStatus.APPROVED) {
             UUID tenantId = SecurityUtils.getCurrentTenantId();
+            UUID leaveId = leave.getId();
             List<LeaveRequest> overlapping = leaveRequestRepository.findOverlappingLeaves(
                     tenantId, leave.getStaff().getId(), leave.getStartDate(), leave.getEndDate());
             overlapping = overlapping.stream()
-                    .filter(l -> !l.getId().equals(leave.getId()))
+                    .filter(l -> !l.getId().equals(leaveId))
                     .collect(Collectors.toList());
             if (!overlapping.isEmpty()) {
-                throw new BadRequestException("Leave request overlaps with existing approved leave");
+                throw new BusinessRuleException("Leave request overlaps with existing approved leave");
             }
         }
 
         leave.setStatus(newStatus);
         
         if (newStatus == LeaveStatus.APPROVED || newStatus == LeaveStatus.REJECTED) {
-            Staff approver = staffRepository.findByAuthUserId(currentUserId.toString())
+            Staff approver = staffRepository.findByAuthUserIdAndDeletedAtIsNull(currentUserId.toString())
                     .orElse(null);
             leave.setApprovedBy(approver);
             leave.setApprovedAt(Instant.now());
@@ -140,6 +145,7 @@ public class LeaveService {
         leaveRequestRepository.save(leave);
     }
 
+    @Transactional(readOnly = true)
     public boolean isStaffOnLeave(UUID staffId, LocalDate date) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate(tenantId, staffId, date);
@@ -148,7 +154,7 @@ public class LeaveService {
 
     private LeaveRequest findLeaveById(UUID id) {
         return leaveRequestRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Leave request not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.NOT_FOUND, "Leave request not found: " + id));
     }
 
     private LeaveRequestDto toDto(LeaveRequest leave) {

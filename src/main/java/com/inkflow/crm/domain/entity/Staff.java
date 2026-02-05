@@ -51,6 +51,9 @@ public class Staff extends BaseEntity {
     @Column(name = "bio")
     private String bio;
 
+    @Column(name = "instagram")
+    private String instagram;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private StaffStatus status = StaffStatus.WORKING;

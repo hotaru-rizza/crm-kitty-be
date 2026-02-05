@@ -25,4 +25,20 @@ public enum DayOfWeek {
         }
         throw new IllegalArgumentException("Unknown day of week: " + value);
     }
+
+    public static DayOfWeek fromJavaDayOfWeek(java.time.DayOfWeek javaDow) {
+        return switch (javaDow) {
+            case MONDAY -> MONDAY;
+            case TUESDAY -> TUESDAY;
+            case WEDNESDAY -> WEDNESDAY;
+            case THURSDAY -> THURSDAY;
+            case FRIDAY -> FRIDAY;
+            case SATURDAY -> SATURDAY;
+            case SUNDAY -> SUNDAY;
+        };
+    }
+
+    public String getDisplayName() {
+        return value.substring(0, 1).toUpperCase() + value.substring(1);
+    }
 }

@@ -1,6 +1,7 @@
 package com.inkflow.crm.domain.repository;
 
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.UserRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,4 +44,10 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
             @Param("role") UserRole role,
             @Param("locationId") UUID locationId,
             Pageable pageable);
+
+    Optional<Staff> findByAuthUserIdAndDeletedAtIsNull(String authUserId);
+
+    List<Staff> findByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, StaffStatus status);
+
+    long countByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, StaffStatus status);
 }

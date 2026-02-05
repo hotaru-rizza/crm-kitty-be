@@ -97,6 +97,7 @@ public class SettingsService {
 
     // ========== PERMISSIONS ==========
 
+    @Transactional(readOnly = true)
     public List<PermissionDto> getAllPermissions() {
         return java.util.Arrays.stream(Permission.values())
                 .map(p -> PermissionDto.builder()
@@ -153,6 +154,7 @@ public class SettingsService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public boolean hasPermission(UUID tenantId, UserRole role, String permission) {
         if (role == UserRole.OWNER) return true;
         return rolePermissionRepository.findByTenantIdAndRoleAndPermission(tenantId, role, permission)

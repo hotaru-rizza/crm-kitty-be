@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -77,5 +78,40 @@ public class StaffController {
     public ResponseEntity<ApiResponse<StaffDto>> acceptInvite(@Valid @RequestBody AcceptInviteRequest request) {
         StaffDto staff = staffService.acceptInvite(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(staff));
+    }
+
+    // ======== Staff Services Management ========
+
+    @GetMapping("/{id}/services")
+    public ResponseEntity<ApiResponse<List<StaffServiceDto>>> getStaffServices(@PathVariable UUID id) {
+        List<StaffServiceDto> services = staffService.getStaffServices(id);
+        return ResponseEntity.ok(ApiResponse.success(services));
+    }
+
+    @PutMapping("/{id}/services")
+    public ResponseEntity<ApiResponse<List<StaffServiceDto>>> updateStaffServices(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateStaffServicesRequest request) {
+        List<StaffServiceDto> services = staffService.updateStaffServices(id, request);
+        return ResponseEntity.ok(ApiResponse.success(services));
+    }
+
+    @PostMapping("/{id}/services/{serviceId}")
+    public ResponseEntity<ApiResponse<StaffServiceDto>> addServiceToStaff(
+            @PathVariable UUID id,
+            @PathVariable UUID serviceId,
+            @RequestBody(required = false) AddStaffServiceRequest request) {
+        BigDecimal customPrice = request != null ? request.getCustomPrice() : null;
+        Integer customDuration = request != null ? request.getCustomDuration() : null;
+        StaffServiceDto service = staffService.addServiceToStaff(id, serviceId, customPrice, customDuration);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(service));
+    }
+
+    @DeleteMapping("/{id}/services/{serviceId}")
+    public ResponseEntity<ApiResponse<Void>> removeServiceFromStaff(
+            @PathVariable UUID id,
+            @PathVariable UUID serviceId) {
+        staffService.removeServiceFromStaff(id, serviceId);
+        return ResponseEntity.ok(ApiResponse.empty());
     }
 }

@@ -44,6 +44,7 @@ public class LocationService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public PaginationDto getPagination(PageRequest pageRequest) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Page<Location> page = locationRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());

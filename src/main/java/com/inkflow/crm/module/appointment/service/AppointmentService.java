@@ -46,6 +46,7 @@ public class AppointmentService {
         return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public PaginationDto getPagination(PageRequest pageRequest, UUID locationId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Page<Appointment> page;

@@ -16,4 +16,8 @@ public interface ServiceRepository extends JpaRepository<Service, UUID> {
     List<Service> findByTenantIdAndDeletedAtIsNull(UUID tenantId);
     Optional<Service> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
     List<Service> findByTenantIdAndIsActiveAndDeletedAtIsNull(UUID tenantId, Boolean isActive);
+
+    List<Service> findByTenantIdAndIsActiveTrueAndDeletedAtIsNull(UUID tenantId);
+
+    long countByTenantIdAndIsActiveTrueAndDeletedAtIsNull(UUID tenantId);
 }

@@ -41,4 +41,11 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     List<Appointment> findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(UUID artistId, List<AppointmentStatus> statuses, Instant after);
     
     long countByTenantIdAndLocationIdAndStartTimeBetweenAndDeletedAtIsNull(UUID tenantId, UUID locationId, Instant from, Instant to);
+
+    @Query("SELECT a FROM Appointment a WHERE a.artist.id = :artistId AND a.startTime >= :from AND a.startTime < :to AND a.status != :excludeStatus AND a.deletedAt IS NULL")
+    List<Appointment> findByArtistIdAndStartTimeBetweenAndStatusNotAndDeletedAtIsNull(
+            @Param("artistId") UUID artistId, 
+            @Param("from") Instant from, 
+            @Param("to") Instant to,
+            @Param("excludeStatus") AppointmentStatus excludeStatus);
 }

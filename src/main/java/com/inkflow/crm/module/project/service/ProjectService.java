@@ -38,6 +38,7 @@ public class ProjectService {
         return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public PaginationDto getPagination(PageRequest pageRequest, String status, UUID artistId, String search, Boolean onlyMine, UUID locationId) {
         Page<Project> page = getProjectsPage(pageRequest, status, artistId, search, onlyMine, locationId);
         return PaginationDto.from(page);
