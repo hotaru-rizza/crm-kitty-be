@@ -2,6 +2,9 @@ package com.inkflow.crm.module.appointment.service;
 
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.domain.repository.AppointmentSpecifications;
+import com.inkflow.crm.module.appointment.controller.AppointmentController.AppointmentFilterRequest;
+import org.springframework.data.jpa.domain.Specification;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.*;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -34,31 +38,30 @@ public class AppointmentService {
     private final GalleryPhotoRepository galleryPhotoRepository;
 
     @Transactional(readOnly = true)
-    public List<AppointmentDto> getAllAppointments(PageRequest pageRequest, UUID locationId) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Appointment> page;
-        
-        if (locationId != null) {
-            page = appointmentRepository.findByTenantIdAndLocationIdAndDeletedAtIsNull(tenantId, locationId, pageRequest.toPageable());
-        } else {
-            page = appointmentRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
-        }
-        
-        return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
+    public List<AppointmentDto> getAllAppointments(PageRequest pageRequest, AppointmentFilterRequest filter) {
+        return findFiltered(pageRequest, filter).getContent().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest, UUID locationId) {
+    public PaginationDto getPagination(PageRequest pageRequest, AppointmentFilterRequest filter) {
+        return PaginationDto.from(findFiltered(pageRequest, filter));
+    }
+
+    private Page<Appointment> findFiltered(PageRequest pageRequest, AppointmentFilterRequest filter) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Appointment> page;
-        
-        if (locationId != null) {
-            page = appointmentRepository.findByTenantIdAndLocationIdAndDeletedAtIsNull(tenantId, locationId, pageRequest.toPageable());
-        } else {
-            page = appointmentRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
-        }
-        
-        return PaginationDto.from(page);
+        Instant from = filter.getFrom() != null ? Instant.parse(filter.getFrom()) : null;
+        Instant to = filter.getTo() != null ? Instant.parse(filter.getTo()) : null;
+
+        Specification<Appointment> spec = Specification
+                .where(AppointmentSpecifications.belongsToTenant(tenantId))
+                .and(AppointmentSpecifications.notDeleted())
+                .and(AppointmentSpecifications.withLocation(filter.getLocationId()))
+                .and(AppointmentSpecifications.withArtist(filter.getArtistId()))
+                .and(AppointmentSpecifications.withStatus(filter.getStatus()))
+                .and(AppointmentSpecifications.startTimeAfter(from))
+                .and(AppointmentSpecifications.startTimeBefore(to));
+
+        return appointmentRepository.findAll(spec, pageRequest.toPageable());
     }
 
     @Transactional(readOnly = true)
@@ -158,6 +161,14 @@ public class AppointmentService {
             Location location = locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getLocationId(), tenantId)
                     .orElseThrow(() -> ResourceNotFoundException.location(request.getLocationId().toString()));
             appointment.setLocation(location);
+        }
+
+        if (Boolean.TRUE.equals(request.getClearProjectId())) {
+            appointment.setProject(null);
+        } else if (request.getProjectId() != null) {
+            Project project = projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getProjectId(), tenantId)
+                    .orElseThrow(() -> new RuntimeException("Project not found: " + request.getProjectId()));
+            appointment.setProject(project);
         }
 
         if (request.getStartTime() != null && request.getEndTime() != null) {

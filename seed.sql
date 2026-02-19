@@ -404,31 +404,301 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
--- 10. TRANSACTIONS (для завершених записів)
+-- 10. TRANSACTIONS (income + expenses, 6 months of mock data)
 -- ============================================================
-INSERT INTO transactions (id, tenant_id, appointment_id, amount, payment_method, payment_type,
-                          receipt_number, created_at, updated_at)
+INSERT INTO transactions (id, tenant_id, appointment_id, staff_id, location_id, type, category,
+                          payment_type, amount, payment_method, description,
+                          receipt_number, date, created_at, updated_at)
 VALUES
-    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001',
-     'aa000000-0000-0000-0000-000000000001', 2000.00, 'cash', 'payment',
-     'RCP-001', NOW() - INTERVAL '90 days', NOW()),
+    -- === INCOME — Service payments (last 6 months) ===
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 4500.00, 'CASH',
+     'Велике тату — Traditional sleeve', 'TXN-20250901-001',
+     NOW() - INTERVAL '170 days', NOW() - INTERVAL '170 days', NOW()),
 
-    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001',
-     'aa000000-0000-0000-0000-000000000002', 3500.00, 'card', 'payment',
-     'RCP-002', NOW() - INTERVAL '60 days', NOW()),
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 2800.00, 'CARD',
+     'Акварельне тату — квіткова композиція', 'TXN-20250905-002',
+     NOW() - INTERVAL '165 days', NOW() - INTERVAL '165 days', NOW()),
 
-    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001',
-     'aa000000-0000-0000-0000-000000000003', 3500.00, 'cash', 'payment',
-     'RCP-003', NOW() - INTERVAL '45 days', NOW()),
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'DEPOSIT', 1500.00, 'CARD',
+     'Передоплата — портрет реалізм', 'TXN-20250910-003',
+     NOW() - INTERVAL '160 days', NOW() - INTERVAL '160 days', NOW()),
 
-    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001',
-     'aa000000-0000-0000-0000-000000000004', 2000.00, 'cash', 'payment',
-     'RCP-004', NOW() - INTERVAL '30 days', NOW()),
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 3200.00, 'CASH',
+     'Black & grey — геометрія рукав', 'TXN-20250915-004',
+     NOW() - INTERVAL '155 days', NOW() - INTERVAL '155 days', NOW()),
 
-    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001',
-     'aa000000-0000-0000-0000-000000000005', 2500.00, 'card', 'payment',
-     'RCP-005', NOW() - INTERVAL '20 days', NOW())
-ON CONFLICT DO NOTHING;
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 5500.00, 'SPLIT',
+     'Neo-traditional — повний рукав', 'TXN-20250920-005',
+     NOW() - INTERVAL '150 days', NOW() - INTERVAL '150 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'TIP', 500.00, 'CASH',
+     'Чайові — задоволений клієнт', 'TXN-20250922-006',
+     NOW() - INTERVAL '148 days', NOW() - INTERVAL '148 days', NOW()),
+
+    -- === EXPENSE — Rent (monthly) ===
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'RENT', NULL, 12000.00, 'CARD',
+     'Оренда приміщення — вересень', 'EXP-20250901-001',
+     NOW() - INTERVAL '170 days', NOW() - INTERVAL '170 days', NOW()),
+
+    -- === INCOME — October ===
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 6000.00, 'CARD',
+     'Реалізм — портрет з фото', 'TXN-20251005-007',
+     NOW() - INTERVAL '135 days', NOW() - INTERVAL '135 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'DEPOSIT', 2000.00, 'MONOBANK',
+     'Передоплата онлайн — traditional eagle', 'TXN-20251008-008',
+     NOW() - INTERVAL '132 days', NOW() - INTERVAL '132 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 2500.00, 'CASH',
+     'Dot-work — мандала шия', 'TXN-20251012-009',
+     NOW() - INTERVAL '128 days', NOW() - INTERVAL '128 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 1800.00, 'CARD',
+     'Fineline — мінімалістичне тату', 'TXN-20251015-010',
+     NOW() - INTERVAL '125 days', NOW() - INTERVAL '125 days', NOW()),
+
+    -- === EXPENSE — Supplies October ===
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'SUPPLIES', NULL, 3800.00, 'CARD',
+     'Витратні матеріали — голки, чорнила Intenze', 'EXP-20251001-002',
+     NOW() - INTERVAL '140 days', NOW() - INTERVAL '140 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'RENT', NULL, 12000.00, 'CARD',
+     'Оренда приміщення — жовтень', 'EXP-20251001-003',
+     NOW() - INTERVAL '140 days', NOW() - INTERVAL '140 days', NOW()),
+
+    -- === INCOME — November ===
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 7000.00, 'CASH',
+     'Traditional — повний бэкпіс', 'TXN-20251105-011',
+     NOW() - INTERVAL '105 days', NOW() - INTERVAL '105 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 4200.00, 'CARD',
+     'Реалізм — вовк нога', 'TXN-20251108-012',
+     NOW() - INTERVAL '102 days', NOW() - INTERVAL '102 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 3000.00, 'SPLIT',
+     'Акварель — метелики спина', 'TXN-20251112-013',
+     NOW() - INTERVAL '98 days', NOW() - INTERVAL '98 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'TIP', 800.00, 'CASH',
+     'Чайові', 'TXN-20251115-014',
+     NOW() - INTERVAL '95 days', NOW() - INTERVAL '95 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'MERCH', NULL, 1200.00, 'CARD',
+     'Продаж мерчу — футболки x3, кепки x2', 'TXN-20251118-015',
+     NOW() - INTERVAL '92 days', NOW() - INTERVAL '92 days', NOW()),
+
+    -- === EXPENSE — November ===
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'RENT', NULL, 12000.00, 'CARD',
+     'Оренда приміщення — листопад', 'EXP-20251101-004',
+     NOW() - INTERVAL '110 days', NOW() - INTERVAL '110 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'SALARY', NULL, 8000.00, 'CARD',
+     'Аванс — Олена Коваль', 'EXP-20251115-005',
+     NOW() - INTERVAL '95 days', NOW() - INTERVAL '95 days', NOW()),
+
+    -- === INCOME — December ===
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 5500.00, 'CARD',
+     'Реалізм — лев груди', 'TXN-20251205-016',
+     NOW() - INTERVAL '75 days', NOW() - INTERVAL '75 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'DEPOSIT', 1000.00, 'MONOBANK',
+     'Передоплата онлайн — watercolor fox', 'TXN-20251208-017',
+     NOW() - INTERVAL '72 days', NOW() - INTERVAL '72 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 3800.00, 'CASH',
+     'Blackwork — японські хвилі', 'TXN-20251210-018',
+     NOW() - INTERVAL '70 days', NOW() - INTERVAL '70 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 9000.00, 'SPLIT',
+     'Traditional — full body chest piece', 'TXN-20251215-019',
+     NOW() - INTERVAL '65 days', NOW() - INTERVAL '65 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'MERCH', NULL, 2400.00, 'CARD',
+     'Продаж мерчу — новорічний набір x6', 'TXN-20251220-020',
+     NOW() - INTERVAL '60 days', NOW() - INTERVAL '60 days', NOW()),
+
+    -- === EXPENSE — December ===
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'RENT', NULL, 12000.00, 'CARD',
+     'Оренда приміщення — грудень', 'EXP-20251201-006',
+     NOW() - INTERVAL '80 days', NOW() - INTERVAL '80 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'SUPPLIES', NULL, 5200.00, 'CARD',
+     'Нові машинки Cheyenne Hawk — 2 шт.', 'EXP-20251205-007',
+     NOW() - INTERVAL '75 days', NOW() - INTERVAL '75 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'SALARY', NULL, 8000.00, 'CARD',
+     'Зарплата — Дмитро Мельник', 'EXP-20251215-008',
+     NOW() - INTERVAL '65 days', NOW() - INTERVAL '65 days', NOW()),
+
+    -- === INCOME — January ===
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 3500.00, 'CARD',
+     'Fineline — ботанічний рукав', 'TXN-20260108-021',
+     NOW() - INTERVAL '42 days', NOW() - INTERVAL '42 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 4800.00, 'CASH',
+     'Портрет — чоловіче плече', 'TXN-20260112-022',
+     NOW() - INTERVAL '38 days', NOW() - INTERVAL '38 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'DEPOSIT', 2000.00, 'MONOBANK',
+     'Передоплата онлайн — black & grey sleeve', 'TXN-20260115-023',
+     NOW() - INTERVAL '35 days', NOW() - INTERVAL '35 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 6500.00, 'SPLIT',
+     'Neo-trad — дракон спина', 'TXN-20260118-024',
+     NOW() - INTERVAL '32 days', NOW() - INTERVAL '32 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'TIP', 600.00, 'CASH',
+     'Чайові', 'TXN-20260120-025',
+     NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW()),
+
+    -- === EXPENSE — January ===
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'RENT', NULL, 13000.00, 'CARD',
+     'Оренда приміщення — січень (підвищення)', 'EXP-20260101-009',
+     NOW() - INTERVAL '50 days', NOW() - INTERVAL '50 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'SALARY', NULL, 8000.00, 'CARD',
+     'Зарплата — Анна Бондаренко', 'EXP-20260115-010',
+     NOW() - INTERVAL '35 days', NOW() - INTERVAL '35 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'SUPPLIES', NULL, 2800.00, 'CARD',
+     'Витратні матеріали — чорнила, плівка, рукавички', 'EXP-20260118-011',
+     NOW() - INTERVAL '32 days', NOW() - INTERVAL '32 days', NOW()),
+
+    -- === INCOME — February (current month) ===
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 5200.00, 'CARD',
+     'Реалізм — тигр передпліччя', 'TXN-20260203-026',
+     NOW() - INTERVAL '16 days', NOW() - INTERVAL '16 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 2200.00, 'CASH',
+     'Fineline — мінімалізм зап''ясток', 'TXN-20260205-027',
+     NOW() - INTERVAL '14 days', NOW() - INTERVAL '14 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 4100.00, 'CARD',
+     'Black & grey — вовча пащека', 'TXN-20260207-028',
+     NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'DEPOSIT', 3000.00, 'MONOBANK',
+     'Передоплата онлайн — Japanese koi', 'TXN-20260210-029',
+     NOW() - INTERVAL '9 days', NOW() - INTERVAL '9 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 8500.00, 'SPLIT',
+     'Traditional — full sleeve сесія 3', 'TXN-20260212-030',
+     NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'TIP', 1000.00, 'CASH',
+     'Чайові — постійний клієнт', 'TXN-20260214-031',
+     NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001',
+     'INCOME', 'SERVICE', 'SERVICE_PAYMENT', 3300.00, 'CARD',
+     'Watercolor — пальма гомілка', 'TXN-20260216-032',
+     NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days', NOW()),
+
+    -- === EXPENSE — February ===
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'RENT', NULL, 13000.00, 'CARD',
+     'Оренда приміщення — лютий', 'EXP-20260201-012',
+     NOW() - INTERVAL '19 days', NOW() - INTERVAL '19 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'SUPPLIES', NULL, 1900.00, 'CASH',
+     'Одноразові матеріали — лютий', 'EXP-20260210-013',
+     NOW() - INTERVAL '9 days', NOW() - INTERVAL '9 days', NOW()),
+
+    (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000001', NULL,
+     'c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
+     'EXPENSE', 'OTHER', NULL, 1500.00, 'CARD',
+     'Підписка на CRM + інструменти', 'EXP-20260215-014',
+     NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days', NOW())
+
+ON CONFLICT (receipt_number) DO NOTHING;
 
 -- ============================================================
 -- REQUESTS (заявки з різних джерел)

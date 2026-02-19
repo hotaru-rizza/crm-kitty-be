@@ -36,6 +36,14 @@ server:
   servlet:
     context-path: /api
 
+# Cloudflare R2 Storage
+r2:
+  account-id: ${R2_ACCOUNT_ID:8e987ad59f6f797133fb456f9634c382}
+  access-key-id: ${R2_ACCESS_KEY_ID:d55be8f09aeefed881c8d28dbaf1c2a8}
+  secret-access-key: ${R2_SECRET_ACCESS_KEY:3d97fe6b37db6a9ba27900cf5f0fc9059e12765e85c7b3b33e592732b7314d1c}
+  bucket-name: ${R2_BUCKET_NAME:inkat-crm}
+  public-url: ${R2_PUBLIC_URL:https://pub-c3324f961f15454f98b95bbf7115ca14.r2.dev}
+
 # Supabase JWT Configuration
 supabase:
   jwt:
@@ -93,4 +101,11 @@ logging:
     root: WARN
     com.inkflow: INFO
 
+monobank:
+  acquiring:
+    token: ${MONOBANK_TOKEN:REPLACE_WITH_REAL_TOKEN}
+    api-url: https://api.monobank.ua
+    webhook-url: ${APP_BASE_URL:http://localhost:8080}/api/payments/monobank/webhook
+    redirect-url: ${FRONTEND_URL:http://localhost:5173}/app/calendar
+    invoice-validity-seconds: 3600
 ## smtp: re_Xoz3s4ui_Gp1KpXfYtBkkgeRU1AnEreNE

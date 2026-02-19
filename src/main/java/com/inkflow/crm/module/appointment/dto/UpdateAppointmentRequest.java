@@ -21,6 +21,7 @@ public class UpdateAppointmentRequest {
     private UUID serviceId;
     private UUID locationId;
     private UUID projectId;
+    private Boolean clearProjectId;
     private Instant startTime;
     private Instant endTime;
 

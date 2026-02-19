@@ -26,10 +26,25 @@ public class AppointmentController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAllAppointments(
             @ModelAttribute PageRequest pageRequest,
-            @RequestParam(required = false) UUID locationId) {
-        List<AppointmentDto> appointments = appointmentService.getAllAppointments(pageRequest, locationId);
-        PaginationDto pagination = appointmentService.getPagination(pageRequest, locationId);
+            @RequestParam(required = false) UUID locationId,
+            @RequestParam(required = false) UUID artistId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        AppointmentFilterRequest filter = new AppointmentFilterRequest(locationId, artistId, status, from, to);
+        List<AppointmentDto> appointments = appointmentService.getAllAppointments(pageRequest, filter);
+        PaginationDto pagination = appointmentService.getPagination(pageRequest, filter);
         return ResponseEntity.ok(ApiResponse.success(appointments, pagination));
+    }
+
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    public static class AppointmentFilterRequest {
+        private UUID locationId;
+        private UUID artistId;
+        private String status;
+        private String from;
+        private String to;
     }
 
     @GetMapping("/client/{clientId}")
