@@ -31,6 +31,7 @@ public class AppointmentService {
     private final ServiceRepository serviceRepository;
     private final LocationRepository locationRepository;
     private final ProjectRepository projectRepository;
+    private final GalleryPhotoRepository galleryPhotoRepository;
 
     @Transactional(readOnly = true)
     public List<AppointmentDto> getAllAppointments(PageRequest pageRequest, UUID locationId) {
@@ -58,6 +59,14 @@ public class AppointmentService {
         }
         
         return PaginationDto.from(page);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppointmentDto> getClientHistory(UUID clientId, PageRequest pageRequest) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        Page<Appointment> page = appointmentRepository
+                .findByTenantIdAndClientIdAndDeletedAtIsNullOrderByStartTimeDesc(tenantId, clientId, pageRequest.toPageable());
+        return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -192,6 +201,47 @@ public class AppointmentService {
         appointmentRepository.save(appointment);
     }
 
+    @Transactional
+    public AppointmentDetailDto.PhotoDto addPhoto(UUID appointmentId, String url, String stage) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        UUID userId = SecurityUtils.getCurrentUserId();
+
+        Appointment appointment = appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.appointment(appointmentId.toString()));
+
+        com.inkflow.crm.domain.enums.GalleryStage galleryStage =
+                com.inkflow.crm.domain.enums.GalleryStage.fromValue(stage);
+
+        GalleryPhoto photo = GalleryPhoto.builder()
+                .tenantId(tenantId)
+                .appointment(appointment)
+                .url(url)
+                .stage(galleryStage)
+                .uploadedBy(userId)
+                .build();
+
+        photo = galleryPhotoRepository.save(photo);
+
+        return AppointmentDetailDto.PhotoDto.builder()
+                .id(photo.getId())
+                .url(photo.getUrl())
+                .stage(photo.getStage().getValue())
+                .build();
+    }
+
+    @Transactional
+    public void deletePhoto(UUID appointmentId, UUID photoId) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.appointment(appointmentId.toString()));
+
+        GalleryPhoto photo = galleryPhotoRepository.findById(photoId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        com.inkflow.crm.common.exception.ErrorCode.APPOINTMENT_NOT_FOUND, "Photo not found: " + photoId));
+
+        galleryPhotoRepository.delete(photo);
+    }
+
     private AppointmentDto mapToDto(Appointment appointment) {
         return AppointmentDto.builder()
                 .id(appointment.getId())
@@ -228,6 +278,7 @@ public class AppointmentService {
                 .price(appointment.getPrice())
                 .finalPrice(appointment.getFinalPrice())
                 .waiverSigned(appointment.getWaiverSigned())
+                .sketchImage(appointment.getSketchImage())
                 .createdAt(appointment.getCreatedAt())
                 .build();
     }

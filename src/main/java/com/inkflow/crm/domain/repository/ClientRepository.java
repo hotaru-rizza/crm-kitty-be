@@ -36,13 +36,11 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
            "     c.phone LIKE CONCAT('%', :search, '%') OR " +
            "     LOWER(c.email) LIKE LOWER(CONCAT('%', :search, '%'))) " +
            "AND (:status IS NULL OR c.status = :status) " +
-           "AND (:artistId IS NULL OR p.artist.id = :artistId) " +
-           "AND (:locationId IS NULL OR c.location.id = :locationId)")
+           "AND (:artistId IS NULL OR p.artist.id = :artistId)")
     Page<Client> findWithFilters(
             @Param("tenantId") UUID tenantId,
             @Param("search") String search,
             @Param("status") ClientStatus status,
             @Param("artistId") UUID artistId,
-            @Param("locationId") UUID locationId,
             Pageable pageable);
 }

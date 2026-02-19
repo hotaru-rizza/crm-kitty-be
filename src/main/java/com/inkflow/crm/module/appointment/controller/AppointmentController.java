@@ -6,6 +6,8 @@ import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.module.appointment.dto.*;
 import com.inkflow.crm.module.appointment.service.AppointmentService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +30,14 @@ public class AppointmentController {
         List<AppointmentDto> appointments = appointmentService.getAllAppointments(pageRequest, locationId);
         PaginationDto pagination = appointmentService.getPagination(pageRequest, locationId);
         return ResponseEntity.ok(ApiResponse.success(appointments, pagination));
+    }
+
+    @GetMapping("/client/{clientId}")
+    public ResponseEntity<ApiResponse<List<AppointmentDto>>> getClientHistory(
+            @PathVariable UUID clientId,
+            @ModelAttribute PageRequest pageRequest) {
+        List<AppointmentDto> appointments = appointmentService.getClientHistory(clientId, pageRequest);
+        return ResponseEntity.ok(ApiResponse.success(appointments));
     }
 
     @GetMapping("/{id}")
@@ -60,5 +70,29 @@ public class AppointmentController {
     public ResponseEntity<ApiResponse<Void>> deleteAppointment(@PathVariable UUID id) {
         appointmentService.deleteAppointment(id);
         return ResponseEntity.ok(ApiResponse.empty());
+    }
+
+    @PostMapping("/{id}/photos")
+    public ResponseEntity<ApiResponse<AppointmentDetailDto.PhotoDto>> addPhoto(
+            @PathVariable UUID id,
+            @Valid @RequestBody AddPhotoRequest request) {
+        AppointmentDetailDto.PhotoDto photo = appointmentService.addPhoto(id, request.getUrl(), request.getStage());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(photo));
+    }
+
+    @DeleteMapping("/{id}/photos/{photoId}")
+    public ResponseEntity<ApiResponse<Void>> deletePhoto(
+            @PathVariable UUID id,
+            @PathVariable UUID photoId) {
+        appointmentService.deletePhoto(id, photoId);
+        return ResponseEntity.ok(ApiResponse.empty());
+    }
+
+    @Data
+    public static class AddPhotoRequest {
+        @NotBlank
+        private String url;
+        @NotBlank
+        private String stage;
     }
 }

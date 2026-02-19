@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -27,4 +28,36 @@ public class ProjectDto {
     private Integer totalSessions;
     private Integer completedSessions;
     private Instant createdAt;
+    private List<PhotoDto> photos;
+    private List<SessionDto> sessions;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PhotoDto {
+        private UUID id;
+        private String url;
+        private String stage;
+        private Instant uploadedAt;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SessionDto {
+        private UUID id;
+        private Instant startTime;
+        private Instant endTime;
+        private String status;
+        private UUID serviceId;
+        private String serviceName;
+        private String serviceColor;
+        private BigDecimal price;
+        private BigDecimal finalPrice;
+        private Boolean waiverSigned;
+        private String notes;
+        private Integer photosCount;
+    }
 }

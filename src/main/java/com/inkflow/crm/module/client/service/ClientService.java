@@ -32,25 +32,25 @@ public class ClientService {
     private final ClientMapper clientMapper;
 
     @Transactional(readOnly = true)
-    public List<ClientDto> getAllClients(PageRequest pageRequest, String search, String status, Boolean onlyMine, UUID locationId) {
-        Page<Client> page = getClientsPage(pageRequest, search, status, onlyMine, locationId);
+    public List<ClientDto> getAllClients(PageRequest pageRequest, String search, String status, Boolean onlyMine) {
+        Page<Client> page = getClientsPage(pageRequest, search, status, onlyMine);
         return clientMapper.toDtoList(page.getContent());
     }
 
     @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest, String search, String status, Boolean onlyMine, UUID locationId) {
-        Page<Client> page = getClientsPage(pageRequest, search, status, onlyMine, locationId);
+    public PaginationDto getPagination(PageRequest pageRequest, String search, String status, Boolean onlyMine) {
+        Page<Client> page = getClientsPage(pageRequest, search, status, onlyMine);
         return PaginationDto.from(page);
     }
 
-    private Page<Client> getClientsPage(PageRequest pageRequest, String search, String status, Boolean onlyMine, UUID locationId) {
+    private Page<Client> getClientsPage(PageRequest pageRequest, String search, String status, Boolean onlyMine) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         ClientStatus clientStatus = status != null ? ClientStatus.fromValue(status) : null;
         
         // If onlyMine is true, get current user's ID to filter clients who have projects with this artist
         UUID artistId = Boolean.TRUE.equals(onlyMine) ? SecurityUtils.getCurrentUserId() : null;
 
-        return clientRepository.findWithFilters(tenantId, search, clientStatus, artistId, locationId, pageRequest.toPageable());
+        return clientRepository.findWithFilters(tenantId, search, clientStatus, artistId, pageRequest.toPageable());
     }
 
     @Transactional(readOnly = true)

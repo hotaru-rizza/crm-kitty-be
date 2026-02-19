@@ -8,7 +8,8 @@ import lombok.RequiredArgsConstructor;
 public enum PaymentMethod {
     CASH("cash", "Cash payment"),
     CARD("card", "Card payment"),
-    SPLIT("split", "Split payment (cash + card)");
+    SPLIT("split", "Split payment (cash + card)"),
+    MONOBANK("monobank", "Monobank online payment");
 
     private final String value;
     private final String description;

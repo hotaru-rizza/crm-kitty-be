@@ -28,6 +28,7 @@ public class AppointmentDto {
     private BigDecimal price;
     private BigDecimal finalPrice;
     private Boolean waiverSigned;
+    private String sketchImage;
     private Instant createdAt;
 
     @Data

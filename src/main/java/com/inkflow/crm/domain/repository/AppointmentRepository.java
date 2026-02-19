@@ -18,7 +18,9 @@ import java.util.UUID;
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
     Page<Appointment> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
     Page<Appointment> findByTenantIdAndLocationIdAndDeletedAtIsNull(UUID tenantId, UUID locationId, Pageable pageable);
+    Page<Appointment> findByTenantIdAndClientIdAndDeletedAtIsNullOrderByStartTimeDesc(UUID tenantId, UUID clientId, Pageable pageable);
     Optional<Appointment> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+    Optional<Appointment> findByIdAndDeletedAtIsNull(UUID id);
 
     @Query("SELECT a FROM Appointment a WHERE a.tenantId = :tenantId AND a.startTime >= :from AND a.startTime < :to AND a.deletedAt IS NULL ORDER BY a.startTime")
     List<Appointment> findByTenantIdAndDateRange(@Param("tenantId") UUID tenantId, @Param("from") Instant from, @Param("to") Instant to);

@@ -40,8 +40,10 @@ public class SecurityConfig {
                                 "/staff/invite/info/**",
                                 "/requests",
                                 "/onboarding",
-                                "/public/**"
+                                "/public/**",
+                                "/payments/monobank/webhook"
                         ).permitAll()
+                        .requestMatchers("/files/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

@@ -26,11 +26,12 @@ public class ProjectController {
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) UUID artistId,
+            @RequestParam(required = false) UUID clientId,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean onlyMine,
             @RequestParam(required = false) UUID locationId) {
-        List<ProjectDto> projects = projectService.getAllProjects(pageRequest, status, artistId, search, onlyMine, locationId);
-        PaginationDto pagination = projectService.getPagination(pageRequest, status, artistId, search, onlyMine, locationId);
+        List<ProjectDto> projects = projectService.getAllProjects(pageRequest, status, artistId, clientId, search, onlyMine, locationId);
+        PaginationDto pagination = projectService.getPagination(pageRequest, status, artistId, clientId, search, onlyMine, locationId);
         return ResponseEntity.ok(ApiResponse.success(projects, pagination));
     }
 
@@ -59,4 +60,22 @@ public class ProjectController {
         projectService.deleteProject(id);
         return ResponseEntity.ok(ApiResponse.empty());
     }
+
+    @PostMapping("/{id}/photos")
+    public ResponseEntity<ApiResponse<ProjectDto.PhotoDto>> addPhoto(
+            @PathVariable UUID id,
+            @RequestBody AddPhotoRequest request) {
+        ProjectDto.PhotoDto photo = projectService.addPhoto(id, request.url(), request.stage());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(photo));
+    }
+
+    @DeleteMapping("/{id}/photos/{photoId}")
+    public ResponseEntity<ApiResponse<Void>> deletePhoto(
+            @PathVariable UUID id,
+            @PathVariable UUID photoId) {
+        projectService.deletePhoto(id, photoId);
+        return ResponseEntity.ok(ApiResponse.empty());
+    }
+
+    record AddPhotoRequest(String url, String stage) {}
 }

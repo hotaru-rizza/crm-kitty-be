@@ -1,13 +1,17 @@
 package com.inkflow.crm.module.project.service;
 
 import com.inkflow.crm.common.dto.PageRequest;
+import java.util.Comparator;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Client;
+import com.inkflow.crm.domain.entity.GalleryPhoto;
 import com.inkflow.crm.domain.entity.Project;
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.enums.GalleryStage;
 import com.inkflow.crm.domain.enums.ProjectStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
+import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
 import com.inkflow.crm.domain.repository.ProjectRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.client.dto.ClientSummaryDto;
@@ -31,20 +35,21 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ClientRepository clientRepository;
     private final StaffRepository staffRepository;
+    private final GalleryPhotoRepository galleryPhotoRepository;
 
     @Transactional(readOnly = true)
-    public List<ProjectDto> getAllProjects(PageRequest pageRequest, String status, UUID artistId, String search, Boolean onlyMine, UUID locationId) {
-        Page<Project> page = getProjectsPage(pageRequest, status, artistId, search, onlyMine, locationId);
+    public List<ProjectDto> getAllProjects(PageRequest pageRequest, String status, UUID artistId, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
+        Page<Project> page = getProjectsPage(pageRequest, status, artistId, clientId, search, onlyMine, locationId);
         return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest, String status, UUID artistId, String search, Boolean onlyMine, UUID locationId) {
-        Page<Project> page = getProjectsPage(pageRequest, status, artistId, search, onlyMine, locationId);
+    public PaginationDto getPagination(PageRequest pageRequest, String status, UUID artistId, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
+        Page<Project> page = getProjectsPage(pageRequest, status, artistId, clientId, search, onlyMine, locationId);
         return PaginationDto.from(page);
     }
 
-    private Page<Project> getProjectsPage(PageRequest pageRequest, String status, UUID artistId, String search, Boolean onlyMine, UUID locationId) {
+    private Page<Project> getProjectsPage(PageRequest pageRequest, String status, UUID artistId, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         ProjectStatus projectStatus = status != null ? ProjectStatus.fromValue(status) : null;
         
@@ -54,7 +59,7 @@ public class ProjectService {
             effectiveArtistId = SecurityUtils.getCurrentUserId();
         }
 
-        return projectRepository.findWithFilters(tenantId, projectStatus, effectiveArtistId, search, locationId, pageRequest.toPageable());
+        return projectRepository.findWithFilters(tenantId, projectStatus, effectiveArtistId, clientId, search, locationId, pageRequest.toPageable());
     }
 
     @Transactional(readOnly = true)
@@ -126,7 +131,75 @@ public class ProjectService {
         projectRepository.save(project);
     }
 
+    @Transactional
+    public ProjectDto.PhotoDto addPhoto(UUID projectId, String url, String stage) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        UUID userId = SecurityUtils.getCurrentUserId();
+
+        Project project = projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.project(projectId.toString()));
+
+        GalleryPhoto photo = GalleryPhoto.builder()
+                .tenantId(tenantId)
+                .project(project)
+                .url(url)
+                .stage(GalleryStage.fromValue(stage))
+                .uploadedBy(userId)
+                .build();
+
+        photo = galleryPhotoRepository.save(photo);
+
+        return ProjectDto.PhotoDto.builder()
+                .id(photo.getId())
+                .url(photo.getUrl())
+                .stage(photo.getStage().getValue())
+                .uploadedAt(photo.getUploadedAt())
+                .build();
+    }
+
+    @Transactional
+    public void deletePhoto(UUID projectId, UUID photoId) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.project(projectId.toString()));
+
+        GalleryPhoto photo = galleryPhotoRepository.findById(photoId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        com.inkflow.crm.common.exception.ErrorCode.PROJECT_NOT_FOUND, "Photo not found: " + photoId));
+
+        galleryPhotoRepository.delete(photo);
+    }
+
     private ProjectDto mapToDto(Project project) {
+        List<ProjectDto.PhotoDto> photos = galleryPhotoRepository.findByProjectId(project.getId())
+                .stream()
+                .map(p -> ProjectDto.PhotoDto.builder()
+                        .id(p.getId())
+                        .url(p.getUrl())
+                        .stage(p.getStage().getValue())
+                        .uploadedAt(p.getUploadedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        List<ProjectDto.SessionDto> sessions = project.getAppointments().stream()
+                .filter(a -> a.getDeletedAt() == null)
+                .sorted(Comparator.comparing(com.inkflow.crm.domain.entity.Appointment::getStartTime))
+                .map(a -> ProjectDto.SessionDto.builder()
+                        .id(a.getId())
+                        .startTime(a.getStartTime())
+                        .endTime(a.getEndTime())
+                        .status(a.getStatus().getValue())
+                        .serviceId(a.getService() != null ? a.getService().getId() : null)
+                        .serviceName(a.getService() != null ? a.getService().getTitle() : null)
+                        .serviceColor(a.getService() != null ? a.getService().getColor() : null)
+                        .price(a.getPrice())
+                        .finalPrice(a.getFinalPrice())
+                        .waiverSigned(a.getWaiverSigned())
+                        .notes(a.getNotes())
+                        .photosCount(a.getPhotos() != null ? a.getPhotos().size() : 0)
+                        .build())
+                .collect(Collectors.toList());
+
         return ProjectDto.builder()
                 .id(project.getId())
                 .title(project.getTitle())
@@ -153,6 +226,8 @@ public class ProjectService {
                 .totalSessions(project.getTotalSessions())
                 .completedSessions(project.getCompletedSessions())
                 .createdAt(project.getCreatedAt())
+                .photos(photos)
+                .sessions(sessions)
                 .build();
     }
 }

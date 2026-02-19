@@ -58,11 +58,19 @@ public class JwtTokenProvider {
         UUID userId = UUID.fromString(jwt.getSubject());
         String email = jwt.getClaim("email").asString();
 
+        // tenant_id and user_role are stored in app_metadata → appear as top-level JWT claims
         String tenantIdStr = jwt.getClaim("tenant_id").asString();
         UUID tenantId = tenantIdStr != null ? UUID.fromString(tenantIdStr) : null;
 
-        String roleStr = jwt.getClaim("role").asString();
-        UserRole role = roleStr != null ? UserRole.fromValue(roleStr) : null;
+        // Supabase sets "role" = "authenticated" (system claim); our role is in "user_role"
+        String roleStr = jwt.getClaim("user_role").asString();
+        UserRole role = null;
+        if (roleStr != null) {
+            try {
+                role = UserRole.fromValue(roleStr);
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
 
         List<UUID> locationIds = Collections.emptyList();
         List<String> locationIdStrings = jwt.getClaim("location_ids").asList(String.class);
