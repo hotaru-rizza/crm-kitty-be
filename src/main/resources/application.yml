@@ -3,9 +3,9 @@ spring:
     name: inkflow-crm
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/crm-kitty
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:admin}
+    url: jdbc:postgresql://aws-1-eu-north-1.pooler.supabase.com:5432/postgres?sslmode=require
+    username: ${DB_USERNAME:postgres.orxguferhezbfbgmlrzc}
+    password: ${DB_PASSWORD:_t4ORd5vLZLhm4jo}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -39,8 +39,8 @@ server:
 # Supabase JWT Configuration
 supabase:
   jwt:
-    secret: ${SUPABASE_JWT_SECRET:your-jwt-secret-here}
-    issuer: ${SUPABASE_PROJECT_URL:https://your-project.supabase.co}/auth/v1
+    issuer: https://orxguferhezbfbgmlrzc.supabase.co/auth/v1
+    jwks-uri: https://orxguferhezbfbgmlrzc.supabase.co/auth/v1/.well-known/jwks.json
 
 # Logging
 logging:
@@ -92,3 +92,5 @@ logging:
   level:
     root: WARN
     com.inkflow: INFO
+
+## smtp: re_Xoz3s4ui_Gp1KpXfYtBkkgeRU1AnEreNE

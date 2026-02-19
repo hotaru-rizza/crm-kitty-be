@@ -23,7 +23,10 @@ public class AuthService {
     public CurrentUserResponse getCurrentUser() {
         UserPrincipal principal = SecurityUtils.getCurrentUserOrThrow();
 
-        Staff staff = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(principal.getId(), principal.getTenantId())
+        // In production: principal.getId() is the Supabase user UUID → match via authUserId.
+        // In dev mode: principal.getId() is the Staff primary key → fall back to findById.
+        Staff staff = staffRepository.findByAuthUserIdAndDeletedAtIsNull(principal.getId().toString())
+                .or(() -> staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(principal.getId(), principal.getTenantId()))
                 .orElseThrow(() -> ResourceNotFoundException.staff(principal.getId().toString()));
 
         Tenant tenant = tenantRepository.findById(principal.getTenantId())

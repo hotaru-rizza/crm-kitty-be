@@ -48,7 +48,7 @@ public class OnboardingService {
 
         // 2. Create Owner Staff
         Staff owner = Staff.builder()
-                .id(supabaseUserId) // Use Supabase user ID
+                .authUserId(supabaseUserId.toString())
                 .tenantId(tenant.getId())
                 .email(email)
                 .firstName(request.getFirstName())
@@ -66,6 +66,7 @@ public class OnboardingService {
                 .name("Основна студія")
                 .address("")
                 .phone("")
+                .color("#6366f1")
                 .isActive(true)
                 .build();
         locationRepository.save(defaultLocation);
@@ -98,15 +99,16 @@ public class OnboardingService {
 
     private String generateSubdomain(String companyName) {
         String base = companyName.toLowerCase()
-                .replaceAll("[^a-z0-9]", "")
-                .substring(0, Math.min(companyName.length(), 20));
-        
+                .replaceAll("[^a-z0-9]", "");
+
+        if (base.length() > 20) {
+            base = base.substring(0, 20);
+        }
+
         if (base.isEmpty()) {
             base = "studio";
         }
-        
-        // Add random suffix to ensure uniqueness
-        String subdomain = base + "-" + UUID.randomUUID().toString().substring(0, 6);
-        return subdomain;
+
+        return base + "-" + UUID.randomUUID().toString().substring(0, 6);
     }
 }

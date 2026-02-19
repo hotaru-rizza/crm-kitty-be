@@ -145,6 +145,20 @@ public class StaffService {
         staffRepository.save(staff);
     }
 
+    @Transactional(readOnly = true)
+    public InviteInfoDto getInviteInfo(String token) {
+        StaffInvite invite = staffInviteRepository.findByToken(token)
+                .orElseThrow(() -> new BusinessRuleException("Invalid invite token"));
+
+        return InviteInfoDto.builder()
+                .email(invite.getEmail())
+                .role(invite.getRole().getValue())
+                .expiresAt(invite.getExpiresAt())
+                .expired(invite.isExpired())
+                .accepted(invite.isAccepted())
+                .build();
+    }
+
     @Transactional
     public String inviteStaff(InviteStaffRequest request) {
         SecurityUtils.requireAdminAccess();
@@ -198,6 +212,7 @@ public class StaffService {
                 .phone(request.getPhone())
                 .role(invite.getRole())
                 .calendarColor(invite.getCalendarColor())
+                .authUserId(request.getAuthUserId())
                 .status(com.inkflow.crm.domain.enums.StaffStatus.WORKING)
                 .build();
 

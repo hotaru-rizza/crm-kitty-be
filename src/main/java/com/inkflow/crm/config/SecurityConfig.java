@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/actuator/**",
                                 "/staff/accept-invite",
+                                "/staff/invite/info/**",
                                 "/requests",
                                 "/onboarding",
                                 "/public/**"

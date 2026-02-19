@@ -68,6 +68,12 @@ public class StaffController {
         return ResponseEntity.ok(ApiResponse.empty());
     }
 
+    @GetMapping("/invite/info/{token}")
+    public ResponseEntity<ApiResponse<com.inkflow.crm.module.staff.dto.InviteInfoDto>> getInviteInfo(
+            @PathVariable String token) {
+        return ResponseEntity.ok(ApiResponse.success(staffService.getInviteInfo(token)));
+    }
+
     @PostMapping("/invite")
     public ResponseEntity<ApiResponse<Map<String, String>>> inviteStaff(@Valid @RequestBody InviteStaffRequest request) {
         String token = staffService.inviteStaff(request);

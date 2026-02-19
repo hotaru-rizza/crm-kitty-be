@@ -25,4 +25,7 @@ public class AcceptInviteRequest {
     private String lastName;
 
     private String phone;
+
+    @NotBlank(message = "Auth user ID is required")
+    private String authUserId;
 }

@@ -94,23 +94,25 @@ public class DevSecurityConfig {
         private volatile UserRole role;
         private volatile List<UUID> locationIds;
 
+        private volatile UUID resolvedUserId;
+
         private synchronized void loadUserIfNeeded() {
             if (tenantId != null) return;
-            
+
             try {
-                // Simple native query - no lazy loading issues
+                // Find the first OWNER from the database (no hardcoded ID)
                 List<Tuple> results = entityManager.createNativeQuery(
-                        "SELECT tenant_id, email, role FROM staff WHERE id = :id", Tuple.class)
-                        .setParameter("id", DEV_USER_ID)
+                        "SELECT id, auth_user_id, tenant_id, email, role FROM staff " +
+                        "WHERE role = 'OWNER' AND deleted_at IS NULL ORDER BY created_at LIMIT 1", Tuple.class)
                         .getResultList();
 
                 if (!results.isEmpty()) {
                     Tuple row = results.get(0);
-                    tenantId = (UUID) row.get("tenant_id");
-                    email = (String) row.get("email");
-                    role = UserRole.valueOf((String) row.get("role"));
+                    resolvedUserId = (UUID) row.get("id");
+                    tenantId      = (UUID) row.get("tenant_id");
+                    email         = (String) row.get("email");
+                    role          = UserRole.valueOf((String) row.get("role"));
 
-                    // Load locations
                     @SuppressWarnings("unchecked")
                     List<UUID> locs = entityManager.createNativeQuery(
                             "SELECT id FROM locations WHERE tenant_id = :tid AND deleted_at IS NULL", UUID.class)
@@ -119,21 +121,23 @@ public class DevSecurityConfig {
                     locationIds = locs;
 
                     log.warn("════════════════════════════════════════════════════════");
-                    log.warn("  DEV USER: {} ({}) | Tenant: {}", email, role, tenantId);
+                    log.warn("  DEV USER: {} ({}) | Tenant: {} | ID: {}", email, role, tenantId, resolvedUserId);
                     log.warn("════════════════════════════════════════════════════════");
                 } else {
-                    log.error("❌ DEV USER NOT FOUND: {}", DEV_USER_ID);
-                    tenantId = DEV_USER_ID; // fallback to prevent NPE
-                    email = "unknown";
-                    role = UserRole.OWNER;
-                    locationIds = Collections.emptyList();
+                    log.error("❌ No OWNER staff found in DB — run onboarding first");
+                    resolvedUserId = DEV_USER_ID;
+                    tenantId       = DEV_USER_ID;
+                    email          = "unknown";
+                    role           = UserRole.OWNER;
+                    locationIds    = Collections.emptyList();
                 }
             } catch (Exception e) {
                 log.error("❌ Failed to load dev user: {}", e.getMessage());
-                tenantId = DEV_USER_ID;
-                email = "error";
-                role = UserRole.OWNER;
-                locationIds = Collections.emptyList();
+                resolvedUserId = DEV_USER_ID;
+                tenantId       = DEV_USER_ID;
+                email          = "error";
+                role           = UserRole.OWNER;
+                locationIds    = Collections.emptyList();
             }
         }
 
@@ -145,7 +149,7 @@ public class DevSecurityConfig {
             loadUserIfNeeded();
 
             UserPrincipal devUser = UserPrincipal.builder()
-                    .id(DEV_USER_ID)
+                    .id(resolvedUserId)
                     .email(email)
                     .tenantId(tenantId)
                     .role(role)
@@ -158,7 +162,7 @@ public class DevSecurityConfig {
             SecurityContextHolder.getContext().setAuthentication(auth);
 
             TenantContext.setCurrentTenant(tenantId);
-            TenantContext.setCurrentUser(DEV_USER_ID);
+            TenantContext.setCurrentUser(resolvedUserId);
             TenantContext.setCurrentRole(role);
             TenantContext.setCurrentLocationIds(locationIds);
 
