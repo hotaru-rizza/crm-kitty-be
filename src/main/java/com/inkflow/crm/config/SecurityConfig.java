@@ -1,6 +1,7 @@
 package com.inkflow.crm.config;
 
 import com.inkflow.crm.security.JwtAuthenticationFilter;
+import com.inkflow.crm.security.SubscriptionFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +27,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final SubscriptionFilter subscriptionFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -46,7 +48,8 @@ public class SecurityConfig {
                         .requestMatchers("/files/**").authenticated()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(subscriptionFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

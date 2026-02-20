@@ -27,8 +27,16 @@ public class MonobankInvoice {
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
-    @Column(name = "appointment_id", nullable = false)
+    /** null when this invoice is for a subscription payment */
+    @Column(name = "appointment_id")
     private UUID appointmentId;
+
+    /**
+     * APPOINTMENT or SUBSCRIPTION
+     */
+    @Column(name = "invoice_type", nullable = false)
+    @Builder.Default
+    private String invoiceType = "APPOINTMENT";
 
     /** Monobank's own invoice identifier */
     @Column(name = "monobank_invoice_id", nullable = false, unique = true)

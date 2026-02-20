@@ -28,39 +28,36 @@ public class TransactionService {
     private final LocationRepository locationRepository;
 
     @Transactional(readOnly = true)
-    public List<TransactionDto> getAllTransactions(PageRequest pageRequest, String type, String category) {
+    public List<TransactionDto> getAllTransactions(PageRequest pageRequest, String type, String category, Instant from, Instant to) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Transaction> page;
-
-        if (type != null) {
-            page = transactionRepository.findByTenantIdAndTypeAndDeletedAtIsNull(
-                    tenantId, TransactionType.fromValue(type), pageRequest.toPageable());
-        } else if (category != null) {
-            page = transactionRepository.findByTenantIdAndCategoryAndDeletedAtIsNull(
-                    tenantId, TransactionCategory.fromValue(category), pageRequest.toPageable());
-        } else {
-            page = transactionRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
-        }
-
+        Page<Transaction> page = resolveTransactionPage(pageRequest, type, category, from, to, tenantId);
         return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest, String type, String category) {
+    public PaginationDto getPagination(PageRequest pageRequest, String type, String category, Instant from, Instant to) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Transaction> page;
+        Page<Transaction> page = resolveTransactionPage(pageRequest, type, category, from, to, tenantId);
+        return PaginationDto.from(page);
+    }
 
-        if (type != null) {
-            page = transactionRepository.findByTenantIdAndTypeAndDeletedAtIsNull(
+    private Page<Transaction> resolveTransactionPage(PageRequest pageRequest, String type, String category, Instant from, Instant to, UUID tenantId) {
+        boolean hasDateRange = from != null && to != null;
+        if (type != null && hasDateRange) {
+            return transactionRepository.findByTenantIdAndTypeAndDateRangeAndDeletedAtIsNull(
+                    tenantId, TransactionType.fromValue(type), from, to, pageRequest.toPageable());
+        } else if (type != null) {
+            return transactionRepository.findByTenantIdAndTypeAndDeletedAtIsNull(
                     tenantId, TransactionType.fromValue(type), pageRequest.toPageable());
         } else if (category != null) {
-            page = transactionRepository.findByTenantIdAndCategoryAndDeletedAtIsNull(
+            return transactionRepository.findByTenantIdAndCategoryAndDeletedAtIsNull(
                     tenantId, TransactionCategory.fromValue(category), pageRequest.toPageable());
+        } else if (hasDateRange) {
+            return transactionRepository.findByTenantIdAndDateRangeAndDeletedAtIsNull(
+                    tenantId, from, to, pageRequest.toPageable());
         } else {
-            page = transactionRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
+            return transactionRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
         }
-
-        return PaginationDto.from(page);
     }
 
     @Transactional(readOnly = true)
@@ -122,7 +119,7 @@ public class TransactionService {
     }
 
     @Transactional(readOnly = true)
-    public FinanceStatsDto getFinanceStats(Instant from, Instant to) {
+    public FinanceStatsDto getFinanceStats(Instant from, Instant to, UUID staffId) {
         SecurityUtils.requireAdminAccess();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
@@ -149,20 +146,34 @@ public class TransactionService {
         }
 
         List<FinanceStatsDto.ArtistRevenueDto> byArtist = new ArrayList<>();
-        List<Object[]> artistResults = transactionRepository.sumByArtistAndDateRange(tenantId, from, to);
+        List<Object[]> artistResults = staffId != null
+                ? transactionRepository.sumByArtistAndDateRangeForStaff(tenantId, staffId, from, to)
+                : transactionRepository.sumByArtistAndDateRange(tenantId, from, to);
         for (Object[] row : artistResults) {
             UUID artistId = (UUID) row[0];
             String firstName = (String) row[1];
             String lastName = (String) row[2];
             BigDecimal revenue = (BigDecimal) row[3];
             Long count = (Long) row[4];
+            String calendarColor = (String) row[5];
 
             byArtist.add(FinanceStatsDto.ArtistRevenueDto.builder()
                     .artistId(artistId.toString())
                     .artistName(firstName + " " + lastName)
                     .revenue(revenue)
                     .appointmentsCount(count.intValue())
+                    .calendarColor(calendarColor)
                     .build());
+        }
+
+        List<Object[]> dateResults = staffId != null
+                ? transactionRepository.sumIncomeByDayAndDateRangeForStaff(tenantId, staffId, from, to)
+                : transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to);
+        Map<String, BigDecimal> byDate = new java.util.LinkedHashMap<>();
+        for (Object[] row : dateResults) {
+            String day = row[0].toString();
+            BigDecimal amount = new BigDecimal(row[1].toString());
+            byDate.put(day, amount);
         }
 
         return FinanceStatsDto.builder()
@@ -172,6 +183,7 @@ public class TransactionService {
                 .byCategory(byCategory)
                 .byPaymentMethod(byPaymentMethod)
                 .byArtist(byArtist)
+                .byDate(byDate)
                 .build();
     }
 

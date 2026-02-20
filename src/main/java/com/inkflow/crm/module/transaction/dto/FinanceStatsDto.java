@@ -20,6 +20,7 @@ public class FinanceStatsDto {
     private Map<String, BigDecimal> byCategory;
     private Map<String, BigDecimal> byPaymentMethod;
     private List<ArtistRevenueDto> byArtist;
+    private Map<String, BigDecimal> byDate;
 
     @Data
     @Builder
@@ -30,5 +31,6 @@ public class FinanceStatsDto {
         private String artistName;
         private BigDecimal revenue;
         private Integer appointmentsCount;
+        private String calendarColor;
     }
 }

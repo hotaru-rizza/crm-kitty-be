@@ -12,6 +12,7 @@ import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.module.onboarding.dto.OnboardingRequest;
 import com.inkflow.crm.module.onboarding.dto.OnboardingResponse;
+import com.inkflow.crm.module.subscription.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class OnboardingService {
     private final StaffRepository staffRepository;
     private final LocationRepository locationRepository;
     private final CompanySettingsRepository companySettingsRepository;
+    private final SubscriptionService subscriptionService;
 
     @Transactional
     public OnboardingResponse completeOnboarding(UUID supabaseUserId, String email, OnboardingRequest request) {
@@ -86,7 +88,8 @@ public class OnboardingService {
                 .build();
         companySettingsRepository.save(settings);
 
-        // 5. Store additional info (instagram, teamSize) - can be stored in tenant metadata later
+        // 5. Create 14-day free trial subscription
+        subscriptionService.createTrialForTenant(tenant.getId());
 
         return OnboardingResponse.builder()
                 .userId(owner.getId())

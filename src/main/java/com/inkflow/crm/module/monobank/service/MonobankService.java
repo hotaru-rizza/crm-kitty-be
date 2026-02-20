@@ -34,6 +34,7 @@ public class MonobankService {
     private final TransactionRepository transactionRepository;
     private final StaffRepository staffRepository;
     private final ObjectMapper objectMapper;
+    private final com.inkflow.crm.module.subscription.service.SubscriptionService subscriptionService;
 
     private static final int CCY_UAH = 980;
 
@@ -133,7 +134,11 @@ public class MonobankService {
 
         if ("success".equals(payload.getStatus())) {
             invoice.setPaidAt(Instant.now());
-            recordSuccessfulPayment(invoice, payload);
+            if ("SUBSCRIPTION".equals(invoice.getInvoiceType())) {
+                subscriptionService.activateSubscription(invoice.getTenantId(), payload.getInvoiceId());
+            } else {
+                recordSuccessfulPayment(invoice, payload);
+            }
         }
 
         invoiceRepository.save(invoice);

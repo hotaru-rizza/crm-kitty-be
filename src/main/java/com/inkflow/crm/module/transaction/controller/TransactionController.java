@@ -29,9 +29,11 @@ public class TransactionController {
     public ResponseEntity<ApiResponse<List<TransactionDto>>> getAllTransactions(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) String category) {
-        List<TransactionDto> transactions = transactionService.getAllTransactions(pageRequest, type, category);
-        PaginationDto pagination = transactionService.getPagination(pageRequest, type, category);
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+        List<TransactionDto> transactions = transactionService.getAllTransactions(pageRequest, type, category, from, to);
+        PaginationDto pagination = transactionService.getPagination(pageRequest, type, category, from, to);
         return ResponseEntity.ok(ApiResponse.success(transactions, pagination));
     }
 
@@ -50,11 +52,12 @@ public class TransactionController {
     public ResponseEntity<ApiResponse<FinanceStatsDto>> getFinanceStats(
             @RequestParam(required = false) String period,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
-        
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required = false) UUID staffId) {
+
         LocalDate now = LocalDate.now();
         ZoneId zone = ZoneId.systemDefault();
-        
+
         if (period != null) {
             switch (period.toLowerCase()) {
                 case "week" -> {
@@ -75,12 +78,11 @@ public class TransactionController {
                 }
             }
         } else if (from == null || to == null) {
-            // Default to current month
             from = now.withDayOfMonth(1).atStartOfDay(zone).toInstant();
             to = now.plusMonths(1).withDayOfMonth(1).atStartOfDay(zone).toInstant();
         }
-        
-        FinanceStatsDto stats = transactionService.getFinanceStats(from, to);
+
+        FinanceStatsDto stats = transactionService.getFinanceStats(from, to, staffId);
         return ResponseEntity.ok(ApiResponse.success(stats));
     }
 

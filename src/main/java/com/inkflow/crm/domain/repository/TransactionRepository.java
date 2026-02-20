@@ -24,6 +24,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     Page<Transaction> findByTenantIdAndCategoryAndDeletedAtIsNull(UUID tenantId, TransactionCategory category, Pageable pageable);
     Page<Transaction> findByTenantIdAndStaffIdAndDeletedAtIsNull(UUID tenantId, UUID staffId, Pageable pageable);
 
+    @Query("SELECT t FROM Transaction t WHERE t.tenantId = :tenantId AND t.date >= :from AND t.date < :to AND t.deletedAt IS NULL")
+    Page<Transaction> findByTenantIdAndDateRangeAndDeletedAtIsNull(@Param("tenantId") UUID tenantId, @Param("from") Instant from, @Param("to") Instant to, Pageable pageable);
+
+    @Query("SELECT t FROM Transaction t WHERE t.tenantId = :tenantId AND t.type = :type AND t.date >= :from AND t.date < :to AND t.deletedAt IS NULL")
+    Page<Transaction> findByTenantIdAndTypeAndDateRangeAndDeletedAtIsNull(@Param("tenantId") UUID tenantId, @Param("type") TransactionType type, @Param("from") Instant from, @Param("to") Instant to, Pageable pageable);
+
     @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.tenantId = :tenantId AND t.type = :type AND t.date >= :from AND t.date < :to AND t.deletedAt IS NULL")
     BigDecimal sumByTypeAndDateRange(@Param("tenantId") UUID tenantId, @Param("type") TransactionType type, @Param("from") Instant from, @Param("to") Instant to);
 
@@ -33,8 +39,17 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     @Query("SELECT t.paymentMethod, SUM(t.amount) FROM Transaction t WHERE t.tenantId = :tenantId AND t.type = 'INCOME' AND t.date >= :from AND t.date < :to AND t.deletedAt IS NULL GROUP BY t.paymentMethod")
     List<Object[]> sumByPaymentMethodAndDateRange(@Param("tenantId") UUID tenantId, @Param("from") Instant from, @Param("to") Instant to);
 
-    @Query("SELECT t.staff.id, t.staff.firstName, t.staff.lastName, SUM(t.amount), COUNT(t) FROM Transaction t WHERE t.tenantId = :tenantId AND t.type = 'INCOME' AND t.category = 'SERVICE' AND t.date >= :from AND t.date < :to AND t.staff IS NOT NULL AND t.deletedAt IS NULL GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName")
+    @Query("SELECT t.staff.id, t.staff.firstName, t.staff.lastName, SUM(t.amount), COUNT(t), t.staff.calendarColor FROM Transaction t WHERE t.tenantId = :tenantId AND t.type = 'INCOME' AND t.category = 'SERVICE' AND t.date >= :from AND t.date < :to AND t.staff IS NOT NULL AND t.deletedAt IS NULL GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName, t.staff.calendarColor")
     List<Object[]> sumByArtistAndDateRange(@Param("tenantId") UUID tenantId, @Param("from") Instant from, @Param("to") Instant to);
+
+    @Query("SELECT t.staff.id, t.staff.firstName, t.staff.lastName, SUM(t.amount), COUNT(t), t.staff.calendarColor FROM Transaction t WHERE t.tenantId = :tenantId AND t.staff.id = :staffId AND t.type = 'INCOME' AND t.category = 'SERVICE' AND t.date >= :from AND t.date < :to AND t.staff IS NOT NULL AND t.deletedAt IS NULL GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName, t.staff.calendarColor")
+    List<Object[]> sumByArtistAndDateRangeForStaff(@Param("tenantId") UUID tenantId, @Param("staffId") UUID staffId, @Param("from") Instant from, @Param("to") Instant to);
+
+    @Query(value = "SELECT t.date::date AS day, SUM(t.amount) FROM transactions t WHERE t.tenant_id = :tenantId AND t.type = 'INCOME' AND t.date >= :from AND t.date < :to AND t.deleted_at IS NULL GROUP BY t.date::date ORDER BY t.date::date", nativeQuery = true)
+    List<Object[]> sumIncomeByDayAndDateRange(@Param("tenantId") UUID tenantId, @Param("from") Instant from, @Param("to") Instant to);
+
+    @Query(value = "SELECT t.date::date AS day, SUM(t.amount) FROM transactions t WHERE t.tenant_id = :tenantId AND t.staff_id = :staffId AND t.type = 'INCOME' AND t.date >= :from AND t.date < :to AND t.deleted_at IS NULL GROUP BY t.date::date ORDER BY t.date::date", nativeQuery = true)
+    List<Object[]> sumIncomeByDayAndDateRangeForStaff(@Param("tenantId") UUID tenantId, @Param("staffId") UUID staffId, @Param("from") Instant from, @Param("to") Instant to);
 
     long countByTenantIdAndDateBetweenAndDeletedAtIsNull(UUID tenantId, Instant from, Instant to);
     
