@@ -52,6 +52,9 @@ public class Project extends BaseEntity {
     @Column(name = "completed_sessions", nullable = false)
     private Integer completedSessions = 0;
 
+    @Column(name = "sketch_image")
+    private String sketchImage;
+
     @OneToMany(mappedBy = "project")
     @Builder.Default
     private List<Appointment> appointments = new ArrayList<>();

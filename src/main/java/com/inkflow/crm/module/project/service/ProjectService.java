@@ -6,12 +6,14 @@ import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.GalleryPhoto;
+import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Project;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.GalleryStage;
 import com.inkflow.crm.domain.enums.ProjectStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
+import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ProjectRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.client.dto.ClientSummaryDto;
@@ -36,6 +38,7 @@ public class ProjectService {
     private final ClientRepository clientRepository;
     private final StaffRepository staffRepository;
     private final GalleryPhotoRepository galleryPhotoRepository;
+    private final LocationRepository locationRepository;
 
     @Transactional(readOnly = true)
     public List<ProjectDto> getAllProjects(PageRequest pageRequest, String status, UUID artistId, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
@@ -79,17 +82,24 @@ public class ProjectService {
         Staff artist = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getArtistId(), tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.staff(request.getArtistId().toString()));
 
+        Location location = null;
+        if (request.getLocationId() != null) {
+            location = locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getLocationId(), tenantId).orElse(null);
+        }
+
         Project project = Project.builder()
                 .tenantId(tenantId)
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .client(client)
                 .artist(artist)
+                .location(location)
                 .status(ProjectStatus.IN_PROGRESS)
                 .estimatedCost(request.getEstimatedCost())
                 .totalPaid(BigDecimal.ZERO)
                 .totalSessions(request.getTotalSessions())
                 .completedSessions(0)
+                .sketchImage(request.getSketchImage())
                 .build();
 
         project = projectRepository.save(project);
@@ -116,6 +126,10 @@ public class ProjectService {
 
         if (request.getStatus() != null) {
             project.setStatus(ProjectStatus.fromValue(request.getStatus()));
+        }
+
+        if (request.getSketchImage() != null) {
+            project.setSketchImage(request.getSketchImage().isBlank() ? null : request.getSketchImage());
         }
 
         project = projectRepository.save(project);
@@ -225,6 +239,7 @@ public class ProjectService {
                 .totalPaid(project.getTotalPaid())
                 .totalSessions(project.getTotalSessions())
                 .completedSessions(project.getCompletedSessions())
+                .sketchImage(project.getSketchImage())
                 .createdAt(project.getCreatedAt())
                 .photos(photos)
                 .sessions(sessions)

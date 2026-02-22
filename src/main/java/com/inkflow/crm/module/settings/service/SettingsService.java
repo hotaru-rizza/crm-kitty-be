@@ -33,7 +33,9 @@ public class SettingsService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         CompanySettings settings = companySettingsRepository.findByTenantId(tenantId)
                 .orElseGet(() -> createDefaultSettings(tenantId));
-        return mapToDto(settings);
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.NOT_FOUND, "Tenant not found"));
+        return mapToDto(settings, tenant.getAccountType());
     }
 
     @Transactional
@@ -57,7 +59,9 @@ public class SettingsService {
         settings.setUpdatedBy(SecurityUtils.getCurrentUserId());
 
         settings = companySettingsRepository.save(settings);
-        return mapToDto(settings);
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.NOT_FOUND, "Tenant not found"));
+        return mapToDto(settings, tenant.getAccountType());
     }
 
     private CompanySettings createDefaultSettings(UUID tenantId) {
@@ -80,7 +84,7 @@ public class SettingsService {
         return companySettingsRepository.save(settings);
     }
 
-    private CompanySettingsDto mapToDto(CompanySettings settings) {
+    private CompanySettingsDto mapToDto(CompanySettings settings, String accountType) {
         return CompanySettingsDto.builder()
                 .smsReminders(settings.getSmsReminders())
                 .telegramReminders(settings.getTelegramReminders())
@@ -92,6 +96,7 @@ public class SettingsService {
                 .minAdvanceHours(settings.getMinAdvanceHours())
                 .maxAdvanceDays(settings.getMaxAdvanceDays())
                 .updatedAt(settings.getUpdatedAt())
+                .accountType(accountType != null ? accountType : "STUDIO")
                 .build();
     }
 

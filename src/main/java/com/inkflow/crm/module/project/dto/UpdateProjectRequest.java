@@ -30,4 +30,6 @@ public class UpdateProjectRequest {
 
     @Pattern(regexp = "^(in_progress|on_hold|completed|cancelled)$", message = "Invalid status")
     private String status;
+
+    private String sketchImage;
 }

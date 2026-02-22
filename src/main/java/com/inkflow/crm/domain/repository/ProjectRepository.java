@@ -27,7 +27,7 @@ public interface ProjectRepository extends JpaRepository<Project, UUID> {
            "AND (:artistId IS NULL OR p.artist.id = :artistId) " +
            "AND (:clientId IS NULL OR p.client.id = :clientId) " +
            "AND (COALESCE(:search, '') = '' OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-           "AND (:locationId IS NULL OR p.location.id = :locationId)")
+           "AND (:locationId IS NULL OR p.location IS NULL OR p.location.id = :locationId)")
     Page<Project> findWithFilters(
             @Param("tenantId") UUID tenantId,
             @Param("status") ProjectStatus status,

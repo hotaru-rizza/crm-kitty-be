@@ -27,6 +27,8 @@ public class CreateProjectRequest {
     @NotNull(message = "Artist ID is required")
     private UUID artistId;
 
+    private UUID locationId;
+
     @NotNull(message = "Estimated cost is required")
     @DecimalMin(value = "0.0", message = "Estimated cost must be positive")
     private BigDecimal estimatedCost;
@@ -34,4 +36,6 @@ public class CreateProjectRequest {
     @NotNull(message = "Total sessions is required")
     @Min(value = 1, message = "Total sessions must be at least 1")
     private Integer totalSessions;
+
+    private String sketchImage;
 }

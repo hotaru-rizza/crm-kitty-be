@@ -27,6 +27,7 @@ public class ProjectDto {
     private BigDecimal totalPaid;
     private Integer totalSessions;
     private Integer completedSessions;
+    private String sketchImage;
     private Instant createdAt;
     private List<PhotoDto> photos;
     private List<SessionDto> sessions;

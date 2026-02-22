@@ -37,12 +37,14 @@ public class OnboardingService {
         log.info("Starting onboarding for user: {}", email);
 
         // 1. Create Tenant
+        String accountType = "solo".equalsIgnoreCase(request.getTeamSize()) ? "SOLO" : "STUDIO";
         Tenant tenant = Tenant.builder()
                 .name(request.getCompanyName())
                 .subdomain(generateSubdomain(request.getCompanyName()))
                 .currency("UAH")
                 .timezone("Europe/Kyiv")
                 .language("ua")
+                .accountType(accountType)
                 .isActive(true)
                 .build();
         tenant = tenantRepository.save(tenant);

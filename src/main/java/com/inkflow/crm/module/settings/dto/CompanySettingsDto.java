@@ -22,4 +22,5 @@ public class CompanySettingsDto {
     private Integer minAdvanceHours;
     private Integer maxAdvanceDays;
     private Instant updatedAt;
+    private String accountType;
 }
