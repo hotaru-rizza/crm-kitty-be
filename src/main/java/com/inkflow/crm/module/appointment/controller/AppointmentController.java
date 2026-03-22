@@ -28,10 +28,11 @@ public class AppointmentController {
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) UUID locationId,
             @RequestParam(required = false) UUID artistId,
+            @RequestParam(required = false) UUID serviceId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
-        AppointmentFilterRequest filter = new AppointmentFilterRequest(locationId, artistId, status, from, to);
+        AppointmentFilterRequest filter = new AppointmentFilterRequest(locationId, artistId, serviceId, status, from, to);
         List<AppointmentDto> appointments = appointmentService.getAllAppointments(pageRequest, filter);
         PaginationDto pagination = appointmentService.getPagination(pageRequest, filter);
         return ResponseEntity.ok(ApiResponse.success(appointments, pagination));
@@ -42,6 +43,7 @@ public class AppointmentController {
     public static class AppointmentFilterRequest {
         private UUID locationId;
         private UUID artistId;
+        private UUID serviceId;
         private String status;
         private String from;
         private String to;

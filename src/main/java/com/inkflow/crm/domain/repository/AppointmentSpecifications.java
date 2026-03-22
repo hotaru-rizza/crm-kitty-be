@@ -42,4 +42,9 @@ public final class AppointmentSpecifications {
         if (to == null) return null;
         return (root, query, cb) -> cb.lessThanOrEqualTo(root.get("startTime"), to);
     }
+
+    public static Specification<Appointment> withService(UUID serviceId) {
+        if (serviceId == null) return null;
+        return (root, query, cb) -> cb.equal(root.get("service").get("id"), serviceId);
+    }
 }

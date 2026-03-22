@@ -57,6 +57,7 @@ public class AppointmentService {
                 .and(AppointmentSpecifications.notDeleted())
                 .and(AppointmentSpecifications.withLocation(filter.getLocationId()))
                 .and(AppointmentSpecifications.withArtist(filter.getArtistId()))
+                .and(AppointmentSpecifications.withService(filter.getServiceId()))
                 .and(AppointmentSpecifications.withStatus(filter.getStatus()))
                 .and(AppointmentSpecifications.startTimeAfter(from))
                 .and(AppointmentSpecifications.startTimeBefore(to));
