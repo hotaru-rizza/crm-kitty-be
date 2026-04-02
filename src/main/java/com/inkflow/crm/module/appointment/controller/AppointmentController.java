@@ -5,6 +5,7 @@ import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.module.appointment.dto.*;
 import com.inkflow.crm.module.appointment.service.AppointmentService;
+import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -24,6 +25,7 @@ public class AppointmentController {
     private final AppointmentService appointmentService;
 
     @GetMapping
+    @RequirePermission({"calendar.view_all", "calendar.view_own"})
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAllAppointments(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) UUID locationId,
@@ -50,6 +52,7 @@ public class AppointmentController {
     }
 
     @GetMapping("/client/{clientId}")
+    @RequirePermission({"calendar.view_all", "calendar.view_own"})
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getClientHistory(
             @PathVariable UUID clientId,
             @ModelAttribute PageRequest pageRequest) {
@@ -58,24 +61,28 @@ public class AppointmentController {
     }
 
     @GetMapping("/{id}")
+    @RequirePermission({"calendar.view_all", "calendar.view_own"})
     public ResponseEntity<ApiResponse<AppointmentDetailDto>> getAppointment(@PathVariable UUID id) {
         AppointmentDetailDto appointment = appointmentService.getAppointmentById(id);
         return ResponseEntity.ok(ApiResponse.success(appointment));
     }
 
     @GetMapping("/calendar")
+    @RequirePermission({"calendar.view_all", "calendar.view_own"})
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getCalendar(@Valid @ModelAttribute CalendarQueryRequest request) {
         List<AppointmentDto> appointments = appointmentService.getCalendar(request);
         return ResponseEntity.ok(ApiResponse.success(appointments));
     }
 
     @PostMapping
+    @RequirePermission("calendar.create")
     public ResponseEntity<ApiResponse<AppointmentDto>> createAppointment(@Valid @RequestBody CreateAppointmentRequest request) {
         AppointmentDto appointment = appointmentService.createAppointment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(appointment));
     }
 
     @PatchMapping("/{id}")
+    @RequirePermission("calendar.edit")
     public ResponseEntity<ApiResponse<AppointmentDto>> updateAppointment(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateAppointmentRequest request) {
@@ -84,12 +91,14 @@ public class AppointmentController {
     }
 
     @DeleteMapping("/{id}")
+    @RequirePermission("calendar.cancel")
     public ResponseEntity<ApiResponse<Void>> deleteAppointment(@PathVariable UUID id) {
         appointmentService.deleteAppointment(id);
         return ResponseEntity.ok(ApiResponse.empty());
     }
 
     @PostMapping("/{id}/photos")
+    @RequirePermission("calendar.edit")
     public ResponseEntity<ApiResponse<AppointmentDetailDto.PhotoDto>> addPhoto(
             @PathVariable UUID id,
             @Valid @RequestBody AddPhotoRequest request) {
@@ -98,6 +107,7 @@ public class AppointmentController {
     }
 
     @DeleteMapping("/{id}/photos/{photoId}")
+    @RequirePermission("calendar.edit")
     public ResponseEntity<ApiResponse<Void>> deletePhoto(
             @PathVariable UUID id,
             @PathVariable UUID photoId) {

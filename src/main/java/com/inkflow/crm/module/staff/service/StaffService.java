@@ -66,7 +66,6 @@ public class StaffService {
 
     @Transactional
     public StaffDto createStaff(CreateStaffRequest request) {
-        SecurityUtils.requireAdminAccess();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         if (staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull(request.getEmail(), tenantId)) {
@@ -85,7 +84,6 @@ public class StaffService {
 
     @Transactional
     public StaffDto updateStaff(UUID id, UpdateStaffRequest request) {
-        SecurityUtils.requireAdminAccess();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         Staff staff = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
@@ -161,7 +159,6 @@ public class StaffService {
 
     @Transactional
     public String inviteStaff(InviteStaffRequest request) {
-        SecurityUtils.requireAdminAccess();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UUID currentUserId = SecurityUtils.getCurrentUserId();
 
@@ -306,7 +303,6 @@ public class StaffService {
 
     @Transactional
     public List<StaffServiceDto> updateStaffServices(UUID staffId, UpdateStaffServicesRequest request) {
-        SecurityUtils.requireAdminAccess();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         Staff staff = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)
@@ -340,7 +336,6 @@ public class StaffService {
 
     @Transactional
     public StaffServiceDto addServiceToStaff(UUID staffId, UUID serviceId, java.math.BigDecimal customPrice, Integer customDuration) {
-        SecurityUtils.requireAdminAccess();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         Staff staff = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)
@@ -369,7 +364,6 @@ public class StaffService {
 
     @Transactional
     public void removeServiceFromStaff(UUID staffId, UUID serviceId) {
-        SecurityUtils.requireAdminAccess();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)

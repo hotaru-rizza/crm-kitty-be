@@ -18,6 +18,7 @@ import com.inkflow.crm.domain.repository.ProjectRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.client.dto.ClientSummaryDto;
 import com.inkflow.crm.module.project.dto.*;
+import com.inkflow.crm.module.settings.service.SettingsService;
 import com.inkflow.crm.module.staff.dto.StaffSummaryDto;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class ProjectService {
     private final StaffRepository staffRepository;
     private final GalleryPhotoRepository galleryPhotoRepository;
     private final LocationRepository locationRepository;
+    private final SettingsService settingsService;
 
     @Transactional(readOnly = true)
     public List<ProjectDto> getAllProjects(PageRequest pageRequest, String status, UUID artistId, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
@@ -56,7 +58,9 @@ public class ProjectService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         ProjectStatus projectStatus = status != null ? ProjectStatus.fromValue(status) : null;
         
-        // If onlyMine is true, use current user's ID as artistId
+        if (!settingsService.hasPermission(tenantId, SecurityUtils.getCurrentUserRole(), "projects.view_all")) {
+            onlyMine = true;
+        }
         UUID effectiveArtistId = artistId;
         if (Boolean.TRUE.equals(onlyMine)) {
             effectiveArtistId = SecurityUtils.getCurrentUserId();

@@ -4,6 +4,7 @@ import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.module.staff.dto.*;
+import com.inkflow.crm.security.RequirePermission;
 import com.inkflow.crm.module.staff.service.StaffService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class StaffController {
     private final StaffService staffService;
 
     @GetMapping
+    @RequirePermission("staff.view")
     public ResponseEntity<ApiResponse<List<StaffDto>>> getAllStaff(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String search,
@@ -35,18 +37,21 @@ public class StaffController {
     }
 
     @GetMapping("/{id}")
+    @RequirePermission("staff.view")
     public ResponseEntity<ApiResponse<StaffDetailDto>> getStaff(@PathVariable UUID id) {
         StaffDetailDto staff = staffService.getStaffById(id);
         return ResponseEntity.ok(ApiResponse.success(staff));
     }
 
     @PostMapping
+    @RequirePermission("staff.invite")
     public ResponseEntity<ApiResponse<StaffDto>> createStaff(@Valid @RequestBody CreateStaffRequest request) {
         StaffDto staff = staffService.createStaff(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(staff));
     }
 
     @PatchMapping("/{id}")
+    @RequirePermission("staff.edit")
     public ResponseEntity<ApiResponse<StaffDto>> updateStaff(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateStaffRequest request) {
@@ -61,6 +66,7 @@ public class StaffController {
     }
 
     @PutMapping("/{id}/schedule")
+    @RequirePermission("staff.edit")
     public ResponseEntity<ApiResponse<Void>> updateSchedule(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateScheduleRequest request) {
@@ -75,6 +81,7 @@ public class StaffController {
     }
 
     @PostMapping("/invite")
+    @RequirePermission("staff.invite")
     public ResponseEntity<ApiResponse<Map<String, String>>> inviteStaff(@Valid @RequestBody InviteStaffRequest request) {
         String token = staffService.inviteStaff(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(Map.of("token", token)));
@@ -89,12 +96,14 @@ public class StaffController {
     // ======== Staff Services Management ========
 
     @GetMapping("/{id}/services")
+    @RequirePermission("staff.view")
     public ResponseEntity<ApiResponse<List<StaffServiceDto>>> getStaffServices(@PathVariable UUID id) {
         List<StaffServiceDto> services = staffService.getStaffServices(id);
         return ResponseEntity.ok(ApiResponse.success(services));
     }
 
     @PutMapping("/{id}/services")
+    @RequirePermission("staff.edit")
     public ResponseEntity<ApiResponse<List<StaffServiceDto>>> updateStaffServices(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateStaffServicesRequest request) {
@@ -103,6 +112,7 @@ public class StaffController {
     }
 
     @PostMapping("/{id}/services/{serviceId}")
+    @RequirePermission("staff.edit")
     public ResponseEntity<ApiResponse<StaffServiceDto>> addServiceToStaff(
             @PathVariable UUID id,
             @PathVariable UUID serviceId,
@@ -114,6 +124,7 @@ public class StaffController {
     }
 
     @DeleteMapping("/{id}/services/{serviceId}")
+    @RequirePermission("staff.edit")
     public ResponseEntity<ApiResponse<Void>> removeServiceFromStaff(
             @PathVariable UUID id,
             @PathVariable UUID serviceId) {

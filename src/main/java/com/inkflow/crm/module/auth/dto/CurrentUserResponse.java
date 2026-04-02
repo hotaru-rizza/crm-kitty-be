@@ -22,18 +22,5 @@ public class CurrentUserResponse {
     private UUID tenantId;
     private String tenantName;
     private List<UUID> locationIds;
-    private PermissionsDto permissions;
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class PermissionsDto {
-        private boolean canManageStaff;
-        private boolean canManageClients;
-        private boolean canManageServices;
-        private boolean canManageLocations;
-        private boolean canViewFinances;
-        private boolean canManageSettings;
-    }
+    private List<String> permissions;
 }

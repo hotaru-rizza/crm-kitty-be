@@ -70,7 +70,6 @@ public class TransactionService {
 
     @Transactional
     public TransactionDto createTransaction(CreateTransactionRequest request) {
-        SecurityUtils.requireAdminAccess();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         Location location = locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getLocationId(), tenantId)
@@ -120,7 +119,6 @@ public class TransactionService {
 
     @Transactional(readOnly = true)
     public FinanceStatsDto getFinanceStats(Instant from, Instant to, UUID staffId) {
-        SecurityUtils.requireAdminAccess();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         BigDecimal totalIncome = transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to);

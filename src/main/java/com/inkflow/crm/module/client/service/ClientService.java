@@ -13,6 +13,7 @@ import com.inkflow.crm.domain.repository.ProjectRepository;
 import com.inkflow.crm.module.client.dto.*;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
 import com.inkflow.crm.module.project.dto.ProjectSummaryDto;
+import com.inkflow.crm.module.settings.service.SettingsService;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,7 @@ public class ClientService {
     private final ClientRepository clientRepository;
     private final ProjectRepository projectRepository;
     private final ClientMapper clientMapper;
+    private final SettingsService settingsService;
 
     @Transactional(readOnly = true)
     public List<ClientDto> getAllClients(PageRequest pageRequest, String search, String status, Boolean onlyMine) {
@@ -47,7 +49,9 @@ public class ClientService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         ClientStatus clientStatus = status != null ? ClientStatus.fromValue(status) : null;
         
-        // If onlyMine is true, get current user's ID to filter clients who have projects with this artist
+        if (!settingsService.hasPermission(tenantId, SecurityUtils.getCurrentUserRole(), "clients.view_all")) {
+            onlyMine = true;
+        }
         UUID artistId = Boolean.TRUE.equals(onlyMine) ? SecurityUtils.getCurrentUserId() : null;
 
         return clientRepository.findWithFilters(tenantId, search, clientStatus, artistId, pageRequest.toPageable());

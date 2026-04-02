@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.inkflow.crm.security.RequirePermission;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,6 +24,7 @@ public class ClientController {
     private final ClientService clientService;
 
     @GetMapping
+    @RequirePermission({"clients.view_all", "clients.view_own"})
     public ResponseEntity<ApiResponse<List<ClientDto>>> getAllClients(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String search,
@@ -34,18 +36,21 @@ public class ClientController {
     }
 
     @GetMapping("/{id}")
+    @RequirePermission({"clients.view_all", "clients.view_own"})
     public ResponseEntity<ApiResponse<ClientDetailDto>> getClient(@PathVariable UUID id) {
         ClientDetailDto client = clientService.getClientById(id);
         return ResponseEntity.ok(ApiResponse.success(client));
     }
 
     @PostMapping
+    @RequirePermission("clients.create")
     public ResponseEntity<ApiResponse<ClientDto>> createClient(@Valid @RequestBody CreateClientRequest request) {
         ClientDto client = clientService.createClient(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(client));
     }
 
     @PatchMapping("/{id}")
+    @RequirePermission("clients.edit")
     public ResponseEntity<ApiResponse<ClientDto>> updateClient(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateClientRequest request) {
@@ -54,6 +59,7 @@ public class ClientController {
     }
 
     @DeleteMapping("/{id}")
+    @RequirePermission("clients.delete")
     public ResponseEntity<ApiResponse<Void>> deleteClient(@PathVariable UUID id) {
         clientService.deleteClient(id);
         return ResponseEntity.ok(ApiResponse.empty());

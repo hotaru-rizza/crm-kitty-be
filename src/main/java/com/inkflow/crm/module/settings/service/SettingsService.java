@@ -167,6 +167,21 @@ public class SettingsService {
                 .orElse(false);
     }
 
+    @Transactional(readOnly = true)
+    public List<String> getGrantedPermissions(UUID tenantId, UserRole role) {
+        if (role == UserRole.OWNER) {
+            return java.util.Arrays.stream(Permission.values())
+                    .map(Permission::getValue)
+                    .toList();
+        }
+        initializeDefaultPermissionsIfNeeded(tenantId);
+        return rolePermissionRepository.findByTenantIdAndRole(tenantId, role)
+                .stream()
+                .filter(RolePermission::getGranted)
+                .map(RolePermission::getPermission)
+                .toList();
+    }
+
     private void initializeDefaultPermissionsIfNeeded(UUID tenantId) {
         if (!rolePermissionRepository.findByTenantId(tenantId).isEmpty()) return;
 

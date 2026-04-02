@@ -6,6 +6,7 @@ import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.module.client.dto.ClientDto;
 import com.inkflow.crm.module.request.dto.*;
 import com.inkflow.crm.module.request.service.RequestService;
+import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -25,6 +26,7 @@ public class RequestController {
     private final RequestService requestService;
 
     @GetMapping
+    @RequirePermission("requests.view")
     public ResponseEntity<ApiResponse<List<RequestDto>>> getAllRequests(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String status,
@@ -38,6 +40,7 @@ public class RequestController {
     }
 
     @GetMapping("/{id}")
+    @RequirePermission("requests.view")
     public ResponseEntity<ApiResponse<RequestDto>> getRequest(@PathVariable UUID id) {
         RequestDto request = requestService.getRequestById(id);
         return ResponseEntity.ok(ApiResponse.success(request));
@@ -50,6 +53,7 @@ public class RequestController {
     }
 
     @PatchMapping("/{id}/status")
+    @RequirePermission("requests.change_status")
     public ResponseEntity<ApiResponse<RequestDto>> updateRequestStatus(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateRequestStatusRequest request) {
@@ -58,6 +62,7 @@ public class RequestController {
     }
 
     @PostMapping("/{id}/convert")
+    @RequirePermission(value = {"requests.change_status", "clients.create"}, requireAll = true)
     public ResponseEntity<ApiResponse<ClientDto>> convertToClient(
             @PathVariable UUID id,
             @Valid @RequestBody ConvertRequestRequest request) {
@@ -66,6 +71,7 @@ public class RequestController {
     }
 
     @DeleteMapping("/{id}")
+    @RequirePermission("requests.change_status")
     public ResponseEntity<ApiResponse<Void>> deleteRequest(@PathVariable UUID id) {
         requestService.deleteRequest(id);
         return ResponseEntity.ok(ApiResponse.empty());

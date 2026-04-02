@@ -5,6 +5,7 @@ import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.module.transaction.dto.*;
 import com.inkflow.crm.module.transaction.service.TransactionService;
+import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -26,6 +27,7 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     @GetMapping
+    @RequirePermission("finance.view")
     public ResponseEntity<ApiResponse<List<TransactionDto>>> getAllTransactions(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String type,
@@ -38,6 +40,7 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
+    @RequirePermission("finance.view")
     public ResponseEntity<ApiResponse<TransactionDto>> getTransaction(@PathVariable UUID id) {
         TransactionDto transaction = transactionService.getTransactionById(id);
         return ResponseEntity.ok(ApiResponse.success(transaction));
@@ -49,6 +52,7 @@ public class TransactionController {
      * - from/to: explicit date range
      */
     @GetMapping("/stats")
+    @RequirePermission("finance.view")
     public ResponseEntity<ApiResponse<FinanceStatsDto>> getFinanceStats(
             @RequestParam(required = false) String period,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
@@ -87,6 +91,7 @@ public class TransactionController {
     }
 
     @PostMapping
+    @RequirePermission("finance.create")
     public ResponseEntity<ApiResponse<TransactionDto>> createTransaction(@Valid @RequestBody CreateTransactionRequest request) {
         TransactionDto transaction = transactionService.createTransaction(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(transaction));

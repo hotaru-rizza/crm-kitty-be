@@ -5,6 +5,7 @@ import com.inkflow.crm.module.settings.dto.*;
 
 import java.util.List;
 import com.inkflow.crm.module.settings.service.SettingsService;
+import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ public class SettingsController {
     private final SettingsService settingsService;
 
     @GetMapping({"", "/company"})
+    @RequirePermission("settings.access")
     public ResponseEntity<ApiResponse<CompanySettingsDto>> getCompanySettings() {
         CompanySettingsDto settings = settingsService.getCompanySettings();
         return ResponseEntity.ok(ApiResponse.success(settings));
@@ -31,11 +33,13 @@ public class SettingsController {
     }
 
     @GetMapping("/permissions")
+    @RequirePermission("settings.roles")
     public ResponseEntity<ApiResponse<List<PermissionDto>>> getAllPermissions() {
         return ResponseEntity.ok(ApiResponse.success(settingsService.getAllPermissions()));
     }
 
     @GetMapping("/roles")
+    @RequirePermission("settings.roles")
     public ResponseEntity<ApiResponse<List<RolePermissionsDto>>> getAllRolePermissions() {
         return ResponseEntity.ok(ApiResponse.success(settingsService.getAllRolePermissions()));
     }

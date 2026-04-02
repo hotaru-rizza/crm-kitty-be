@@ -6,6 +6,7 @@ import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.module.auth.dto.CurrentUserResponse;
+import com.inkflow.crm.module.settings.service.SettingsService;
 import com.inkflow.crm.security.SecurityUtils;
 import com.inkflow.crm.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -18,13 +19,12 @@ public class AuthService {
 
     private final StaffRepository staffRepository;
     private final TenantRepository tenantRepository;
+    private final SettingsService settingsService;
 
     @Transactional(readOnly = true)
     public CurrentUserResponse getCurrentUser() {
         UserPrincipal principal = SecurityUtils.getCurrentUserOrThrow();
 
-        // In production: principal.getId() is the Supabase user UUID → match via authUserId.
-        // In dev mode: principal.getId() is the Staff primary key → fall back to findById.
         Staff staff = staffRepository.findByAuthUserIdAndDeletedAtIsNull(principal.getId().toString())
                 .or(() -> staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(principal.getId(), principal.getTenantId()))
                 .orElseThrow(() -> ResourceNotFoundException.staff(principal.getId().toString()));
@@ -43,21 +43,8 @@ public class AuthService {
                 .tenantId(tenant.getId())
                 .tenantName(tenant.getName())
                 .locationIds(principal.getLocationIds())
-                .permissions(buildPermissions(principal))
-                .build();
-    }
-
-    private CurrentUserResponse.PermissionsDto buildPermissions(UserPrincipal principal) {
-        boolean isAdmin = principal.isAdmin();
-        boolean isOwner = principal.isOwner();
-
-        return CurrentUserResponse.PermissionsDto.builder()
-                .canManageStaff(isAdmin)
-                .canManageClients(true)
-                .canManageServices(isAdmin)
-                .canManageLocations(isAdmin)
-                .canViewFinances(isAdmin)
-                .canManageSettings(isOwner)
+                .permissions(settingsService.getGrantedPermissions(
+                        principal.getTenantId(), principal.getRole()))
                 .build();
     }
 }

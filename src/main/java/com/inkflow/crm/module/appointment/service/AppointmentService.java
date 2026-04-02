@@ -12,6 +12,7 @@ import com.inkflow.crm.domain.enums.AppointmentStatus;
 import com.inkflow.crm.domain.repository.*;
 import com.inkflow.crm.module.appointment.dto.*;
 import com.inkflow.crm.module.client.dto.ClientSummaryDto;
+import com.inkflow.crm.module.settings.service.SettingsService;
 import com.inkflow.crm.module.staff.dto.StaffSummaryDto;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class AppointmentService {
     private final LocationRepository locationRepository;
     private final ProjectRepository projectRepository;
     private final GalleryPhotoRepository galleryPhotoRepository;
+    private final SettingsService settingsService;
 
     @Transactional(readOnly = true)
     public List<AppointmentDto> getAllAppointments(PageRequest pageRequest, AppointmentFilterRequest filter) {
@@ -52,11 +54,16 @@ public class AppointmentService {
         Instant from = filter.getFrom() != null ? Instant.parse(filter.getFrom()) : null;
         Instant to = filter.getTo() != null ? Instant.parse(filter.getTo()) : null;
 
+        UUID effectiveArtistId = filter.getArtistId();
+        if (!settingsService.hasPermission(tenantId, SecurityUtils.getCurrentUserRole(), "calendar.view_all")) {
+            effectiveArtistId = SecurityUtils.getCurrentUserId();
+        }
+
         Specification<Appointment> spec = Specification
                 .where(AppointmentSpecifications.belongsToTenant(tenantId))
                 .and(AppointmentSpecifications.notDeleted())
                 .and(AppointmentSpecifications.withLocation(filter.getLocationId()))
-                .and(AppointmentSpecifications.withArtist(filter.getArtistId()))
+                .and(AppointmentSpecifications.withArtist(effectiveArtistId))
                 .and(AppointmentSpecifications.withService(filter.getServiceId()))
                 .and(AppointmentSpecifications.withStatus(filter.getStatus()))
                 .and(AppointmentSpecifications.startTimeAfter(from))
@@ -84,8 +91,12 @@ public class AppointmentService {
     @Transactional(readOnly = true)
     public List<AppointmentDto> getCalendar(CalendarQueryRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
+        List<UUID> artistIds = request.getArtistIds();
+        if (!settingsService.hasPermission(tenantId, SecurityUtils.getCurrentUserRole(), "calendar.view_all")) {
+            artistIds = List.of(SecurityUtils.getCurrentUserId());
+        }
         List<Appointment> appointments = appointmentRepository.findForCalendar(
-                tenantId, request.getFrom(), request.getTo(), request.getArtistIds());
+                tenantId, request.getFrom(), request.getTo(), artistIds);
         return appointments.stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
