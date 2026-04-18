@@ -123,6 +123,18 @@ public class StaffController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(service));
     }
 
+    @PutMapping("/{id}/services/{serviceId}")
+    @RequirePermission("staff.edit")
+    public ResponseEntity<ApiResponse<StaffServiceDto>> updateStaffServicePricing(
+            @PathVariable UUID id,
+            @PathVariable UUID serviceId,
+            @Valid @RequestBody AddStaffServiceRequest request) {
+        BigDecimal customPrice = request != null ? request.getCustomPrice() : null;
+        Integer customDuration = request != null ? request.getCustomDuration() : null;
+        StaffServiceDto service = staffService.updateStaffServicePricing(id, serviceId, customPrice, customDuration);
+        return ResponseEntity.ok(ApiResponse.success(service));
+    }
+
     @DeleteMapping("/{id}/services/{serviceId}")
     @RequirePermission("staff.edit")
     public ResponseEntity<ApiResponse<Void>> removeServiceFromStaff(

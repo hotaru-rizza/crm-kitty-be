@@ -27,7 +27,7 @@ public class ProjectController {
     public ResponseEntity<ApiResponse<List<ProjectDto>>> getAllProjects(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) UUID artistId,
+            @RequestParam(required = false) List<UUID> artistId,
             @RequestParam(required = false) UUID clientId,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean onlyMine,

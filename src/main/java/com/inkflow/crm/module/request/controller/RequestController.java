@@ -30,7 +30,7 @@ public class RequestController {
     public ResponseEntity<ApiResponse<List<RequestDto>>> getAllRequests(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String source,
+            @RequestParam(required = false) List<String> source,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(required = false) UUID locationId) {

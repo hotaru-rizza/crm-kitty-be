@@ -375,6 +375,27 @@ public class StaffService {
         artistServicePricingRepository.delete(pricing);
     }
 
+    @Transactional
+    public StaffServiceDto updateStaffServicePricing(UUID staffId, UUID serviceId, java.math.BigDecimal customPrice, Integer customDuration) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+
+        staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.staff(staffId.toString()));
+
+        ArtistServicePricing pricing = artistServicePricingRepository.findByStaffIdAndServiceId(staffId, serviceId)
+                .orElseThrow(() -> new BusinessRuleException("Service is not assigned to this staff member"));
+
+        if (customPrice != null) {
+            pricing.setPrice(customPrice);
+        }
+        if (customDuration != null) {
+            pricing.setDuration(customDuration);
+        }
+
+        pricing = artistServicePricingRepository.save(pricing);
+        return mapToStaffServiceDto(pricing);
+    }
+
     private StaffServiceDto mapToStaffServiceDto(ArtistServicePricing pricing) {
         com.inkflow.crm.domain.entity.Service service = pricing.getService();
         boolean hasCustomPrice = !pricing.getPrice().equals(service.getPrice());

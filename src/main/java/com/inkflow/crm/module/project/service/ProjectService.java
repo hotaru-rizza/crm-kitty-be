@@ -43,30 +43,30 @@ public class ProjectService {
     private final SettingsService settingsService;
 
     @Transactional(readOnly = true)
-    public List<ProjectDto> getAllProjects(PageRequest pageRequest, String status, UUID artistId, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
-        Page<Project> page = getProjectsPage(pageRequest, status, artistId, clientId, search, onlyMine, locationId);
+    public List<ProjectDto> getAllProjects(PageRequest pageRequest, String status, List<UUID> artistIds, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
+        Page<Project> page = getProjectsPage(pageRequest, status, artistIds, clientId, search, onlyMine, locationId);
         return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest, String status, UUID artistId, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
-        Page<Project> page = getProjectsPage(pageRequest, status, artistId, clientId, search, onlyMine, locationId);
+    public PaginationDto getPagination(PageRequest pageRequest, String status, List<UUID> artistIds, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
+        Page<Project> page = getProjectsPage(pageRequest, status, artistIds, clientId, search, onlyMine, locationId);
         return PaginationDto.from(page);
     }
 
-    private Page<Project> getProjectsPage(PageRequest pageRequest, String status, UUID artistId, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
+    private Page<Project> getProjectsPage(PageRequest pageRequest, String status, List<UUID> artistIds, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         ProjectStatus projectStatus = status != null ? ProjectStatus.fromValue(status) : null;
         
         if (!settingsService.hasPermission(tenantId, SecurityUtils.getCurrentUserRole(), "projects.view_all")) {
             onlyMine = true;
         }
-        UUID effectiveArtistId = artistId;
+        List<UUID> effectiveArtistIds = artistIds;
         if (Boolean.TRUE.equals(onlyMine)) {
-            effectiveArtistId = SecurityUtils.getCurrentUserId();
+            effectiveArtistIds = List.of(SecurityUtils.getCurrentUserId());
         }
 
-        return projectRepository.findWithFilters(tenantId, projectStatus, effectiveArtistId, clientId, search, locationId, pageRequest.toPageable());
+        return projectRepository.findWithFilters(tenantId, projectStatus, effectiveArtistIds, clientId, search, locationId, pageRequest.toPageable());
     }
 
     @Transactional(readOnly = true)
