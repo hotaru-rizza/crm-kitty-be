@@ -37,6 +37,14 @@ public class CompanySettings {
     @Column(name = "email_reminders", nullable = false)
     private Boolean emailReminders = true;
 
+    @Column(name = "email_confirmations", nullable = false)
+    @Builder.Default
+    private Boolean emailConfirmations = true;
+
+    @Column(name = "email_aftercare", nullable = false)
+    @Builder.Default
+    private Boolean emailAftercare = false;
+
     @Column(name = "reminder_hours_before", nullable = false)
     private Integer reminderHoursBefore = 24;
 

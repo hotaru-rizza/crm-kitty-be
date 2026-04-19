@@ -70,6 +70,9 @@ public class Appointment extends BaseEntity {
     @Column(name = "waiver_signed", nullable = false)
     private Boolean waiverSigned = false;
 
+    @Column(name = "consent_token", unique = true)
+    private String consentToken;
+
     @Column(name = "cancellation_reason")
     private String cancellationReason;
 

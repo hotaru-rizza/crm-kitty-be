@@ -88,19 +88,20 @@ public class DevSecurityConfig {
         @Autowired
         private EntityManager entityManager;
 
+        @Autowired
+        private com.inkflow.crm.security.JwtTokenProvider jwtTokenProvider;
+
         // Lazy-loaded on first request
         private volatile UUID tenantId;
         private volatile String email;
         private volatile UserRole role;
         private volatile List<UUID> locationIds;
-
         private volatile UUID resolvedUserId;
 
         private synchronized void loadUserIfNeeded() {
             if (tenantId != null) return;
 
             try {
-                // Find the first OWNER from the database (no hardcoded ID)
                 List<Tuple> results = entityManager.createNativeQuery(
                         "SELECT id, auth_user_id, tenant_id, email, role FROM staff " +
                         "WHERE role = 'OWNER' AND deleted_at IS NULL ORDER BY created_at LIMIT 1", Tuple.class)
@@ -145,7 +146,36 @@ public class DevSecurityConfig {
         protected void doFilterInternal(HttpServletRequest request,
                                         HttpServletResponse response,
                                         FilterChain filterChain) throws ServletException, IOException {
-            
+
+            // If a real JWT is provided — use it (enables demo/other tenants in dev mode)
+            String bearerToken = request.getHeader("Authorization");
+            if (org.springframework.util.StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+                String jwt = bearerToken.substring(7);
+                try {
+                    if (jwtTokenProvider.validateToken(jwt)) {
+                        com.inkflow.crm.security.UserPrincipal jwtUser = jwtTokenProvider.getUserPrincipal(jwt);
+                        UsernamePasswordAuthenticationToken auth =
+                                new UsernamePasswordAuthenticationToken(jwtUser, null, jwtUser.getAuthorities());
+                        auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                        TenantContext.setCurrentTenant(jwtUser.getTenantId());
+                        TenantContext.setCurrentUser(jwtUser.getId());
+                        TenantContext.setCurrentRole(jwtUser.getRole());
+                        TenantContext.setCurrentLocationIds(jwtUser.getLocationIds());
+                        try {
+                            filterChain.doFilter(request, response);
+                        } finally {
+                            TenantContext.clear();
+                            SecurityContextHolder.clearContext();
+                        }
+                        return;
+                    }
+                } catch (Exception e) {
+                    log.debug("JWT validation failed in dev mode, falling back to dev user: {}", e.getMessage());
+                }
+            }
+
+            // No JWT or invalid — use hardcoded dev user
             loadUserIfNeeded();
 
             UserPrincipal devUser = UserPrincipal.builder()

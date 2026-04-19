@@ -1,5 +1,6 @@
 package com.inkflow.crm.config;
 
+import com.inkflow.crm.security.DemoTenantFilter;
 import com.inkflow.crm.security.JwtAuthenticationFilter;
 import com.inkflow.crm.security.SubscriptionFilter;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final SubscriptionFilter subscriptionFilter;
+    private final DemoTenantFilter demoTenantFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -49,7 +51,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(subscriptionFilter, JwtAuthenticationFilter.class);
+                .addFilterAfter(subscriptionFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(demoTenantFilter, SubscriptionFilter.class);
 
         return http.build();
     }

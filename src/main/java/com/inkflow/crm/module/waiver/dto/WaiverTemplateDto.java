@@ -18,8 +18,12 @@ public class WaiverTemplateDto {
     private String title;
     private String content;
     private Integer version;
-    private List<CheckboxDto> checkboxes;
+    private Boolean isActive;
+    private List<ConsentFieldDto> fields;
     private Instant createdAt;
+
+    // Legacy support
+    private List<CheckboxDto> checkboxes;
 
     @Data
     @Builder

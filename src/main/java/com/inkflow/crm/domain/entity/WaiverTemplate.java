@@ -2,6 +2,8 @@ package com.inkflow.crm.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -31,13 +33,19 @@ public class WaiverTemplate {
     @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "content", columnDefinition = "TEXT")
     private String content;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "fields", columnDefinition = "jsonb")
+    private List<ConsentField> fields;
+
     @Column(name = "version", nullable = false)
+    @Builder.Default
     private Integer version = 1;
 
     @Column(name = "is_active", nullable = false)
+    @Builder.Default
     private Boolean isActive = true;
 
     @ElementCollection(fetch = FetchType.EAGER)
@@ -51,4 +59,15 @@ public class WaiverTemplate {
 
     @Column(name = "created_by")
     private UUID createdBy;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    /**
+     * True if this template uses the new structured fields model
+     * (as opposed to the legacy content+checkboxes model).
+     */
+    public boolean isStructured() {
+        return fields != null && !fields.isEmpty();
+    }
 }

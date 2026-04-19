@@ -44,6 +44,16 @@ r2:
   bucket-name: ${R2_BUCKET_NAME:inkat-crm}
   public-url: ${R2_PUBLIC_URL:https://pub-c3324f961f15454f98b95bbf7115ca14.r2.dev}
 
+# Demo tenant (readonly mode for public demo)
+demo:
+  tenant-id: ${DEMO_TENANT_ID:a0000000-0000-0000-0000-000000000001}
+
+# Resend Email
+resend:
+  api-key: ${RESEND_API_KEY:re_Xoz3s4ui_Gp1KpXfYtBkkgeRU1AnEreNE}
+  from-email: ${RESEND_FROM_EMAIL:noreply@inkat.studio}
+  from-name: ${RESEND_FROM_NAME:INKAT}
+
 # Supabase JWT Configuration
 supabase:
   jwt:
@@ -108,4 +118,3 @@ monobank:
     webhook-url: ${APP_BASE_URL:http://localhost:8080}/api/payments/monobank/webhook
     redirect-url: ${FRONTEND_URL:http://localhost:5173}/app/calendar
     invoice-validity-seconds: 3600
-## smtp: re_Xoz3s4ui_Gp1KpXfYtBkkgeRU1AnEreNE

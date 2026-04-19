@@ -2,10 +2,13 @@ package com.inkflow.crm.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -43,6 +46,10 @@ public class SignedWaiver {
 
     @Column(name = "checkbox_values", columnDefinition = "TEXT")
     private String checkboxValues;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "field_values", columnDefinition = "jsonb")
+    private Map<String, Object> fieldValues;
 
     @Column(name = "client_ip")
     private String clientIp;

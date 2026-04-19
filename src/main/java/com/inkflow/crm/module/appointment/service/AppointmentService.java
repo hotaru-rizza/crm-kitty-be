@@ -12,6 +12,7 @@ import com.inkflow.crm.domain.enums.AppointmentStatus;
 import com.inkflow.crm.domain.repository.*;
 import com.inkflow.crm.module.appointment.dto.*;
 import com.inkflow.crm.module.client.dto.ClientSummaryDto;
+import com.inkflow.crm.module.email.service.EmailService;
 import com.inkflow.crm.module.settings.service.SettingsService;
 import com.inkflow.crm.module.staff.dto.StaffSummaryDto;
 import com.inkflow.crm.security.SecurityUtils;
@@ -38,6 +39,8 @@ public class AppointmentService {
     private final ProjectRepository projectRepository;
     private final GalleryPhotoRepository galleryPhotoRepository;
     private final SettingsService settingsService;
+    private final EmailService emailService;
+    private final CompanySettingsRepository companySettingsRepository;
 
     @Transactional(readOnly = true)
     public List<AppointmentDto> getAllAppointments(PageRequest pageRequest, AppointmentFilterRequest filter) {
@@ -147,6 +150,16 @@ public class AppointmentService {
                 .build();
 
         appointment = appointmentRepository.save(appointment);
+
+        try {
+            CompanySettings cs = companySettingsRepository.findByTenantId(tenantId).orElse(null);
+            if (cs != null && cs.getEmailConfirmations()) {
+                emailService.sendConfirmation(appointment);
+            }
+        } catch (Exception e) {
+            // email failure should not break appointment creation
+        }
+
         return mapToDto(appointment);
     }
 
@@ -200,6 +213,8 @@ public class AppointmentService {
 
         appointment.calculateFinalPrice();
 
+        AppointmentStatus previousStatus = appointment.getStatus();
+
         if (request.getStatus() != null) {
             AppointmentStatus newStatus = AppointmentStatus.fromValue(request.getStatus());
             if (newStatus == AppointmentStatus.CANCELLED) {
@@ -212,6 +227,26 @@ public class AppointmentService {
         }
 
         appointment = appointmentRepository.save(appointment);
+
+        try {
+            UUID tid = appointment.getTenantId();
+            CompanySettings cs = companySettingsRepository.findByTenantId(tid).orElse(null);
+            if (cs != null && request.getStatus() != null) {
+                AppointmentStatus newStatus = AppointmentStatus.fromValue(request.getStatus());
+                if (newStatus == AppointmentStatus.CONFIRMED && previousStatus != AppointmentStatus.CONFIRMED
+                        && cs.getEmailConfirmations()
+                        && !emailService.wasAlreadySent(appointment.getId(), com.inkflow.crm.domain.enums.EmailType.CONFIRMATION)) {
+                    emailService.sendConfirmation(appointment);
+                }
+                if (newStatus == AppointmentStatus.DONE && previousStatus != AppointmentStatus.DONE
+                        && cs.getEmailAftercare()) {
+                    emailService.sendAftercare(appointment);
+                }
+            }
+        } catch (Exception e) {
+            // email failure should not break appointment update
+        }
+
         return mapToDto(appointment);
     }
 

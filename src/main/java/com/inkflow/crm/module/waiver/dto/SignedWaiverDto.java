@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,5 +23,7 @@ public class SignedWaiverDto {
     private String templateTitle;
     private String signatureData;
     private Map<String, Boolean> checkboxValues;
+    private Map<String, Object> fieldValues;
+    private List<ConsentFieldDto> templateFields;
     private Instant signedAt;
 }
