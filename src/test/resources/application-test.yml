@@ -13,7 +13,20 @@ spring:
   flyway:
     enabled: false
 
+r2:
+  account-id: test-account
+  access-key-id: test-key
+  secret-access-key: test-secret
+  bucket-name: test-bucket
+  public-url: https://example.com
+  verify-connection: false
+
+resend:
+  api-key: re_test_placeholder
+  from-email: test@example.com
+  from-name: Test
+
 supabase:
   jwt:
-    secret: test-secret-key-for-testing-purposes-only
     issuer: https://test.supabase.co/auth/v1
+    jwks-uri: https://test.supabase.co/auth/v1/.well-known/jwks.json

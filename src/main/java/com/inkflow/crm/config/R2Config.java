@@ -51,7 +51,10 @@ public class R2Config {
 
     @PostConstruct
     public void verifyR2Connection() {
-        // Use a fresh client here to avoid referencing the bean being constructed
+        if (!r2Properties.isVerifyConnection()) {
+            log.warn("R2 verifyConnection вимкнено — перевірку bucket пропущено");
+            return;
+        }
         try (S3Client client = S3Client.builder()
                 .endpointOverride(URI.create("https://" + r2Properties.getAccountId() + ".r2.cloudflarestorage.com"))
                 .credentialsProvider(StaticCredentialsProvider.create(

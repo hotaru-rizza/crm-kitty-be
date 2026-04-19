@@ -3,9 +3,9 @@ spring:
     name: inkflow-crm
 
   datasource:
-    url: jdbc:postgresql://aws-1-eu-north-1.pooler.supabase.com:5432/postgres?sslmode=require
-    username: ${DB_USERNAME:postgres.orxguferhezbfbgmlrzc}
-    password: ${DB_PASSWORD:_t4ORd5vLZLhm4jo}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5432/postgres?sslmode=disable}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -32,44 +32,40 @@ spring:
     default-property-inclusion: non_null
 
 server:
-  port: 8080
+  port: ${PORT:${SERVER_PORT:8080}}
   servlet:
     context-path: /api
 
-# Cloudflare R2 Storage
+# Cloudflare R2 — значення тільки з env / .env
 r2:
-  account-id: ${R2_ACCOUNT_ID:8e987ad59f6f797133fb456f9634c382}
-  access-key-id: ${R2_ACCESS_KEY_ID:d55be8f09aeefed881c8d28dbaf1c2a8}
-  secret-access-key: ${R2_SECRET_ACCESS_KEY:3d97fe6b37db6a9ba27900cf5f0fc9059e12765e85c7b3b33e592732b7314d1c}
-  bucket-name: ${R2_BUCKET_NAME:inkat-crm}
-  public-url: ${R2_PUBLIC_URL:https://pub-c3324f961f15454f98b95bbf7115ca14.r2.dev}
+  account-id: ${R2_ACCOUNT_ID}
+  access-key-id: ${R2_ACCESS_KEY_ID}
+  secret-access-key: ${R2_SECRET_ACCESS_KEY}
+  bucket-name: ${R2_BUCKET_NAME}
+  public-url: ${R2_PUBLIC_URL}
+  verify-connection: ${R2_VERIFY_CONNECTION:true}
 
-# Demo tenant (readonly mode for public demo)
 demo:
   tenant-id: ${DEMO_TENANT_ID:a0000000-0000-0000-0000-000000000001}
 
-# Resend Email
 resend:
-  api-key: ${RESEND_API_KEY:re_Xoz3s4ui_Gp1KpXfYtBkkgeRU1AnEreNE}
-  from-email: ${RESEND_FROM_EMAIL:noreply@inkat.studio}
+  api-key: ${RESEND_API_KEY}
+  from-email: ${RESEND_FROM_EMAIL}
   from-name: ${RESEND_FROM_NAME:INKAT}
 
-# Supabase JWT Configuration
 supabase:
   jwt:
-    issuer: https://orxguferhezbfbgmlrzc.supabase.co/auth/v1
-    jwks-uri: https://orxguferhezbfbgmlrzc.supabase.co/auth/v1/.well-known/jwks.json
+    issuer: ${SUPABASE_JWT_ISSUER}
+    jwks-uri: ${SUPABASE_JWKS_URI}
 
-# Logging
 logging:
   level:
     root: INFO
-    com.inkflow: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.inkflow: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: OFF
+    org.hibernate.type.descriptor.sql.BasicBinder: OFF
 
-# Actuator
 management:
   endpoints:
     web:
@@ -80,7 +76,6 @@ management:
       show-details: when-authorized
 
 ---
-# Development profile
 spring:
   config:
     activate:
@@ -94,8 +89,14 @@ spring:
   flyway:
     enabled: false
 
+logging:
+  level:
+    com.inkflow: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
 ---
-# Production profile
 spring:
   config:
     activate:
@@ -113,7 +114,7 @@ logging:
 
 monobank:
   acquiring:
-    token: ${MONOBANK_TOKEN:REPLACE_WITH_REAL_TOKEN}
+    token: ${MONOBANK_TOKEN:}
     api-url: https://api.monobank.ua
     webhook-url: ${APP_BASE_URL:http://localhost:8080}/api/payments/monobank/webhook
     redirect-url: ${FRONTEND_URL:http://localhost:5173}/app/calendar
