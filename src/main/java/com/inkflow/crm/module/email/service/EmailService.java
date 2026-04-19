@@ -1,10 +1,12 @@
 package com.inkflow.crm.module.email.service;
 
 import com.inkflow.crm.domain.entity.Appointment;
+import com.inkflow.crm.domain.entity.CompanySettings;
 import com.inkflow.crm.domain.entity.EmailLog;
 import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.enums.EmailStatus;
 import com.inkflow.crm.domain.enums.EmailType;
+import com.inkflow.crm.domain.repository.CompanySettingsRepository;
 import com.inkflow.crm.domain.repository.EmailLogRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.module.email.dto.EmailLogDto;
@@ -18,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -28,6 +32,29 @@ public class EmailService {
     private final ResendEmailClient resendClient;
     private final EmailLogRepository emailLogRepository;
     private final TenantRepository tenantRepository;
+    private final CompanySettingsRepository companySettingsRepository;
+
+    private Map<String, String> getCustomTemplate(UUID tenantId, String type) {
+        return companySettingsRepository.findByTenantId(tenantId)
+                .map(CompanySettings::getEmailTemplates)
+                .map(t -> t != null ? t.get(type) : null)
+                .orElse(null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> getCustomFields(UUID tenantId, String type) {
+        return companySettingsRepository.findByTenantId(tenantId)
+                .map(CompanySettings::getEmailTemplates)
+                .map(t -> {
+                    if (t == null) return null;
+                    Map<String, String> tmpl = t.get(type);
+                    if (tmpl == null || !tmpl.containsKey("fields")) return null;
+                    String raw = tmpl.get("fields");
+                    if (raw == null || raw.isBlank()) return List.<String>of();
+                    return List.of(raw.split(","));
+                })
+                .orElse(null);
+    }
 
     public void sendConfirmation(Appointment appointment) {
         String email = appointment.getClient().getEmail();
@@ -37,20 +64,32 @@ public class EmailService {
         String studioName = tenant != null ? tenant.getName() : "INKAT";
         String timezone = tenant != null ? tenant.getTimezone() : "Europe/Kyiv";
 
+        Map<String, String> custom = getCustomTemplate(appointment.getTenantId(), "CONFIRMATION");
+        List<String> customFields = getCustomFields(appointment.getTenantId(), "CONFIRMATION");
+        String customSubject = custom != null ? custom.get("subject") : null;
+        String customBody = custom != null ? custom.get("body") : null;
+
         String html = EmailTemplates.confirmation(
                 appointment.getClient().getFirstName(),
                 appointment.getService().getTitle(),
                 appointment.getArtist().getFirstName() + " " + appointment.getArtist().getLastName(),
                 appointment.getStartTime(),
                 timezone,
-                studioName
+                studioName,
+                customSubject,
+                customBody,
+                customFields
         );
+
+        String subjectLine = customSubject != null
+                ? customSubject.replace("{{studio}}", studioName)
+                : "Запис підтверджено — " + studioName;
 
         sendAndLog(
                 appointment.getTenantId(),
                 email,
                 appointment.getClient().getFullName(),
-                "Запис підтверджено — " + studioName,
+                subjectLine,
                 html,
                 EmailType.CONFIRMATION,
                 appointment.getId()
@@ -65,6 +104,11 @@ public class EmailService {
         String studioName = tenant != null ? tenant.getName() : "INKAT";
         String timezone = tenant != null ? tenant.getTimezone() : "Europe/Kyiv";
 
+        Map<String, String> custom = getCustomTemplate(appointment.getTenantId(), "REMINDER");
+        List<String> customFields = getCustomFields(appointment.getTenantId(), "REMINDER");
+        String customSubject = custom != null ? custom.get("subject") : null;
+        String customBody = custom != null ? custom.get("body") : null;
+
         String html = EmailTemplates.reminder(
                 appointment.getClient().getFirstName(),
                 appointment.getService().getTitle(),
@@ -72,14 +116,21 @@ public class EmailService {
                 appointment.getStartTime(),
                 timezone,
                 studioName,
-                hoursBefore
+                hoursBefore,
+                customSubject,
+                customBody,
+                customFields
         );
+
+        String subjectLine = customSubject != null
+                ? customSubject.replace("{{studio}}", studioName)
+                : "Нагадування про запис — " + studioName;
 
         sendAndLog(
                 appointment.getTenantId(),
                 email,
                 appointment.getClient().getFullName(),
-                "Нагадування про запис — " + studioName,
+                subjectLine,
                 html,
                 EmailType.REMINDER,
                 appointment.getId()
@@ -93,17 +144,29 @@ public class EmailService {
         Tenant tenant = tenantRepository.findById(appointment.getTenantId()).orElse(null);
         String studioName = tenant != null ? tenant.getName() : "INKAT";
 
+        Map<String, String> custom = getCustomTemplate(appointment.getTenantId(), "AFTERCARE");
+        List<String> customFields = getCustomFields(appointment.getTenantId(), "AFTERCARE");
+        String customSubject = custom != null ? custom.get("subject") : null;
+        String customBody = custom != null ? custom.get("body") : null;
+
         String html = EmailTemplates.aftercare(
                 appointment.getClient().getFirstName(),
                 appointment.getService().getTitle(),
-                studioName
+                studioName,
+                customSubject,
+                customBody,
+                customFields
         );
+
+        String subjectLine = customSubject != null
+                ? customSubject.replace("{{studio}}", studioName)
+                : "Догляд після сеансу — " + studioName;
 
         sendAndLog(
                 appointment.getTenantId(),
                 email,
                 appointment.getClient().getFullName(),
-                "Догляд після сеансу — " + studioName,
+                subjectLine,
                 html,
                 EmailType.AFTERCARE,
                 appointment.getId()

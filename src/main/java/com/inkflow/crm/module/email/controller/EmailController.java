@@ -8,8 +8,10 @@ import com.inkflow.crm.domain.repository.CompanySettingsRepository;
 import com.inkflow.crm.module.email.dto.EmailLogDto;
 import com.inkflow.crm.module.email.dto.EmailSettingsDto;
 import com.inkflow.crm.module.email.dto.EmailStatsDto;
+import com.inkflow.crm.module.email.dto.EmailTemplateDto;
 import com.inkflow.crm.module.email.dto.SendEmailRequest;
 import com.inkflow.crm.module.email.service.EmailService;
+import com.inkflow.crm.module.email.service.EmailTemplates;
 import com.inkflow.crm.security.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,9 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/emails")
@@ -69,6 +69,77 @@ public class EmailController {
         }
 
         return ResponseEntity.ok(Map.of("sent", sent, "skipped", skipped));
+    }
+
+    @GetMapping("/templates")
+    public ResponseEntity<List<EmailTemplateDto>> getTemplates() {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        CompanySettings settings = companySettingsRepository.findByTenantId(tenantId).orElse(null);
+        Map<String, Map<String, String>> custom = settings != null ? settings.getEmailTemplates() : null;
+
+        List<EmailTemplateDto> result = new ArrayList<>();
+        for (String type : List.of("CONFIRMATION", "REMINDER", "AFTERCARE")) {
+            Map<String, String> defaults = EmailTemplates.getDefaults(type);
+            List<String> defaultFields = EmailTemplates.getDefaultFields(type);
+            Map<String, String> saved = custom != null ? custom.get(type) : null;
+
+            List<String> fields = defaultFields;
+            if (saved != null && saved.containsKey("fields")) {
+                String raw = saved.get("fields");
+                fields = (raw == null || raw.isBlank()) ? List.of() : List.of(raw.split(","));
+            }
+
+            result.add(EmailTemplateDto.builder()
+                    .type(type)
+                    .subject(saved != null && saved.containsKey("subject") ? saved.get("subject") : defaults.get("subject"))
+                    .body(saved != null && saved.containsKey("body") ? saved.get("body") : defaults.get("body"))
+                    .fields(fields)
+                    .build());
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("/templates/{type}")
+    public ResponseEntity<EmailTemplateDto> updateTemplate(
+            @PathVariable String type,
+            @RequestBody EmailTemplateDto dto
+    ) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        CompanySettings settings = companySettingsRepository.findByTenantId(tenantId)
+                .orElseThrow(() -> new RuntimeException("Settings not found"));
+
+        Map<String, Map<String, String>> templates = settings.getEmailTemplates();
+        if (templates == null) templates = new HashMap<>();
+
+        Map<String, String> entry = new HashMap<>();
+        entry.put("subject", dto.getSubject());
+        entry.put("body", dto.getBody());
+        entry.put("fields", dto.getFields() != null ? String.join(",", dto.getFields()) : "");
+        templates.put(type.toUpperCase(), entry);
+        settings.setEmailTemplates(templates);
+        companySettingsRepository.save(settings);
+
+        return ResponseEntity.ok(EmailTemplateDto.builder()
+                .type(type.toUpperCase())
+                .subject(dto.getSubject())
+                .body(dto.getBody())
+                .fields(dto.getFields())
+                .build());
+    }
+
+    @DeleteMapping("/templates/{type}")
+    public ResponseEntity<Void> resetTemplate(@PathVariable String type) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        CompanySettings settings = companySettingsRepository.findByTenantId(tenantId)
+                .orElseThrow(() -> new RuntimeException("Settings not found"));
+
+        Map<String, Map<String, String>> templates = settings.getEmailTemplates();
+        if (templates != null) {
+            templates.remove(type.toUpperCase());
+            settings.setEmailTemplates(templates);
+            companySettingsRepository.save(settings);
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/settings")

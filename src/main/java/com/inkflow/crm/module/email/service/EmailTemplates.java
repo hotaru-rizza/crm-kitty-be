@@ -3,7 +3,9 @@ package com.inkflow.crm.module.email.service;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public final class EmailTemplates {
 
@@ -15,7 +17,54 @@ public final class EmailTemplates {
     private static final String TEXT_COLOR = "#c1c2c5";
     private static final String TEXT_BRIGHT = "#ffffff";
 
-    private static String formatDateTime(Instant time, String timezone) {
+    private static final String DEFAULT_CONFIRMATION_SUBJECT = "Запис підтверджено — {{studio}}";
+    private static final String DEFAULT_CONFIRMATION_BODY =
+            "Привіт, {{client_name}}! Ваш запис підтверджено.\n\n" +
+            "Якщо потрібно скасувати або перенести — зв'яжіться з нами завчасно.";
+
+    private static final String DEFAULT_REMINDER_SUBJECT = "Нагадування про запис — {{studio}}";
+    private static final String DEFAULT_REMINDER_BODY =
+            "Привіт, {{client_name}}! Нагадуємо про ваш запис через {{hours_before}}.\n\n" +
+            "Не забудьте прийти вчасно. До зустрічі!";
+
+    private static final String DEFAULT_AFTERCARE_SUBJECT = "Догляд після сеансу — {{studio}}";
+    private static final String DEFAULT_AFTERCARE_BODY =
+            "Привіт, {{client_name}}! Дякуємо, що обрали нас для {{service}}.\n\n" +
+            "Поради по догляду:\n" +
+            "• Не знімайте захисну плівку протягом 2-4 годин\n" +
+            "• Промийте татуювання теплою водою з м'яким милом\n" +
+            "• Наносьте тонкий шар загоювального крему 2-3 рази на день\n" +
+            "• Уникайте прямих сонячних променів 2-3 тижні\n" +
+            "• Не відвідуйте басейн та сауну 2 тижні\n" +
+            "• Не чешіть та не здирайте кірочки\n\n" +
+            "Якщо виникнуть питання — не вагайтесь звертатися!";
+
+    private static final Map<String, String> FIELD_LABELS = Map.of(
+            "service", "Послуга",
+            "artist", "Майстер",
+            "datetime", "Дата та час",
+            "hours_before", "Через"
+    );
+
+    public static List<String> getDefaultFields(String type) {
+        return switch (type.toUpperCase()) {
+            case "CONFIRMATION" -> List.of("service", "artist", "datetime");
+            case "REMINDER" -> List.of("service", "artist", "datetime");
+            case "AFTERCARE" -> List.of("service");
+            default -> List.of();
+        };
+    }
+
+    public static Map<String, String> getDefaults(String type) {
+        return switch (type.toUpperCase()) {
+            case "CONFIRMATION" -> Map.of("subject", DEFAULT_CONFIRMATION_SUBJECT, "body", DEFAULT_CONFIRMATION_BODY);
+            case "REMINDER" -> Map.of("subject", DEFAULT_REMINDER_SUBJECT, "body", DEFAULT_REMINDER_BODY);
+            case "AFTERCARE" -> Map.of("subject", DEFAULT_AFTERCARE_SUBJECT, "body", DEFAULT_AFTERCARE_BODY);
+            default -> Map.of("subject", "", "body", "");
+        };
+    }
+
+    static String formatDateTime(Instant time, String timezone) {
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", new Locale("uk"));
         return time.atZone(ZoneId.of(timezone)).format(fmt);
     }
@@ -52,81 +101,103 @@ public final class EmailTemplates {
         """.formatted(TEXT_COLOR, label, TEXT_BRIGHT, value);
     }
 
+    private static String resolveBody(String template, Map<String, String> vars) {
+        String resolved = template;
+        for (var entry : vars.entrySet()) {
+            resolved = resolved.replace("{{" + entry.getKey() + "}}", entry.getValue());
+        }
+        return resolved;
+    }
+
+    private static String textToHtml(String plainText, Map<String, String> vars) {
+        String resolved = resolveBody(plainText, vars);
+        String[] lines = resolved.split("\n");
+        StringBuilder html = new StringBuilder();
+        boolean inList = false;
+        for (String line : lines) {
+            if (line.startsWith("• ")) {
+                if (!inList) { html.append("<ul style=\"color:%s;font-size:14px;line-height:1.8;padding-left:20px;margin:12px 0;\">".formatted(TEXT_COLOR)); inList = true; }
+                html.append("<li>%s</li>\n".formatted(line.substring(2)));
+            } else {
+                if (inList) { html.append("</ul>\n"); inList = false; }
+                if (line.isBlank()) {
+                    html.append("<br/>\n");
+                } else {
+                    html.append("<p style=\"color:%s;font-size:15px;line-height:1.6;margin:0 0 8px;\">%s</p>\n"
+                            .formatted(TEXT_COLOR, line));
+                }
+            }
+        }
+        if (inList) html.append("</ul>\n");
+        return html.toString();
+    }
+
+    private static String buildInfoBlock(List<String> fields, Map<String, String> vars) {
+        if (fields == null || fields.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div style=\"margin:20px 0;\">\n");
+        for (String field : fields) {
+            String label = FIELD_LABELS.getOrDefault(field, field);
+            String value = vars.getOrDefault(field, "");
+            if (!value.isBlank()) {
+                sb.append(infoRow(label, value));
+            }
+        }
+        sb.append("</div>\n");
+        return sb.toString();
+    }
+
     public static String confirmation(String clientName, String serviceName, String artistName,
-                                       Instant startTime, String timezone, String studioName) {
+                                       Instant startTime, String timezone, String studioName,
+                                       String customSubject, String customBody, List<String> customFields) {
         String dateStr = formatDateTime(startTime, timezone);
-        String body = """
-            <p style="color:%s;font-size:15px;line-height:1.6;margin:0 0 20px;">
-              Привіт, <strong style="color:%s">%s</strong>! Ваш запис підтверджено.
-            </p>
-            <div style="margin:20px 0;">
-              %s
-              %s
-              %s
-            </div>
-            <p style="color:%s;font-size:13px;margin:20px 0 0;line-height:1.5;">
-              Якщо потрібно скасувати або перенести — зв'яжіться з нами завчасно.
-            </p>
-            """.formatted(
-                TEXT_COLOR, TEXT_BRIGHT, clientName,
-                infoRow("Послуга", serviceName),
-                infoRow("Майстер", artistName),
-                infoRow("Дата та час", dateStr),
-                TEXT_COLOR
+        Map<String, String> vars = Map.of(
+                "client_name", clientName, "service", serviceName,
+                "artist", artistName, "datetime", dateStr, "studio", studioName
         );
-        return wrap("Запис підтверджено ✓", body, studioName);
+
+        String subjectTemplate = customSubject != null ? customSubject : DEFAULT_CONFIRMATION_SUBJECT;
+        String bodyTemplate = customBody != null ? customBody : DEFAULT_CONFIRMATION_BODY;
+        List<String> fields = customFields != null ? customFields : getDefaultFields("CONFIRMATION");
+
+        String subject = resolveBody(subjectTemplate, vars);
+        String bodyHtml = textToHtml(bodyTemplate, vars) + buildInfoBlock(fields, vars);
+        return wrap(subject, bodyHtml, studioName);
     }
 
     public static String reminder(String clientName, String serviceName, String artistName,
-                                   Instant startTime, String timezone, String studioName, int hoursBefore) {
+                                   Instant startTime, String timezone, String studioName, int hoursBefore,
+                                   String customSubject, String customBody, List<String> customFields) {
         String dateStr = formatDateTime(startTime, timezone);
         String timeLabel = hoursBefore >= 24 ? (hoursBefore / 24) + " дн." : hoursBefore + " год.";
-        String body = """
-            <p style="color:%s;font-size:15px;line-height:1.6;margin:0 0 20px;">
-              Привіт, <strong style="color:%s">%s</strong>! Нагадуємо про ваш запис через <strong style="color:%s">%s</strong>
-            </p>
-            <div style="margin:20px 0;">
-              %s
-              %s
-              %s
-            </div>
-            <p style="color:%s;font-size:13px;margin:20px 0 0;line-height:1.5;">
-              Не забудьте прийти вчасно. До зустрічі!
-            </p>
-            """.formatted(
-                TEXT_COLOR, TEXT_BRIGHT, clientName, BRAND_COLOR, timeLabel,
-                infoRow("Послуга", serviceName),
-                infoRow("Майстер", artistName),
-                infoRow("Дата та час", dateStr),
-                TEXT_COLOR
+        Map<String, String> vars = Map.of(
+                "client_name", clientName, "service", serviceName,
+                "artist", artistName, "datetime", dateStr, "studio", studioName,
+                "hours_before", timeLabel
         );
-        return wrap("Нагадування про запис", body, studioName);
+
+        String subjectTemplate = customSubject != null ? customSubject : DEFAULT_REMINDER_SUBJECT;
+        String bodyTemplate = customBody != null ? customBody : DEFAULT_REMINDER_BODY;
+        List<String> fields = customFields != null ? customFields : getDefaultFields("REMINDER");
+
+        String subject = resolveBody(subjectTemplate, vars);
+        String bodyHtml = textToHtml(bodyTemplate, vars) + buildInfoBlock(fields, vars);
+        return wrap(subject, bodyHtml, studioName);
     }
 
-    public static String aftercare(String clientName, String serviceName, String studioName) {
-        String body = """
-            <p style="color:%s;font-size:15px;line-height:1.6;margin:0 0 20px;">
-              Привіт, <strong style="color:%s">%s</strong>! Дякуємо, що обрали нас для <strong>%s</strong>.
-            </p>
-            <div style="background:#1a1b1e;border-radius:8px;padding:20px;margin:20px 0;">
-              <h3 style="color:%s;margin:0 0 12px;font-size:16px;">Поради по догляду:</h3>
-              <ul style="color:%s;font-size:14px;line-height:1.8;padding-left:20px;margin:0;">
-                <li>Не знімайте захисну плівку протягом 2-4 годин</li>
-                <li>Промийте татуювання теплою водою з м'яким милом</li>
-                <li>Наносьте тонкий шар загоювального крему 2-3 рази на день</li>
-                <li>Уникайте прямих сонячних променів 2-3 тижні</li>
-                <li>Не відвідуйте басейн та сауну 2 тижні</li>
-                <li>Не чешіть та не здирайте кірочки</li>
-              </ul>
-            </div>
-            <p style="color:%s;font-size:13px;margin:20px 0 0;line-height:1.5;">
-              Якщо виникнуть питання — не вагайтесь звертатися!
-            </p>
-            """.formatted(
-                TEXT_COLOR, TEXT_BRIGHT, clientName, serviceName,
-                TEXT_BRIGHT, TEXT_COLOR, TEXT_COLOR
+    public static String aftercare(String clientName, String serviceName, String studioName,
+                                    String customSubject, String customBody, List<String> customFields) {
+        Map<String, String> vars = Map.of(
+                "client_name", clientName, "service", serviceName, "studio", studioName
         );
-        return wrap("Догляд після сеансу", body, studioName);
+
+        String subjectTemplate = customSubject != null ? customSubject : DEFAULT_AFTERCARE_SUBJECT;
+        String bodyTemplate = customBody != null ? customBody : DEFAULT_AFTERCARE_BODY;
+        List<String> fields = customFields != null ? customFields : getDefaultFields("AFTERCARE");
+
+        String subject = resolveBody(subjectTemplate, vars);
+        String bodyHtml = textToHtml(bodyTemplate, vars) + buildInfoBlock(fields, vars);
+        return wrap(subject, bodyHtml, studioName);
     }
 
     public static String manual(String subject, String textBody, String studioName) {
