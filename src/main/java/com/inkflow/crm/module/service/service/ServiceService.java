@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.service.service;
 
 import com.inkflow.crm.common.dto.PageRequest;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.ArtistServicePricing;
@@ -27,23 +28,17 @@ public class ServiceService {
     private final ServiceMapper serviceMapper;
 
     @Transactional(readOnly = true)
-    public List<ServiceDto> getAllServices(PageRequest pageRequest, Boolean active) {
+    public PageResult<ServiceDto> getAllServices(PageRequest pageRequest, Boolean active) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         if (active != null) {
             List<Service> services = serviceRepository.findByTenantIdAndIsActiveAndDeletedAtIsNull(tenantId, active);
-            return serviceMapper.toDtoList(services);
+            return new PageResult<>(serviceMapper.toDtoList(services), null);
         } else {
             Page<Service> page = serviceRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
-            return serviceMapper.toDtoList(page.getContent());
+            List<ServiceDto> data = serviceMapper.toDtoList(page.getContent());
+            return new PageResult<>(data, PaginationDto.from(page));
         }
-    }
-
-    @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Service> page = serviceRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
-        return PaginationDto.from(page);
     }
 
     @Transactional(readOnly = true)

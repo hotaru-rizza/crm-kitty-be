@@ -2,7 +2,7 @@ package com.inkflow.crm.module.client.controller;
 
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
-import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.module.client.dto.*;
 import com.inkflow.crm.module.client.service.ClientService;
 import com.inkflow.crm.module.project.dto.ProjectSummaryDto;
@@ -30,9 +30,8 @@ public class ClientController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Boolean onlyMine) {
-        List<ClientDto> clients = clientService.getAllClients(pageRequest, search, status, onlyMine);
-        PaginationDto pagination = clientService.getPagination(pageRequest, search, status, onlyMine);
-        return ResponseEntity.ok(ApiResponse.success(clients, pagination));
+        PageResult<ClientDto> result = clientService.getAllClients(pageRequest, search, status, onlyMine);
+        return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
     @GetMapping("/{id}")

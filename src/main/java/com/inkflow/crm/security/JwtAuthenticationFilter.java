@@ -31,27 +31,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = extractJwtFromRequest(request);
 
-            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                UserPrincipal userPrincipal = tokenProvider.getUserPrincipal(jwt);
+            if (StringUtils.hasText(jwt)) {
+                if (tokenProvider.validateToken(jwt)) {
+                    UserPrincipal userPrincipal = tokenProvider.getUserPrincipal(jwt);
+                    log.info("JWT auth OK: user={}, tenant={}, role={}, authUserId={}",
+                            userPrincipal.getId(), userPrincipal.getTenantId(),
+                            userPrincipal.getRole(), userPrincipal.getAuthUserId());
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userPrincipal,
-                                null,
-                                userPrincipal.getAuthorities()
-                        );
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userPrincipal,
+                                    null,
+                                    userPrincipal.getAuthorities()
+                            );
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                // Set tenant context
-                TenantContext.setCurrentTenant(userPrincipal.getTenantId());
-                TenantContext.setCurrentUser(userPrincipal.getId());
-                TenantContext.setCurrentRole(userPrincipal.getRole());
-                TenantContext.setCurrentLocationIds(userPrincipal.getLocationIds());
+                    TenantContext.setCurrentTenant(userPrincipal.getTenantId());
+                    TenantContext.setCurrentUser(userPrincipal.getId());
+                    TenantContext.setCurrentRole(userPrincipal.getRole());
+                    TenantContext.setCurrentLocationIds(userPrincipal.getLocationIds());
+                } else {
+                    log.warn("JWT validation FAILED for request {} {}", request.getMethod(), request.getRequestURI());
+                }
+            } else {
+                log.debug("No JWT token in request {} {}", request.getMethod(), request.getRequestURI());
             }
         } catch (Exception ex) {
-            log.error("Could not set user authentication in security context", ex);
+            log.error("Could not set user authentication in security context: {}", ex.getMessage(), ex);
         }
 
         try {

@@ -11,7 +11,11 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "requests")
+@Table(name = "requests", indexes = {
+    @Index(name = "idx_request_tenant_status", columnList = "tenant_id, status"),
+    @Index(name = "idx_request_tenant_created", columnList = "tenant_id, created_at"),
+    @Index(name = "idx_request_location", columnList = "location_id"),
+})
 @Getter
 @Setter
 @Builder

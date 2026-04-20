@@ -10,7 +10,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "projects")
+@Table(name = "projects", indexes = {
+    @Index(name = "idx_project_tenant_deleted", columnList = "tenant_id, deleted_at"),
+    @Index(name = "idx_project_client", columnList = "client_id"),
+    @Index(name = "idx_project_artist", columnList = "artist_id"),
+    @Index(name = "idx_project_status", columnList = "status"),
+})
 @Getter
 @Setter
 @SuperBuilder

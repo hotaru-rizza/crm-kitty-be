@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.project.service;
 
 import com.inkflow.crm.common.dto.PageRequest;
+import com.inkflow.crm.common.dto.PageResult;
 import java.util.Comparator;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
@@ -43,15 +44,10 @@ public class ProjectService {
     private final SettingsService settingsService;
 
     @Transactional(readOnly = true)
-    public List<ProjectDto> getAllProjects(PageRequest pageRequest, String status, List<UUID> artistIds, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
+    public PageResult<ProjectDto> getAllProjects(PageRequest pageRequest, String status, List<UUID> artistIds, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
         Page<Project> page = getProjectsPage(pageRequest, status, artistIds, clientId, search, onlyMine, locationId);
-        return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest, String status, List<UUID> artistIds, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
-        Page<Project> page = getProjectsPage(pageRequest, status, artistIds, clientId, search, onlyMine, locationId);
-        return PaginationDto.from(page);
+        List<ProjectDto> data = page.getContent().stream().map(this::mapToListDto).collect(Collectors.toList());
+        return new PageResult<>(data, PaginationDto.from(page));
     }
 
     private Page<Project> getProjectsPage(PageRequest pageRequest, String status, List<UUID> artistIds, UUID clientId, String search, Boolean onlyMine, UUID locationId) {
@@ -186,6 +182,37 @@ public class ProjectService {
                         com.inkflow.crm.common.exception.ErrorCode.PROJECT_NOT_FOUND, "Photo not found: " + photoId));
 
         galleryPhotoRepository.delete(photo);
+    }
+
+    private ProjectDto mapToListDto(Project project) {
+        return ProjectDto.builder()
+                .id(project.getId())
+                .title(project.getTitle())
+                .description(project.getDescription())
+                .client(ClientSummaryDto.builder()
+                        .id(project.getClient().getId())
+                        .firstName(project.getClient().getFirstName())
+                        .lastName(project.getClient().getLastName())
+                        .phone(project.getClient().getPhone())
+                        .avatar(project.getClient().getAvatar())
+                        .hasMedicalConditions(project.getClient().hasMedicalConditions())
+                        .build())
+                .artist(StaffSummaryDto.builder()
+                        .id(project.getArtist().getId())
+                        .firstName(project.getArtist().getFirstName())
+                        .lastName(project.getArtist().getLastName())
+                        .avatar(project.getArtist().getAvatar())
+                        .calendarColor(project.getArtist().getCalendarColor())
+                        .role(project.getArtist().getRole().getValue())
+                        .build())
+                .status(project.getStatus().getValue())
+                .estimatedCost(project.getEstimatedCost())
+                .totalPaid(project.getTotalPaid())
+                .totalSessions(project.getTotalSessions())
+                .completedSessions(project.getCompletedSessions())
+                .sketchImage(project.getSketchImage())
+                .createdAt(project.getCreatedAt())
+                .build();
     }
 
     private ProjectDto mapToDto(Project project) {

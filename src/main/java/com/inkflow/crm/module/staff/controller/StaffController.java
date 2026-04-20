@@ -2,7 +2,7 @@ package com.inkflow.crm.module.staff.controller;
 
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
-import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.module.staff.dto.*;
 import com.inkflow.crm.security.RequirePermission;
 import com.inkflow.crm.module.staff.service.StaffService;
@@ -31,9 +31,8 @@ public class StaffController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) UUID locationId) {
-        List<StaffDto> staff = staffService.getAllStaff(pageRequest, search, role, locationId);
-        PaginationDto pagination = staffService.getPagination(pageRequest, search, role, locationId);
-        return ResponseEntity.ok(ApiResponse.success(staff, pagination));
+        PageResult<StaffDto> result = staffService.getAllStaff(pageRequest, search, role, locationId);
+        return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
     @GetMapping("/{id}")

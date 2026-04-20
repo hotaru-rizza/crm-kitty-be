@@ -2,7 +2,7 @@ package com.inkflow.crm.module.transaction.controller;
 
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
-import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.module.transaction.dto.*;
 import com.inkflow.crm.module.transaction.service.TransactionService;
 import com.inkflow.crm.security.RequirePermission;
@@ -34,9 +34,8 @@ public class TransactionController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
-        List<TransactionDto> transactions = transactionService.getAllTransactions(pageRequest, type, category, from, to);
-        PaginationDto pagination = transactionService.getPagination(pageRequest, type, category, from, to);
-        return ResponseEntity.ok(ApiResponse.success(transactions, pagination));
+        PageResult<TransactionDto> result = transactionService.getAllTransactions(pageRequest, type, category, from, to);
+        return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
     @GetMapping("/{id}")

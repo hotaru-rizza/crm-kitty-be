@@ -2,7 +2,7 @@ package com.inkflow.crm.module.request.controller;
 
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
-import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.module.client.dto.ClientDto;
 import com.inkflow.crm.module.request.dto.*;
 import com.inkflow.crm.module.request.service.RequestService;
@@ -34,9 +34,8 @@ public class RequestController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(required = false) UUID locationId) {
-        List<RequestDto> requests = requestService.getAllRequests(pageRequest, status, source, from, to, locationId);
-        PaginationDto pagination = requestService.getPagination(pageRequest, status, source, from, to, locationId);
-        return ResponseEntity.ok(ApiResponse.success(requests, pagination));
+        PageResult<RequestDto> result = requestService.getAllRequests(pageRequest, status, source, from, to, locationId);
+        return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
     @GetMapping("/{id}")

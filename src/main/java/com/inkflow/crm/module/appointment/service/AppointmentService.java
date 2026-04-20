@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.appointment.service;
 
 import com.inkflow.crm.common.dto.PageRequest;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.domain.repository.AppointmentSpecifications;
 import com.inkflow.crm.module.appointment.controller.AppointmentController.AppointmentFilterRequest;
@@ -43,13 +44,10 @@ public class AppointmentService {
     private final CompanySettingsRepository companySettingsRepository;
 
     @Transactional(readOnly = true)
-    public List<AppointmentDto> getAllAppointments(PageRequest pageRequest, AppointmentFilterRequest filter) {
-        return findFiltered(pageRequest, filter).getContent().stream().map(this::mapToDto).collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest, AppointmentFilterRequest filter) {
-        return PaginationDto.from(findFiltered(pageRequest, filter));
+    public PageResult<AppointmentDto> getAllAppointments(PageRequest pageRequest, AppointmentFilterRequest filter) {
+        Page<Appointment> page = findFiltered(pageRequest, filter);
+        List<AppointmentDto> data = page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
+        return new PageResult<>(data, PaginationDto.from(page));
     }
 
     private Page<Appointment> findFiltered(PageRequest pageRequest, AppointmentFilterRequest filter) {

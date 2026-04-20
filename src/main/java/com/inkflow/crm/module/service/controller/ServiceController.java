@@ -2,7 +2,7 @@ package com.inkflow.crm.module.service.controller;
 
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
-import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.module.service.dto.*;
 import com.inkflow.crm.module.service.service.ServiceService;
 import jakarta.validation.Valid;
@@ -25,9 +25,8 @@ public class ServiceController {
     public ResponseEntity<ApiResponse<List<ServiceDto>>> getAllServices(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) Boolean active) {
-        List<ServiceDto> services = serviceService.getAllServices(pageRequest, active);
-        PaginationDto pagination = serviceService.getPagination(pageRequest);
-        return ResponseEntity.ok(ApiResponse.success(services, pagination));
+        PageResult<ServiceDto> result = serviceService.getAllServices(pageRequest, active);
+        return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
     @GetMapping("/{id}")

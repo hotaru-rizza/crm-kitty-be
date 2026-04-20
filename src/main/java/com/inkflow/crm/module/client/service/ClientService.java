@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.client.service;
 
 import com.inkflow.crm.common.dto.PageRequest;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
@@ -34,15 +35,10 @@ public class ClientService {
     private final SettingsService settingsService;
 
     @Transactional(readOnly = true)
-    public List<ClientDto> getAllClients(PageRequest pageRequest, String search, String status, Boolean onlyMine) {
+    public PageResult<ClientDto> getAllClients(PageRequest pageRequest, String search, String status, Boolean onlyMine) {
         Page<Client> page = getClientsPage(pageRequest, search, status, onlyMine);
-        return clientMapper.toDtoList(page.getContent());
-    }
-
-    @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest, String search, String status, Boolean onlyMine) {
-        Page<Client> page = getClientsPage(pageRequest, search, status, onlyMine);
-        return PaginationDto.from(page);
+        List<ClientDto> data = clientMapper.toDtoList(page.getContent());
+        return new PageResult<>(data, PaginationDto.from(page));
     }
 
     private Page<Client> getClientsPage(PageRequest pageRequest, String search, String status, Boolean onlyMine) {

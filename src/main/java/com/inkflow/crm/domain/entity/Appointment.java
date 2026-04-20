@@ -11,7 +11,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "appointments")
+@Table(name = "appointments", indexes = {
+    @Index(name = "idx_appointment_tenant_start", columnList = "tenant_id, start_time"),
+    @Index(name = "idx_appointment_tenant_deleted", columnList = "tenant_id, deleted_at"),
+    @Index(name = "idx_appointment_artist", columnList = "artist_id"),
+    @Index(name = "idx_appointment_client", columnList = "client_id"),
+    @Index(name = "idx_appointment_service", columnList = "service_id"),
+    @Index(name = "idx_appointment_location", columnList = "location_id"),
+    @Index(name = "idx_appointment_status", columnList = "status"),
+    @Index(name = "idx_appointment_start_time", columnList = "start_time"),
+})
 @Getter
 @Setter
 @SuperBuilder

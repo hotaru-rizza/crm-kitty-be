@@ -4,6 +4,8 @@ import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -18,19 +20,32 @@ import java.util.UUID;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID>, JpaSpecificationExecutor<Appointment> {
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     Page<Appointment> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     Page<Appointment> findByTenantIdAndLocationIdAndDeletedAtIsNull(UUID tenantId, UUID locationId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     Page<Appointment> findByTenantIdAndClientIdAndDeletedAtIsNullOrderByStartTimeDesc(UUID tenantId, UUID clientId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     Optional<Appointment> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     Optional<Appointment> findByIdAndDeletedAtIsNull(UUID id);
+
     Optional<Appointment> findByConsentTokenAndDeletedAtIsNull(String consentToken);
 
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     @Query("SELECT a FROM Appointment a WHERE a.tenantId = :tenantId AND a.startTime >= :from AND a.startTime < :to AND a.deletedAt IS NULL ORDER BY a.startTime")
     List<Appointment> findByTenantIdAndDateRange(@Param("tenantId") UUID tenantId, @Param("from") Instant from, @Param("to") Instant to);
 
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     @Query("SELECT a FROM Appointment a WHERE a.tenantId = :tenantId AND a.artist.id = :artistId AND a.startTime >= :from AND a.startTime < :to AND a.deletedAt IS NULL ORDER BY a.startTime")
     List<Appointment> findByTenantIdAndArtistIdAndDateRange(@Param("tenantId") UUID tenantId, @Param("artistId") UUID artistId, @Param("from") Instant from, @Param("to") Instant to);
 
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     @Query("SELECT a FROM Appointment a WHERE a.tenantId = :tenantId AND a.location.id = :locationId AND a.startTime >= :from AND a.startTime < :to AND a.deletedAt IS NULL ORDER BY a.startTime")
     List<Appointment> findByTenantIdAndLocationIdAndDateRange(@Param("tenantId") UUID tenantId, @Param("locationId") UUID locationId, @Param("from") Instant from, @Param("to") Instant to);
 
@@ -40,9 +55,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
     @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM Appointment a WHERE a.artist.id = :artistId AND a.id != :excludeId AND a.status NOT IN ('CANCELLED', 'DONE') AND a.deletedAt IS NULL AND ((a.startTime <= :startTime AND a.endTime > :startTime) OR (a.startTime < :endTime AND a.endTime >= :endTime) OR (a.startTime >= :startTime AND a.endTime <= :endTime))")
     boolean existsConflictingAppointmentExcluding(@Param("artistId") UUID artistId, @Param("startTime") Instant startTime, @Param("endTime") Instant endTime, @Param("excludeId") UUID excludeId);
 
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     @Query("SELECT a FROM Appointment a WHERE a.tenantId = :tenantId AND a.startTime >= :from AND a.startTime < :to AND a.deletedAt IS NULL AND (:artistIds IS NULL OR a.artist.id IN :artistIds) ORDER BY a.startTime")
     List<Appointment> findForCalendar(@Param("tenantId") UUID tenantId, @Param("from") Instant from, @Param("to") Instant to, @Param("artistIds") List<UUID> artistIds);
 
+
+    @Override
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
+    Page<Appointment> findAll(Specification<Appointment> spec, Pageable pageable);
 
     List<Appointment> findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(UUID artistId, List<AppointmentStatus> statuses, Instant after);
     

@@ -14,7 +14,12 @@ import java.util.List;
 
 @Entity
 @Table(name = "clients",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "phone"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "phone"}),
+       indexes = {
+           @Index(name = "idx_client_tenant_deleted", columnList = "tenant_id, deleted_at"),
+           @Index(name = "idx_client_phone_tenant", columnList = "phone, tenant_id"),
+           @Index(name = "idx_client_location", columnList = "location_id"),
+       })
 @Getter
 @Setter
 @SuperBuilder
@@ -46,15 +51,17 @@ public class Client extends BaseEntity {
     @Column(name = "telegram")
     private String telegram;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "client_tags", joinColumns = @JoinColumn(name = "client_id"))
     @Column(name = "tag")
+    @org.hibernate.annotations.BatchSize(size = 50)
     @Builder.Default
     private List<String> tags = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "client_medical_conditions", joinColumns = @JoinColumn(name = "client_id"))
     @Column(name = "condition")
+    @org.hibernate.annotations.BatchSize(size = 50)
     @Builder.Default
     private List<String> medicalConditions = new ArrayList<>();
 

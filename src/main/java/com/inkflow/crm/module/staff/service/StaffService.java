@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.staff.service;
 
 import com.inkflow.crm.common.dto.PageRequest;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
@@ -37,15 +38,10 @@ public class StaffService {
     private final EntityManager entityManager;
 
     @Transactional(readOnly = true)
-    public List<StaffDto> getAllStaff(PageRequest pageRequest, String search, String role, UUID locationId) {
+    public PageResult<StaffDto> getAllStaff(PageRequest pageRequest, String search, String role, UUID locationId) {
         Page<Staff> page = getStaffPage(pageRequest, search, role, locationId);
-        return staffMapper.toDtoList(page.getContent());
-    }
-
-    @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest, String search, String role, UUID locationId) {
-        Page<Staff> page = getStaffPage(pageRequest, search, role, locationId);
-        return PaginationDto.from(page);
+        List<StaffDto> data = staffMapper.toDtoList(page.getContent());
+        return new PageResult<>(data, PaginationDto.from(page));
     }
 
     private Page<Staff> getStaffPage(PageRequest pageRequest, String search, String role, UUID locationId) {

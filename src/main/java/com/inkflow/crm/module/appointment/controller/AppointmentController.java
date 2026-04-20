@@ -2,7 +2,7 @@ package com.inkflow.crm.module.appointment.controller;
 
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
-import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.module.appointment.dto.*;
 import com.inkflow.crm.module.appointment.service.AppointmentService;
 import com.inkflow.crm.security.RequirePermission;
@@ -35,9 +35,8 @@ public class AppointmentController {
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
         AppointmentFilterRequest filter = new AppointmentFilterRequest(locationId, artistId, serviceId, status, from, to);
-        List<AppointmentDto> appointments = appointmentService.getAllAppointments(pageRequest, filter);
-        PaginationDto pagination = appointmentService.getPagination(pageRequest, filter);
-        return ResponseEntity.ok(ApiResponse.success(appointments, pagination));
+        PageResult<AppointmentDto> result = appointmentService.getAllAppointments(pageRequest, filter);
+        return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
     @lombok.Data

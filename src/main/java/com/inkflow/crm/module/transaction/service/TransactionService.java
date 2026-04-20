@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.transaction.service;
 
 import com.inkflow.crm.common.dto.PageRequest;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.*;
@@ -28,17 +29,11 @@ public class TransactionService {
     private final LocationRepository locationRepository;
 
     @Transactional(readOnly = true)
-    public List<TransactionDto> getAllTransactions(PageRequest pageRequest, String type, String category, Instant from, Instant to) {
+    public PageResult<TransactionDto> getAllTransactions(PageRequest pageRequest, String type, String category, Instant from, Instant to) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Page<Transaction> page = resolveTransactionPage(pageRequest, type, category, from, to, tenantId);
-        return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest, String type, String category, Instant from, Instant to) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Transaction> page = resolveTransactionPage(pageRequest, type, category, from, to, tenantId);
-        return PaginationDto.from(page);
+        List<TransactionDto> data = page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
+        return new PageResult<>(data, PaginationDto.from(page));
     }
 
     private Page<Transaction> resolveTransactionPage(PageRequest pageRequest, String type, String category, Instant from, Instant to, UUID tenantId) {

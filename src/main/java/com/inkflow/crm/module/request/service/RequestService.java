@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.request.service;
 
 import com.inkflow.crm.common.dto.PageRequest;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
@@ -34,15 +35,10 @@ public class RequestService {
     private final ClientMapper clientMapper;
 
     @Transactional(readOnly = true)
-    public List<RequestDto> getAllRequests(PageRequest pageRequest, String status, List<String> sources, java.time.Instant from, java.time.Instant to, UUID locationId) {
+    public PageResult<RequestDto> getAllRequests(PageRequest pageRequest, String status, List<String> sources, java.time.Instant from, java.time.Instant to, UUID locationId) {
         Page<Request> page = getRequestsPage(pageRequest, status, sources, from, to, locationId);
-        return page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest, String status, List<String> sources, java.time.Instant from, java.time.Instant to, UUID locationId) {
-        Page<Request> page = getRequestsPage(pageRequest, status, sources, from, to, locationId);
-        return PaginationDto.from(page);
+        List<RequestDto> data = page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
+        return new PageResult<>(data, PaginationDto.from(page));
     }
 
     private Page<Request> getRequestsPage(PageRequest pageRequest, String status, List<String> sources, java.time.Instant from, java.time.Instant to, UUID locationId) {

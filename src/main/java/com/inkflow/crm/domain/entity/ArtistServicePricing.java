@@ -8,7 +8,11 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "artist_service_pricing",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"staff_id", "service_id"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"staff_id", "service_id"}),
+       indexes = {
+           @Index(name = "idx_asp_staff", columnList = "staff_id"),
+           @Index(name = "idx_asp_service", columnList = "service_id"),
+       })
 @Getter
 @Setter
 @Builder

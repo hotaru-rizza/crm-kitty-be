@@ -2,7 +2,7 @@ package com.inkflow.crm.module.project.controller;
 
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
-import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.module.project.dto.*;
 import com.inkflow.crm.module.project.service.ProjectService;
 import jakarta.validation.Valid;
@@ -32,9 +32,8 @@ public class ProjectController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean onlyMine,
             @RequestParam(required = false) UUID locationId) {
-        List<ProjectDto> projects = projectService.getAllProjects(pageRequest, status, artistId, clientId, search, onlyMine, locationId);
-        PaginationDto pagination = projectService.getPagination(pageRequest, status, artistId, clientId, search, onlyMine, locationId);
-        return ResponseEntity.ok(ApiResponse.success(projects, pagination));
+        PageResult<ProjectDto> result = projectService.getAllProjects(pageRequest, status, artistId, clientId, search, onlyMine, locationId);
+        return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
     @GetMapping("/{id}")

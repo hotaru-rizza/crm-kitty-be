@@ -5,6 +5,7 @@ import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.UserRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,19 +17,29 @@ import java.util.UUID;
 
 @Repository
 public interface StaffRepository extends JpaRepository<Staff, UUID> {
+    @EntityGraph(attributePaths = {"locations"})
     Page<Staff> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"locations"})
     List<Staff> findByTenantIdAndDeletedAtIsNull(UUID tenantId);
+
+    @EntityGraph(attributePaths = {"locations", "schedules"})
     Optional<Staff> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+
     Optional<Staff> findByEmailAndTenantIdAndDeletedAtIsNull(String email, UUID tenantId);
+
+    @EntityGraph(attributePaths = {"locations"})
     Page<Staff> findByTenantIdAndRoleAndDeletedAtIsNull(UUID tenantId, UserRole role, Pageable pageable);
     boolean existsByEmailAndTenantIdAndDeletedAtIsNull(String email, UUID tenantId);
 
     @Query("SELECT s FROM Staff s JOIN s.locations l WHERE l.id = :locationId AND s.deletedAt IS NULL")
     List<Staff> findByLocationId(@Param("locationId") UUID locationId);
 
+    @EntityGraph(attributePaths = {"locations"})
     @Query("SELECT s FROM Staff s WHERE s.tenantId = :tenantId AND s.role = 'ARTIST' AND s.deletedAt IS NULL")
     List<Staff> findArtistsByTenantId(@Param("tenantId") UUID tenantId);
 
+    @EntityGraph(attributePaths = {"locations"})
     @Query("SELECT DISTINCT s FROM Staff s " +
            "LEFT JOIN s.locations l " +
            "WHERE s.tenantId = :tenantId AND s.deletedAt IS NULL " +

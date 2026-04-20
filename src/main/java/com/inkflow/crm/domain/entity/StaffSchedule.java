@@ -9,7 +9,10 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "staff_schedules",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"staff_id", "day_of_week"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"staff_id", "day_of_week"}),
+       indexes = {
+           @Index(name = "idx_schedule_staff", columnList = "staff_id"),
+       })
 @Getter
 @Setter
 @Builder

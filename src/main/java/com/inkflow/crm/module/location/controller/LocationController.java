@@ -2,7 +2,7 @@ package com.inkflow.crm.module.location.controller;
 
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
-import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.module.location.dto.*;
 import com.inkflow.crm.module.location.service.LocationService;
 import jakarta.validation.Valid;
@@ -23,9 +23,8 @@ public class LocationController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<LocationDto>>> getAllLocations(@ModelAttribute PageRequest pageRequest) {
-        List<LocationDto> locations = locationService.getAllLocations(pageRequest);
-        PaginationDto pagination = locationService.getPagination(pageRequest);
-        return ResponseEntity.ok(ApiResponse.success(locations, pagination));
+        PageResult<LocationDto> result = locationService.getAllLocations(pageRequest);
+        return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
     @GetMapping("/{id}")

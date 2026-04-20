@@ -13,7 +13,13 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "transactions")
+@Table(name = "transactions", indexes = {
+    @Index(name = "idx_transaction_tenant_deleted", columnList = "tenant_id, deleted_at"),
+    @Index(name = "idx_transaction_appointment", columnList = "appointment_id"),
+    @Index(name = "idx_transaction_staff", columnList = "staff_id"),
+    @Index(name = "idx_transaction_type", columnList = "type"),
+    @Index(name = "idx_transaction_date", columnList = "date"),
+})
 @Getter
 @Setter
 @SuperBuilder

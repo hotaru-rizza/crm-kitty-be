@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.location.service;
 
 import com.inkflow.crm.common.dto.PageRequest;
+import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Location;
@@ -36,19 +37,13 @@ public class LocationService {
     private final LocationMapper locationMapper;
 
     @Transactional(readOnly = true)
-    public List<LocationDto> getAllLocations(PageRequest pageRequest) {
+    public PageResult<LocationDto> getAllLocations(PageRequest pageRequest) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Page<Location> page = locationRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
-        return page.getContent().stream()
+        List<LocationDto> data = page.getContent().stream()
                 .map(this::mapWithStaffCount)
                 .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public PaginationDto getPagination(PageRequest pageRequest) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Location> page = locationRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
-        return PaginationDto.from(page);
+        return new PageResult<>(data, PaginationDto.from(page));
     }
 
     @Transactional(readOnly = true)

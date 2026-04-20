@@ -1,7 +1,6 @@
 package com.inkflow.crm.security;
 
 import com.inkflow.crm.common.exception.AccessDeniedException;
-import jakarta.persistence.EntityManager;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,7 +13,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import javax.sql.DataSource;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.util.UUID;
 
 @Slf4j
@@ -24,7 +26,7 @@ import java.util.UUID;
 @Profile("!dev")
 public class TenantContextFilter extends OncePerRequestFilter {
 
-    private final EntityManager entityManager;
+    private final DataSource dataSource;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -34,9 +36,13 @@ public class TenantContextFilter extends OncePerRequestFilter {
         UUID tenantId = TenantContext.getCurrentTenant();
 
         if (tenantId != null) {
-            entityManager.createNativeQuery("SET app.current_tenant = :tenantId")
-                    .setParameter("tenantId", tenantId.toString())
-                    .executeUpdate();
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement ps = conn.prepareStatement("SET app.current_tenant = ?")) {
+                ps.setString(1, tenantId.toString());
+                ps.execute();
+            } catch (Exception e) {
+                log.warn("Failed to set tenant context in DB session: {}", e.getMessage());
+            }
 
             String locationHeader = request.getHeader("X-Location-Id");
             if (StringUtils.hasText(locationHeader)) {

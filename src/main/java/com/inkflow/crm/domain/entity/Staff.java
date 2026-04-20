@@ -12,7 +12,11 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "staff")
+@Table(name = "staff", indexes = {
+    @Index(name = "idx_staff_tenant_deleted", columnList = "tenant_id, deleted_at"),
+    @Index(name = "idx_staff_auth_user", columnList = "auth_user_id"),
+    @Index(name = "idx_staff_email_tenant", columnList = "email, tenant_id"),
+})
 @Getter
 @Setter
 @SuperBuilder
@@ -42,9 +46,10 @@ public class Staff extends BaseEntity {
     @Column(name = "calendar_color", nullable = false)
     private String calendarColor;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "staff_specializations", joinColumns = @JoinColumn(name = "staff_id"))
     @Column(name = "specialization")
+    @org.hibernate.annotations.BatchSize(size = 50)
     @Builder.Default
     private List<String> specialization = new ArrayList<>();
 
