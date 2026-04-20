@@ -21,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -56,7 +57,7 @@ public class ClientService {
     @Transactional(readOnly = true)
     public ClientDetailDto getClientById(UUID id) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Client client = clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        Client client = clientRepository.findByIdWithCollections(id, tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.client(id.toString()));
 
         List<Project> activeProjects = projectRepository.findByClientIdAndStatusInAndDeletedAtIsNull(
@@ -160,8 +161,8 @@ public class ClientService {
                 .birthDate(client.getBirthDate())
                 .instagram(client.getInstagram())
                 .telegram(client.getTelegram())
-                .tags(client.getTags())
-                .medicalConditions(client.getMedicalConditions())
+                .tags(new ArrayList<>(client.getTags()))
+                .medicalConditions(new ArrayList<>(client.getMedicalConditions()))
                 .source(client.getSource() != null ? client.getSource().getValue() : null)
                 .status(client.getStatus().getValue())
                 .notes(client.getNotes())

@@ -16,6 +16,11 @@ import java.util.UUID;
 public interface ClientRepository extends JpaRepository<Client, UUID> {
     Page<Client> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
     Optional<Client> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+
+    @Query("SELECT c FROM Client c " +
+           "LEFT JOIN FETCH c.tags " +
+           "WHERE c.id = :id AND c.tenantId = :tenantId AND c.deletedAt IS NULL")
+    Optional<Client> findByIdWithCollections(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
     Optional<Client> findByPhoneAndTenantIdAndDeletedAtIsNull(String phone, UUID tenantId);
     boolean existsByPhoneAndTenantIdAndDeletedAtIsNull(String phone, UUID tenantId);
     Page<Client> findByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, ClientStatus status, Pageable pageable);

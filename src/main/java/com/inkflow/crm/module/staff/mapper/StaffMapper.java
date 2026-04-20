@@ -15,6 +15,7 @@ public interface StaffMapper {
     @Mapping(target = "role", expression = "java(staff.getRole().getValue())")
     @Mapping(target = "status", expression = "java(staff.getStatus().getValue())")
     @Mapping(target = "locationIds", expression = "java(staff.getLocations().stream().map(l -> l.getId()).collect(java.util.stream.Collectors.toList()))")
+    @Mapping(target = "specialization", expression = "java(new java.util.ArrayList<>(staff.getSpecialization()))")
     StaffDto toDto(Staff staff);
 
     List<StaffDto> toDtoList(List<Staff> staffList);

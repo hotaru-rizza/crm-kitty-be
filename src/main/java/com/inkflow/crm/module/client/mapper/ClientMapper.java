@@ -11,6 +11,7 @@ import java.util.List;
 public interface ClientMapper {
 
     @Mapping(target = "status", expression = "java(client.getStatus().getValue())")
+    @Mapping(target = "tags", expression = "java(new java.util.ArrayList<>(client.getTags()))")
     ClientDto toDto(Client client);
 
     List<ClientDto> toDtoList(List<Client> clients);
