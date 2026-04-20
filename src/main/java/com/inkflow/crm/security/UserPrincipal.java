@@ -16,6 +16,7 @@ import java.util.UUID;
 public class UserPrincipal implements UserDetails {
 
     private final UUID id;
+    private final String authUserId;
     private final String email;
     private final UUID tenantId;
     private final UserRole role;
@@ -23,6 +24,9 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (role == null) {
+            return List.of(new SimpleGrantedAuthority("ROLE_AUTHENTICATED"));
+        }
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 

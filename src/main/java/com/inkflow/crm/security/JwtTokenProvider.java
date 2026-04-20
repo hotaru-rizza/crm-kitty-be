@@ -8,7 +8,9 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.UserRole;
+import com.inkflow.crm.domain.repository.StaffRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -32,7 +34,12 @@ public class JwtTokenProvider {
     @Value("${supabase.jwt.jwks-uri}")
     private String jwksUri;
 
+    private final StaffRepository staffRepository;
     private JwkProvider jwkProvider;
+
+    public JwtTokenProvider(StaffRepository staffRepository) {
+        this.staffRepository = staffRepository;
+    }
 
     @PostConstruct
     public void init() throws MalformedURLException {
@@ -55,14 +62,13 @@ public class JwtTokenProvider {
     public UserPrincipal getUserPrincipal(String token) {
         DecodedJWT jwt = verifyAndDecode(token);
 
-        UUID userId = UUID.fromString(jwt.getSubject());
+        String supabaseUserId = jwt.getSubject();
         String email = jwt.getClaim("email").asString();
 
         // tenant_id and user_role are stored in app_metadata → appear as top-level JWT claims
         String tenantIdStr = jwt.getClaim("tenant_id").asString();
         UUID tenantId = tenantIdStr != null ? UUID.fromString(tenantIdStr) : null;
 
-        // Supabase sets "role" = "authenticated" (system claim); our role is in "user_role"
         String roleStr = jwt.getClaim("user_role").asString();
         UserRole role = null;
         if (roleStr != null) {
@@ -80,8 +86,30 @@ public class JwtTokenProvider {
                     .toList();
         }
 
+        // Fallback: if JWT lacks user_role/tenant_id, resolve from DB
+        UUID staffId = null;
+        if (role == null || tenantId == null) {
+            var staffOpt = staffRepository.findByAuthUserIdAndDeletedAtIsNull(supabaseUserId);
+            if (staffOpt.isPresent()) {
+                Staff staff = staffOpt.get();
+                staffId = staff.getId();
+                if (tenantId == null) tenantId = staff.getTenantId();
+                if (role == null) role = staff.getRole();
+                if (locationIds.isEmpty() && staff.getLocations() != null) {
+                    locationIds = staff.getLocations().stream()
+                            .map(loc -> loc.getId())
+                            .toList();
+                }
+                if (email == null) email = staff.getEmail();
+                log.debug("JWT missing claims — resolved from DB: staff={}, tenant={}, role={}", staffId, tenantId, role);
+            } else {
+                log.warn("No staff record found for auth user {}", supabaseUserId);
+            }
+        }
+
         return UserPrincipal.builder()
-                .id(userId)
+                .id(staffId != null ? staffId : UUID.fromString(supabaseUserId))
+                .authUserId(supabaseUserId)
                 .email(email)
                 .tenantId(tenantId)
                 .role(role)

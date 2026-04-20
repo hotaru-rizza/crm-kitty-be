@@ -25,9 +25,9 @@ public class AuthService {
     public CurrentUserResponse getCurrentUser() {
         UserPrincipal principal = SecurityUtils.getCurrentUserOrThrow();
 
-        Staff staff = staffRepository.findByAuthUserIdAndDeletedAtIsNull(principal.getId().toString())
+        Staff staff = staffRepository.findByAuthUserIdAndDeletedAtIsNull(principal.getAuthUserId())
                 .or(() -> staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(principal.getId(), principal.getTenantId()))
-                .orElseThrow(() -> ResourceNotFoundException.staff(principal.getId().toString()));
+                .orElseThrow(() -> ResourceNotFoundException.staff(principal.getAuthUserId()));
 
         Tenant tenant = tenantRepository.findById(principal.getTenantId())
                 .orElseThrow(() -> new ResourceNotFoundException(

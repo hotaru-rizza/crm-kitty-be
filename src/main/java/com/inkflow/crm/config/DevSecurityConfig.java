@@ -154,21 +154,24 @@ public class DevSecurityConfig {
                 try {
                     if (jwtTokenProvider.validateToken(jwt)) {
                         com.inkflow.crm.security.UserPrincipal jwtUser = jwtTokenProvider.getUserPrincipal(jwt);
-                        UsernamePasswordAuthenticationToken auth =
-                                new UsernamePasswordAuthenticationToken(jwtUser, null, jwtUser.getAuthorities());
-                        auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(auth);
-                        TenantContext.setCurrentTenant(jwtUser.getTenantId());
-                        TenantContext.setCurrentUser(jwtUser.getId());
-                        TenantContext.setCurrentRole(jwtUser.getRole());
-                        TenantContext.setCurrentLocationIds(jwtUser.getLocationIds());
-                        try {
-                            filterChain.doFilter(request, response);
-                        } finally {
-                            TenantContext.clear();
-                            SecurityContextHolder.clearContext();
+                        if (jwtUser.getRole() != null && jwtUser.getTenantId() != null) {
+                            UsernamePasswordAuthenticationToken auth =
+                                    new UsernamePasswordAuthenticationToken(jwtUser, null, jwtUser.getAuthorities());
+                            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(auth);
+                            TenantContext.setCurrentTenant(jwtUser.getTenantId());
+                            TenantContext.setCurrentUser(jwtUser.getId());
+                            TenantContext.setCurrentRole(jwtUser.getRole());
+                            TenantContext.setCurrentLocationIds(jwtUser.getLocationIds());
+                            try {
+                                filterChain.doFilter(request, response);
+                            } finally {
+                                TenantContext.clear();
+                                SecurityContextHolder.clearContext();
+                            }
+                            return;
                         }
-                        return;
+                        log.debug("JWT valid but missing role/tenant claims, falling back to dev user");
                     }
                 } catch (Exception e) {
                     log.debug("JWT validation failed in dev mode, falling back to dev user: {}", e.getMessage());
@@ -180,6 +183,7 @@ public class DevSecurityConfig {
 
             UserPrincipal devUser = UserPrincipal.builder()
                     .id(resolvedUserId)
+                    .authUserId(resolvedUserId.toString())
                     .email(email)
                     .tenantId(tenantId)
                     .role(role)
