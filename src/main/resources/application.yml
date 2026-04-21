@@ -65,6 +65,13 @@ supabase:
     issuer: ${SUPABASE_JWT_ISSUER}
     jwks-uri: ${SUPABASE_JWKS_URI}
 
+google:
+  calendar:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+    redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/public/google/callback}
+    frontend-redirect: ${FRONTEND_URL:http://localhost:5173}/app/settings
+
 logging:
   level:
     root: INFO

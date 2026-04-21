@@ -14,6 +14,7 @@ import com.inkflow.crm.domain.repository.*;
 import com.inkflow.crm.module.appointment.dto.*;
 import com.inkflow.crm.module.client.dto.ClientSummaryDto;
 import com.inkflow.crm.module.email.service.EmailService;
+import com.inkflow.crm.module.google.GoogleCalendarSyncService;
 import com.inkflow.crm.module.settings.service.SettingsService;
 import com.inkflow.crm.module.staff.dto.StaffSummaryDto;
 import com.inkflow.crm.security.SecurityUtils;
@@ -42,6 +43,7 @@ public class AppointmentService {
     private final SettingsService settingsService;
     private final EmailService emailService;
     private final CompanySettingsRepository companySettingsRepository;
+    private final GoogleCalendarSyncService googleCalendarSyncService;
 
     @Transactional(readOnly = true)
     public PageResult<AppointmentDto> getAllAppointments(PageRequest pageRequest, AppointmentFilterRequest filter) {
@@ -158,6 +160,8 @@ public class AppointmentService {
             // email failure should not break appointment creation
         }
 
+        googleCalendarSyncService.syncNewAppointment(appointment);
+
         return mapToDto(appointment);
     }
 
@@ -245,6 +249,12 @@ public class AppointmentService {
             // email failure should not break appointment update
         }
 
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            googleCalendarSyncService.syncDeletedAppointment(appointment);
+        } else {
+            googleCalendarSyncService.syncUpdatedAppointment(appointment);
+        }
+
         return mapToDto(appointment);
     }
 
@@ -253,6 +263,9 @@ public class AppointmentService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.appointment(id.toString()));
+
+        googleCalendarSyncService.syncDeletedAppointment(appointment);
+
         appointment.softDelete();
         appointmentRepository.save(appointment);
     }

@@ -29,16 +29,22 @@ public class TransactionService {
     private final LocationRepository locationRepository;
 
     @Transactional(readOnly = true)
-    public PageResult<TransactionDto> getAllTransactions(PageRequest pageRequest, String type, String category, Instant from, Instant to) {
+    public PageResult<TransactionDto> getAllTransactions(PageRequest pageRequest, String type, String category, Instant from, Instant to, UUID staffId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Transaction> page = resolveTransactionPage(pageRequest, type, category, from, to, tenantId);
+        Page<Transaction> page = resolveTransactionPage(pageRequest, type, category, from, to, staffId, tenantId);
         List<TransactionDto> data = page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
         return new PageResult<>(data, PaginationDto.from(page));
     }
 
-    private Page<Transaction> resolveTransactionPage(PageRequest pageRequest, String type, String category, Instant from, Instant to, UUID tenantId) {
+    private Page<Transaction> resolveTransactionPage(PageRequest pageRequest, String type, String category, Instant from, Instant to, UUID staffId, UUID tenantId) {
         boolean hasDateRange = from != null && to != null;
-        if (type != null && hasDateRange) {
+        if (staffId != null && hasDateRange) {
+            return transactionRepository.findByTenantIdAndStaffIdAndDateRangeAndDeletedAtIsNull(
+                    tenantId, staffId, from, to, pageRequest.toPageable());
+        } else if (staffId != null) {
+            return transactionRepository.findByTenantIdAndStaffIdAndDeletedAtIsNull(
+                    tenantId, staffId, pageRequest.toPageable());
+        } else if (type != null && hasDateRange) {
             return transactionRepository.findByTenantIdAndTypeAndDateRangeAndDeletedAtIsNull(
                     tenantId, TransactionType.fromValue(type), from, to, pageRequest.toPageable());
         } else if (type != null) {

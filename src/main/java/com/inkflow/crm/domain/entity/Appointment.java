@@ -82,6 +82,9 @@ public class Appointment extends BaseEntity {
     @Column(name = "consent_token", unique = true)
     private String consentToken;
 
+    @Column(name = "google_event_id")
+    private String googleEventId;
+
     @Column(name = "cancellation_reason")
     private String cancellationReason;
 

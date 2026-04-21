@@ -87,6 +87,25 @@ public class Staff extends BaseEntity {
     @Column(name = "auth_user_id")
     private String authUserId;
 
+    @Column(name = "google_access_token", columnDefinition = "TEXT")
+    private String googleAccessToken;
+
+    @Column(name = "google_refresh_token", columnDefinition = "TEXT")
+    private String googleRefreshToken;
+
+    @Column(name = "google_calendar_id")
+    private String googleCalendarId;
+
+    @Column(name = "google_token_expires_at")
+    private java.time.Instant googleTokenExpiresAt;
+
+    @Column(name = "google_calendar_email")
+    private String googleCalendarEmail;
+
+    public boolean isGoogleCalendarConnected() {
+        return googleRefreshToken != null && !googleRefreshToken.isBlank();
+    }
+
     public String getFullName() {
         return firstName + " " + lastName;
     }

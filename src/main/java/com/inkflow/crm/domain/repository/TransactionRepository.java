@@ -24,6 +24,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     Page<Transaction> findByTenantIdAndCategoryAndDeletedAtIsNull(UUID tenantId, TransactionCategory category, Pageable pageable);
     Page<Transaction> findByTenantIdAndStaffIdAndDeletedAtIsNull(UUID tenantId, UUID staffId, Pageable pageable);
 
+    @Query("SELECT t FROM Transaction t WHERE t.tenantId = :tenantId AND t.staff.id = :staffId AND t.date >= :from AND t.date < :to AND t.deletedAt IS NULL")
+    Page<Transaction> findByTenantIdAndStaffIdAndDateRangeAndDeletedAtIsNull(@Param("tenantId") UUID tenantId, @Param("staffId") UUID staffId, @Param("from") Instant from, @Param("to") Instant to, Pageable pageable);
+
     @Query("SELECT t FROM Transaction t WHERE t.tenantId = :tenantId AND t.date >= :from AND t.date < :to AND t.deletedAt IS NULL")
     Page<Transaction> findByTenantIdAndDateRangeAndDeletedAtIsNull(@Param("tenantId") UUID tenantId, @Param("from") Instant from, @Param("to") Instant to, Pageable pageable);
 
