@@ -4,6 +4,7 @@ import com.inkflow.crm.domain.entity.Appointment;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public final class AppointmentSpecifications {
@@ -26,6 +27,12 @@ public final class AppointmentSpecifications {
     public static Specification<Appointment> withArtist(UUID artistId) {
         if (artistId == null) return null;
         return (root, query, cb) -> cb.equal(root.get("artist").get("id"), artistId);
+    }
+
+    public static Specification<Appointment> withArtists(List<UUID> artistIds) {
+        if (artistIds == null || artistIds.isEmpty()) return null;
+        if (artistIds.size() == 1) return withArtist(artistIds.get(0));
+        return (root, query, cb) -> root.get("artist").get("id").in(artistIds);
     }
 
     public static Specification<Appointment> withStatus(String status) {

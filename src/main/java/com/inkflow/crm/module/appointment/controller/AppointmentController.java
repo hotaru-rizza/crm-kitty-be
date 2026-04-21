@@ -29,12 +29,12 @@ public class AppointmentController {
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAllAppointments(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) UUID locationId,
-            @RequestParam(required = false) UUID artistId,
+            @RequestParam(required = false) List<UUID> artistIds,
             @RequestParam(required = false) UUID serviceId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
-        AppointmentFilterRequest filter = new AppointmentFilterRequest(locationId, artistId, serviceId, status, from, to);
+        AppointmentFilterRequest filter = new AppointmentFilterRequest(locationId, artistIds, serviceId, status, from, to);
         PageResult<AppointmentDto> result = appointmentService.getAllAppointments(pageRequest, filter);
         return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
@@ -43,7 +43,7 @@ public class AppointmentController {
     @lombok.AllArgsConstructor
     public static class AppointmentFilterRequest {
         private UUID locationId;
-        private UUID artistId;
+        private List<UUID> artistIds;
         private UUID serviceId;
         private String status;
         private String from;

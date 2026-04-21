@@ -55,16 +55,16 @@ public class AppointmentService {
         Instant from = filter.getFrom() != null ? Instant.parse(filter.getFrom()) : null;
         Instant to = filter.getTo() != null ? Instant.parse(filter.getTo()) : null;
 
-        UUID effectiveArtistId = filter.getArtistId();
+        List<UUID> effectiveArtistIds = filter.getArtistIds();
         if (!settingsService.hasPermission(tenantId, SecurityUtils.getCurrentUserRole(), "calendar.view_all")) {
-            effectiveArtistId = SecurityUtils.getCurrentUserId();
+            effectiveArtistIds = List.of(SecurityUtils.getCurrentUserId());
         }
 
         Specification<Appointment> spec = Specification
                 .where(AppointmentSpecifications.belongsToTenant(tenantId))
                 .and(AppointmentSpecifications.notDeleted())
                 .and(AppointmentSpecifications.withLocation(filter.getLocationId()))
-                .and(AppointmentSpecifications.withArtist(effectiveArtistId))
+                .and(AppointmentSpecifications.withArtists(effectiveArtistIds))
                 .and(AppointmentSpecifications.withService(filter.getServiceId()))
                 .and(AppointmentSpecifications.withStatus(filter.getStatus()))
                 .and(AppointmentSpecifications.startTimeAfter(from))
