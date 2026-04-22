@@ -32,4 +32,7 @@ public class UpdateServiceRequest {
     private String color;
 
     private Boolean isActive;
+
+    @DecimalMin(value = "0.0", message = "Cost price must be positive")
+    private BigDecimal costPrice;
 }

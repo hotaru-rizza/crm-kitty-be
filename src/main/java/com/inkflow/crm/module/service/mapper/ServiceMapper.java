@@ -59,6 +59,7 @@ public interface ServiceMapper {
                 .duration(service.getDuration())
                 .color(service.getColor())
                 .isActive(service.getIsActive())
+                .costPrice(service.getCostPrice())
                 .artistPricing(artistPricing)
                 .createdAt(service.getCreatedAt())
                 .updatedAt(service.getUpdatedAt())

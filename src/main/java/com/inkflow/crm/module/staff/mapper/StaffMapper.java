@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.staff.mapper;
 
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.enums.SalaryType;
 import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.module.staff.dto.*;
@@ -16,6 +17,7 @@ public interface StaffMapper {
     @Mapping(target = "status", expression = "java(staff.getStatus().getValue())")
     @Mapping(target = "locationIds", expression = "java(staff.getLocations().stream().map(l -> l.getId()).collect(java.util.stream.Collectors.toList()))")
     @Mapping(target = "specialization", expression = "java(new java.util.ArrayList<>(staff.getSpecialization()))")
+    @Mapping(target = "salaryType", expression = "java(staff.getSalaryType() != null ? staff.getSalaryType().getValue() : \"none\")")
     StaffDto toDto(Staff staff);
 
     List<StaffDto> toDtoList(List<Staff> staffList);
@@ -34,6 +36,9 @@ public interface StaffMapper {
     @Mapping(target = "authUserId", ignore = true)
     @Mapping(target = "status", expression = "java(com.inkflow.crm.domain.enums.StaffStatus.WORKING)")
     @Mapping(target = "role", expression = "java(mapRole(request.getRole()))")
+    @Mapping(target = "salaryType", expression = "java(com.inkflow.crm.domain.enums.SalaryType.NONE)")
+    @Mapping(target = "salaryRate", ignore = true)
+    @Mapping(target = "bankDetails", ignore = true)
     Staff toEntity(CreateStaffRequest request);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
@@ -50,6 +55,7 @@ public interface StaffMapper {
     @Mapping(target = "servicePricings", ignore = true)
     @Mapping(target = "authUserId", ignore = true)
     @Mapping(target = "status", expression = "java(request.getStatus() != null ? mapStatus(request.getStatus()) : staff.getStatus())")
+    @Mapping(target = "salaryType", expression = "java(request.getSalaryType() != null ? mapSalaryType(request.getSalaryType()) : staff.getSalaryType())")
     void updateEntity(UpdateStaffRequest request, @MappingTarget Staff staff);
 
     default StaffSummaryDto toSummaryDto(Staff staff) {
@@ -69,5 +75,9 @@ public interface StaffMapper {
 
     default StaffStatus mapStatus(String status) {
         return StaffStatus.fromValue(status);
+    }
+
+    default SalaryType mapSalaryType(String type) {
+        return SalaryType.fromValue(type);
     }
 }

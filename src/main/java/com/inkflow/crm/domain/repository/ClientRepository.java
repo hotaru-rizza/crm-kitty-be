@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,6 +47,23 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
             @Param("tenantId") UUID tenantId,
             @Param("search") String search,
             @Param("status") ClientStatus status,
+            @Param("artistId") UUID artistId,
+            Pageable pageable);
+
+    @Query("SELECT DISTINCT c FROM Client c " +
+           "LEFT JOIN Project p ON p.client.id = c.id AND p.deletedAt IS NULL " +
+           "WHERE c.tenantId = :tenantId AND c.deletedAt IS NULL " +
+           "AND c.totalVisits > 0 " +
+           "AND (c.lastVisit IS NULL OR c.lastVisit < :cutoff) " +
+           "AND (COALESCE(:search, '') = '' OR " +
+           "     LOWER(c.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "     LOWER(c.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "     c.phone LIKE CONCAT('%', :search, '%')) " +
+           "AND (:artistId IS NULL OR p.artist.id = :artistId)")
+    Page<Client> findLostClients(
+            @Param("tenantId") UUID tenantId,
+            @Param("cutoff") Instant cutoff,
+            @Param("search") String search,
             @Param("artistId") UUID artistId,
             Pageable pageable);
 }

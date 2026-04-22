@@ -22,5 +22,6 @@ public class ServiceDto {
     private Integer duration;
     private String color;
     private Boolean isActive;
+    private BigDecimal costPrice;
     private Instant createdAt;
 }

@@ -23,6 +23,7 @@ public class ServiceDetailDto {
     private Integer duration;
     private String color;
     private Boolean isActive;
+    private BigDecimal costPrice;
     private List<ArtistPricingOverrideDto> artistPricing;
     private Instant createdAt;
     private Instant updatedAt;

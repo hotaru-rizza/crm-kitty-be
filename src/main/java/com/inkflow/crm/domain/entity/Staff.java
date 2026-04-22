@@ -1,7 +1,9 @@
 package com.inkflow.crm.domain.entity;
 
+import com.inkflow.crm.domain.enums.SalaryType;
 import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.UserRole;
+import java.math.BigDecimal;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -101,6 +103,17 @@ public class Staff extends BaseEntity {
 
     @Column(name = "google_calendar_email")
     private String googleCalendarEmail;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "salary_type", nullable = false)
+    @Builder.Default
+    private SalaryType salaryType = SalaryType.NONE;
+
+    @Column(name = "salary_rate", precision = 10, scale = 2)
+    private BigDecimal salaryRate;
+
+    @Column(name = "bank_details", columnDefinition = "TEXT")
+    private String bankDetails;
 
     public boolean isGoogleCalendarConnected() {
         return googleRefreshToken != null && !googleRefreshToken.isBlank();

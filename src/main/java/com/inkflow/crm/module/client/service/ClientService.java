@@ -21,6 +21,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -36,20 +38,25 @@ public class ClientService {
     private final SettingsService settingsService;
 
     @Transactional(readOnly = true)
-    public PageResult<ClientDto> getAllClients(PageRequest pageRequest, String search, String status, Boolean onlyMine) {
-        Page<Client> page = getClientsPage(pageRequest, search, status, onlyMine);
+    public PageResult<ClientDto> getAllClients(PageRequest pageRequest, String search, String status, Boolean onlyMine, Boolean lost) {
+        Page<Client> page = getClientsPage(pageRequest, search, status, onlyMine, lost);
         List<ClientDto> data = clientMapper.toDtoList(page.getContent());
         return new PageResult<>(data, PaginationDto.from(page));
     }
 
-    private Page<Client> getClientsPage(PageRequest pageRequest, String search, String status, Boolean onlyMine) {
+    private Page<Client> getClientsPage(PageRequest pageRequest, String search, String status, Boolean onlyMine, Boolean lost) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         ClientStatus clientStatus = status != null ? ClientStatus.fromValue(status) : null;
-        
+
         if (!settingsService.hasPermission(tenantId, SecurityUtils.getCurrentUserRole(), "clients.view_all")) {
             onlyMine = true;
         }
         UUID artistId = Boolean.TRUE.equals(onlyMine) ? SecurityUtils.getCurrentUserId() : null;
+
+        if (Boolean.TRUE.equals(lost)) {
+            Instant cutoff = Instant.now().minus(90, ChronoUnit.DAYS);
+            return clientRepository.findLostClients(tenantId, cutoff, search, artistId, pageRequest.toPageable());
+        }
 
         return clientRepository.findWithFilters(tenantId, search, clientStatus, artistId, pageRequest.toPageable());
     }

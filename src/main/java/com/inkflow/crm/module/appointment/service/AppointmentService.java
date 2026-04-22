@@ -44,6 +44,7 @@ public class AppointmentService {
     private final EmailService emailService;
     private final CompanySettingsRepository companySettingsRepository;
     private final GoogleCalendarSyncService googleCalendarSyncService;
+    private final com.inkflow.crm.module.audit.AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public PageResult<AppointmentDto> getAllAppointments(PageRequest pageRequest, AppointmentFilterRequest filter) {
@@ -162,6 +163,10 @@ public class AppointmentService {
 
         googleCalendarSyncService.syncNewAppointment(appointment);
 
+        auditLogService.logCurrent("CREATE", "APPOINTMENT",
+                appointment.getId().toString(),
+                client.getFirstName() + " " + client.getLastName() + " @ " + appointment.getStartTime());
+
         return mapToDto(appointment);
     }
 
@@ -265,6 +270,10 @@ public class AppointmentService {
                 .orElseThrow(() -> ResourceNotFoundException.appointment(id.toString()));
 
         googleCalendarSyncService.syncDeletedAppointment(appointment);
+        auditLogService.logCurrent("DELETE", "APPOINTMENT", id.toString(),
+                appointment.getClient() != null
+                        ? appointment.getClient().getFirstName() + " " + appointment.getClient().getLastName()
+                        : id.toString());
 
         appointment.softDelete();
         appointmentRepository.save(appointment);

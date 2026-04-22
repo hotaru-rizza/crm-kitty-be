@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,4 +39,12 @@ public class UpdateStaffRequest {
 
     @Pattern(regexp = "^(working|on_vacation|sick_leave|fired)$", message = "Invalid status")
     private String status;
+
+    @Pattern(regexp = "^(none|fixed|percent)$", message = "Invalid salary type")
+    private String salaryType;
+
+    @jakarta.validation.constraints.DecimalMin(value = "0.0")
+    private BigDecimal salaryRate;
+
+    private String bankDetails;
 }

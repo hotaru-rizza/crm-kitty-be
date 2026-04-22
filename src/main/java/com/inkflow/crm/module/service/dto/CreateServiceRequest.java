@@ -35,4 +35,7 @@ public class CreateServiceRequest {
     @NotBlank(message = "Color is required")
     @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "Color must be a valid hex color code")
     private String color;
+
+    @DecimalMin(value = "0.0", message = "Cost price must be positive")
+    private BigDecimal costPrice;
 }

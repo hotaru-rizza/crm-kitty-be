@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +30,9 @@ public class StaffDetailDto {
     private List<LocationDto> locations;
     private List<ScheduleDto> schedule;
     private StaffStatsDto stats;
+    private String salaryType;
+    private BigDecimal salaryRate;
+    private String bankDetails;
     private Instant createdAt;
     private Instant updatedAt;
 

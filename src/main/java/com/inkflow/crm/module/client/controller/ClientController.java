@@ -29,8 +29,9 @@ public class ClientController {
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Boolean onlyMine) {
-        PageResult<ClientDto> result = clientService.getAllClients(pageRequest, search, status, onlyMine);
+            @RequestParam(required = false) Boolean onlyMine,
+            @RequestParam(required = false) Boolean lost) {
+        PageResult<ClientDto> result = clientService.getAllClients(pageRequest, search, status, onlyMine, lost);
         return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 

@@ -258,6 +258,9 @@ public class StaffService {
                 .locations(locations)
                 .schedule(schedule)
                 .stats(stats)
+                .salaryType(staff.getSalaryType() != null ? staff.getSalaryType().getValue() : "none")
+                .salaryRate(staff.getSalaryRate())
+                .bankDetails(staff.getBankDetails())
                 .createdAt(staff.getCreatedAt())
                 .updatedAt(staff.getUpdatedAt())
                 .build();
