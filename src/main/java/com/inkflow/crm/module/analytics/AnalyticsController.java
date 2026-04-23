@@ -3,6 +3,7 @@ package com.inkflow.crm.module.analytics;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.module.analytics.dto.AppointmentAnalyticsDto;
 import com.inkflow.crm.module.analytics.dto.ClientAnalyticsDto;
+import com.inkflow.crm.module.analytics.dto.PnlDto;
 import com.inkflow.crm.module.analytics.dto.ServicePopularityDto;
 import com.inkflow.crm.module.analytics.dto.StaffPerformanceDto;
 import com.inkflow.crm.security.RequirePermission;
@@ -56,6 +57,15 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(defaultValue = "month") String groupBy) {
         ClientAnalyticsDto result = analyticsService.getClientAnalytics(from, to, groupBy);
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    @GetMapping("/pnl")
+    @RequirePermission({"finance.view"})
+    public ResponseEntity<ApiResponse<PnlDto>> getPnl(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+        PnlDto result = analyticsService.getPnl(from, to);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 }

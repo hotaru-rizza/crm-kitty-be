@@ -25,4 +25,7 @@ public class StaffPerformanceDto {
     private String salaryType;
     private BigDecimal salaryRate;
     private BigDecimal calculatedSalary;
+    private double scheduledHours;
+    private double bookedHours;
+    private double utilizationRate;
 }

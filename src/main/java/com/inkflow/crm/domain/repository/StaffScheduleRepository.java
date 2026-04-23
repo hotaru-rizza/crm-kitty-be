@@ -16,6 +16,7 @@ import java.util.UUID;
 public interface StaffScheduleRepository extends JpaRepository<StaffSchedule, UUID> {
     List<StaffSchedule> findByStaffId(UUID staffId);
     Optional<StaffSchedule> findByStaffIdAndDayOfWeek(UUID staffId, DayOfWeek dayOfWeek);
+    List<StaffSchedule> findByStaffIdIn(List<UUID> staffIds);
     
     @Modifying(flushAutomatically = true)
     @Query("DELETE FROM StaffSchedule s WHERE s.staff.id = :staffId")

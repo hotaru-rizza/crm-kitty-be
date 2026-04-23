@@ -2,11 +2,19 @@ package com.inkflow.crm.module.analytics;
 
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.entity.StaffSchedule;
+import com.inkflow.crm.domain.entity.TransactionCategoryConfig;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
+import com.inkflow.crm.domain.enums.TransactionCategory;
+import com.inkflow.crm.domain.enums.TransactionType;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.ClientRepository;
+import com.inkflow.crm.domain.repository.StaffScheduleRepository;
+import com.inkflow.crm.domain.repository.TransactionCategoryConfigRepository;
+import com.inkflow.crm.domain.repository.TransactionRepository;
 import com.inkflow.crm.module.analytics.dto.AppointmentAnalyticsDto;
 import com.inkflow.crm.module.analytics.dto.ClientAnalyticsDto;
+import com.inkflow.crm.module.analytics.dto.PnlDto;
 import com.inkflow.crm.module.analytics.dto.ServicePopularityDto;
 import com.inkflow.crm.module.analytics.dto.StaffPerformanceDto;
 import com.inkflow.crm.security.SecurityUtils;
@@ -28,6 +36,9 @@ public class AnalyticsService {
 
     private final AppointmentRepository appointmentRepository;
     private final ClientRepository clientRepository;
+    private final StaffScheduleRepository staffScheduleRepository;
+    private final TransactionRepository transactionRepository;
+    private final TransactionCategoryConfigRepository categoryConfigRepository;
 
     @Transactional(readOnly = true)
     public AppointmentAnalyticsDto getAppointmentAnalytics(Instant from, Instant to, String groupBy) {
@@ -82,10 +93,15 @@ public class AnalyticsService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         List<Appointment> appointments = appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to);
 
-        // Group by artist
         Map<UUID, List<Appointment>> byArtist = appointments.stream()
                 .filter(a -> a.getArtist() != null)
                 .collect(Collectors.groupingBy(a -> a.getArtist().getId()));
+
+        List<UUID> artistIds = new ArrayList<>(byArtist.keySet());
+        Map<UUID, List<StaffSchedule>> schedulesByArtist = staffScheduleRepository
+                .findByStaffIdIn(artistIds)
+                .stream()
+                .collect(Collectors.groupingBy(s -> s.getStaff().getId()));
 
         return byArtist.entrySet().stream().map(entry -> {
             List<Appointment> artistApps = entry.getValue();
@@ -116,6 +132,13 @@ public class AnalyticsService {
                 calculatedSalary = salaryRate;
             }
 
+            List<StaffSchedule> artistSched = schedulesByArtist.getOrDefault(artist.getId(), List.of());
+            double scheduledHours = calculateScheduledHours(artistSched, from, to);
+            double bookedHours = calculateBookedHours(artistApps);
+            double utilizationRate = scheduledHours > 0
+                    ? Math.min(bookedHours / scheduledHours * 100, 100)
+                    : 0;
+
             return StaffPerformanceDto.builder()
                     .staffId(artist.getId())
                     .name(artist.getFirstName() + " " + artist.getLastName())
@@ -129,10 +152,45 @@ public class AnalyticsService {
                     .salaryType(salaryType.getValue())
                     .salaryRate(salaryRate)
                     .calculatedSalary(calculatedSalary)
+                    .scheduledHours(Math.round(scheduledHours * 10.0) / 10.0)
+                    .bookedHours(Math.round(bookedHours * 10.0) / 10.0)
+                    .utilizationRate(Math.round(utilizationRate * 10.0) / 10.0)
                     .build();
         })
         .sorted(Comparator.comparing(StaffPerformanceDto::getRevenue).reversed())
         .collect(Collectors.toList());
+    }
+
+    private double calculateScheduledHours(List<StaffSchedule> schedule, Instant from, Instant to) {
+        if (schedule.isEmpty()) return 0;
+        Map<com.inkflow.crm.domain.enums.DayOfWeek, StaffSchedule> schedMap = schedule.stream()
+                .filter(s -> Boolean.TRUE.equals(s.getIsWorking())
+                        && s.getStartTime() != null && s.getEndTime() != null)
+                .collect(Collectors.toMap(StaffSchedule::getDayOfWeek, s -> s, (a, b) -> a));
+
+        ZoneId zone = ZoneId.of("Europe/Kyiv");
+        LocalDate startDate = from.atZone(zone).toLocalDate();
+        LocalDate endDate = to.atZone(zone).toLocalDate();
+
+        double total = 0;
+        LocalDate cursor = startDate;
+        while (!cursor.isAfter(endDate)) {
+            com.inkflow.crm.domain.enums.DayOfWeek dow =
+                    com.inkflow.crm.domain.enums.DayOfWeek.fromJavaDayOfWeek(cursor.getDayOfWeek());
+            StaffSchedule s = schedMap.get(dow);
+            if (s != null) {
+                total += java.time.Duration.between(s.getStartTime(), s.getEndTime()).toMinutes() / 60.0;
+            }
+            cursor = cursor.plusDays(1);
+        }
+        return total;
+    }
+
+    private double calculateBookedHours(List<Appointment> appointments) {
+        return appointments.stream()
+                .filter(a -> a.getStatus() != AppointmentStatus.CANCELLED)
+                .mapToLong(a -> java.time.Duration.between(a.getStartTime(), a.getEndTime()).toMinutes())
+                .sum() / 60.0;
     }
 
     @Transactional(readOnly = true)
@@ -233,6 +291,115 @@ public class AnalyticsService {
                 .returningClients(returningClients)
                 .repeatRate(Math.round(repeatRate * 10.0) / 10.0)
                 .series(series)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public PnlDto getPnl(Instant from, Instant to) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+
+        List<Appointment> appointments = appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to);
+
+        BigDecimal revenue = appointments.stream()
+                .filter(a -> a.getStatus() == AppointmentStatus.DONE)
+                .map(a -> a.getFinalPrice() != null ? a.getFinalPrice() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal costOfSales = appointments.stream()
+                .filter(a -> a.getStatus() == AppointmentStatus.DONE && a.getService() != null
+                        && a.getService().getCostPrice() != null)
+                .map(a -> a.getService().getCostPrice())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal grossProfit = revenue.subtract(costOfSales);
+        double grossMargin = revenue.compareTo(BigDecimal.ZERO) > 0
+                ? grossProfit.divide(revenue, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).doubleValue()
+                : 0;
+
+        Map<UUID, List<Appointment>> byArtist = appointments.stream()
+                .filter(a -> a.getArtist() != null)
+                .collect(Collectors.groupingBy(a -> a.getArtist().getId()));
+
+        List<PnlDto.StaffLine> staffBreakdown = new ArrayList<>();
+        BigDecimal totalCommissions = BigDecimal.ZERO;
+
+        for (Map.Entry<UUID, List<Appointment>> entry : byArtist.entrySet()) {
+            List<Appointment> artistApps = entry.getValue();
+            Staff artist = artistApps.get(0).getArtist();
+
+            BigDecimal artistRevenue = artistApps.stream()
+                    .filter(a -> a.getStatus() == AppointmentStatus.DONE)
+                    .map(a -> a.getFinalPrice() != null ? a.getFinalPrice() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            com.inkflow.crm.domain.enums.SalaryType salaryType = artist.getSalaryType() != null
+                    ? artist.getSalaryType()
+                    : com.inkflow.crm.domain.enums.SalaryType.NONE;
+            BigDecimal salaryRate = artist.getSalaryRate();
+            BigDecimal commission = BigDecimal.ZERO;
+            if (salaryType == com.inkflow.crm.domain.enums.SalaryType.PERCENT && salaryRate != null) {
+                commission = artistRevenue.multiply(salaryRate)
+                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            } else if (salaryType == com.inkflow.crm.domain.enums.SalaryType.FIXED && salaryRate != null) {
+                commission = salaryRate;
+            }
+            totalCommissions = totalCommissions.add(commission);
+            staffBreakdown.add(PnlDto.StaffLine.builder()
+                    .name(artist.getFirstName() + " " + artist.getLastName())
+                    .revenue(artistRevenue)
+                    .commission(commission)
+                    .salaryType(salaryType.getValue())
+                    .salaryRate(salaryRate)
+                    .build());
+        }
+        staffBreakdown.sort(Comparator.comparing(PnlDto.StaffLine::getRevenue).reversed());
+
+        BigDecimal otherExpenses = transactionRepository
+                .sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to);
+        if (otherExpenses == null) otherExpenses = BigDecimal.ZERO;
+
+        Map<String, TransactionCategoryConfig> configByKey = categoryConfigRepository
+                .findByTenantIdAndDeletedAtIsNullOrderByIsDefaultDescLabelAsc(tenantId)
+                .stream()
+                .collect(Collectors.toMap(TransactionCategoryConfig::getCategoryKey, c -> c, (a, b) -> a));
+
+        List<Object[]> categoryTotals = transactionRepository.sumByCategoryAndDateRange(tenantId, from, to);
+        List<PnlDto.CategoryLine> expenseBreakdown = new ArrayList<>();
+        for (Object[] row : categoryTotals) {
+            TransactionCategory cat = (TransactionCategory) row[0];
+            BigDecimal amount = row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
+            String key = cat.getValue();
+            TransactionCategoryConfig cfg = configByKey.get(key);
+            String plType = cfg != null ? cfg.getPlType() : "NEUTRAL";
+            if ("EXPENSE".equals(plType)) {
+                expenseBreakdown.add(PnlDto.CategoryLine.builder()
+                        .categoryKey(key)
+                        .label(cfg != null ? cfg.getLabel() : key)
+                        .color(cfg != null ? cfg.getColor() : null)
+                        .amount(amount)
+                        .build());
+            }
+        }
+        expenseBreakdown.sort(Comparator.comparing(PnlDto.CategoryLine::getAmount).reversed());
+
+        BigDecimal netProfit = grossProfit.subtract(totalCommissions).subtract(otherExpenses);
+        double netMargin = revenue.compareTo(BigDecimal.ZERO) > 0
+                ? netProfit.divide(revenue, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).doubleValue()
+                : 0;
+
+        return PnlDto.builder()
+                .revenue(revenue)
+                .costOfSales(costOfSales)
+                .grossProfit(grossProfit)
+                .grossMargin(Math.round(grossMargin * 10.0) / 10.0)
+                .staffCommissions(totalCommissions)
+                .otherExpenses(otherExpenses)
+                .netProfit(netProfit)
+                .netMargin(Math.round(netMargin * 10.0) / 10.0)
+                .expenseBreakdown(expenseBreakdown)
+                .staffBreakdown(staffBreakdown)
                 .build();
     }
 
