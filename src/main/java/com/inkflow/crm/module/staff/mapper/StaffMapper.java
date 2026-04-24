@@ -17,6 +17,7 @@ public interface StaffMapper {
     @Mapping(target = "status", expression = "java(staff.getStatus().getValue())")
     @Mapping(target = "locationIds", expression = "java(staff.getLocations().stream().map(l -> l.getId()).collect(java.util.stream.Collectors.toList()))")
     @Mapping(target = "specialization", expression = "java(new java.util.ArrayList<>(staff.getSpecialization()))")
+    @Mapping(target = "portfolioImages", expression = "java(new java.util.ArrayList<>(staff.getPortfolioImages()))")
     @Mapping(target = "salaryType", expression = "java(staff.getSalaryType() != null ? staff.getSalaryType().getValue() : \"none\")")
     StaffDto toDto(Staff staff);
 
@@ -39,6 +40,19 @@ public interface StaffMapper {
     @Mapping(target = "salaryType", expression = "java(com.inkflow.crm.domain.enums.SalaryType.NONE)")
     @Mapping(target = "salaryRate", ignore = true)
     @Mapping(target = "bankDetails", ignore = true)
+    @Mapping(target = "leaveRequests", ignore = true)
+    @Mapping(target = "googleAccessToken", ignore = true)
+    @Mapping(target = "googleRefreshToken", ignore = true)
+    @Mapping(target = "googleCalendarId", ignore = true)
+    @Mapping(target = "googleTokenExpiresAt", ignore = true)
+    @Mapping(target = "googleCalendarEmail", ignore = true)
+    @Mapping(target = "portfolioImages", ignore = true)
+    @Mapping(target = "position", ignore = true)
+    @Mapping(target = "birthday", ignore = true)
+    @Mapping(target = "taxId", ignore = true)
+    @Mapping(target = "iban", ignore = true)
+    @Mapping(target = "bankCard", ignore = true)
+    @Mapping(target = "availableForOnlineBooking", ignore = true)
     Staff toEntity(CreateStaffRequest request);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
@@ -54,6 +68,12 @@ public interface StaffMapper {
     @Mapping(target = "schedules", ignore = true)
     @Mapping(target = "servicePricings", ignore = true)
     @Mapping(target = "authUserId", ignore = true)
+    @Mapping(target = "leaveRequests", ignore = true)
+    @Mapping(target = "googleAccessToken", ignore = true)
+    @Mapping(target = "googleRefreshToken", ignore = true)
+    @Mapping(target = "googleCalendarId", ignore = true)
+    @Mapping(target = "googleTokenExpiresAt", ignore = true)
+    @Mapping(target = "googleCalendarEmail", ignore = true)
     @Mapping(target = "status", expression = "java(request.getStatus() != null ? mapStatus(request.getStatus()) : staff.getStatus())")
     @Mapping(target = "salaryType", expression = "java(request.getSalaryType() != null ? mapSalaryType(request.getSalaryType()) : staff.getSalaryType())")
     void updateEntity(UpdateStaffRequest request, @MappingTarget Staff staff);

@@ -53,7 +53,7 @@ r2:
   verify-connection: ${R2_VERIFY_CONNECTION:true}
 
 demo:
-  tenant-id: ${DEMO_TENANT_ID:a0000000-0000-0000-0000-000000000001}
+  tenant-id: ${DEMO_TENANT_ID:}
 
 resend:
   api-key: ${RESEND_API_KEY}

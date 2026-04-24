@@ -23,6 +23,7 @@ public class LocationDetailDto {
     private String googleMapsLink;
     private String color;
     private Boolean isActive;
+    private String photoUrl;
     private List<StaffSummaryDto> staff;
     private LocationStatsDto stats;
     private Instant createdAt;

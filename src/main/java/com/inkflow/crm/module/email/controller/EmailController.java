@@ -154,12 +154,7 @@ public class EmailController {
                     .reminderHoursBefore(24)
                     .build());
         }
-        return ResponseEntity.ok(EmailSettingsDto.builder()
-                .emailReminders(settings.getEmailReminders())
-                .emailConfirmations(settings.getEmailConfirmations())
-                .emailAftercare(settings.getEmailAftercare())
-                .reminderHoursBefore(settings.getReminderHoursBefore())
-                .build());
+        return buildSettingsDto(settings);
     }
 
     @PatchMapping("/settings")
@@ -168,18 +163,31 @@ public class EmailController {
         CompanySettings settings = companySettingsRepository.findByTenantId(tenantId)
                 .orElseThrow(() -> new RuntimeException("Settings not found"));
 
-        if (dto.isEmailReminders() != settings.getEmailReminders()) settings.setEmailReminders(dto.isEmailReminders());
-        if (dto.isEmailConfirmations() != settings.getEmailConfirmations()) settings.setEmailConfirmations(dto.isEmailConfirmations());
-        if (dto.isEmailAftercare() != settings.getEmailAftercare()) settings.setEmailAftercare(dto.isEmailAftercare());
+        settings.setEmailReminders(dto.isEmailReminders());
+        settings.setEmailConfirmations(dto.isEmailConfirmations());
+        settings.setEmailAftercare(dto.isEmailAftercare());
+        settings.setEmailCancellation(dto.isEmailCancellation());
+        settings.setEmailReschedule(dto.isEmailReschedule());
+        settings.setEmailStaffNewAppointment(dto.isEmailStaffNewAppointment());
+        settings.setEmailStaffCancellation(dto.isEmailStaffCancellation());
+        settings.setEmailStaffReschedule(dto.isEmailStaffReschedule());
         if (dto.getReminderHoursBefore() > 0) settings.setReminderHoursBefore(dto.getReminderHoursBefore());
 
         settings = companySettingsRepository.save(settings);
+        return buildSettingsDto(settings);
+    }
 
+    private ResponseEntity<EmailSettingsDto> buildSettingsDto(CompanySettings s) {
         return ResponseEntity.ok(EmailSettingsDto.builder()
-                .emailReminders(settings.getEmailReminders())
-                .emailConfirmations(settings.getEmailConfirmations())
-                .emailAftercare(settings.getEmailAftercare())
-                .reminderHoursBefore(settings.getReminderHoursBefore())
+                .emailReminders(s.getEmailReminders())
+                .emailConfirmations(s.getEmailConfirmations())
+                .emailAftercare(s.getEmailAftercare())
+                .emailCancellation(Boolean.TRUE.equals(s.getEmailCancellation()))
+                .emailReschedule(Boolean.TRUE.equals(s.getEmailReschedule()))
+                .emailStaffNewAppointment(Boolean.TRUE.equals(s.getEmailStaffNewAppointment()))
+                .emailStaffCancellation(Boolean.TRUE.equals(s.getEmailStaffCancellation()))
+                .emailStaffReschedule(Boolean.TRUE.equals(s.getEmailStaffReschedule()))
+                .reminderHoursBefore(s.getReminderHoursBefore())
                 .build());
     }
 }

@@ -25,6 +25,7 @@ public class StaffDetailDto {
     private String role;
     private String calendarColor;
     private List<String> specialization;
+    private List<String> portfolioImages;
     private String bio;
     private String status;
     private List<LocationDto> locations;

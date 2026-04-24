@@ -4,6 +4,7 @@ import com.inkflow.crm.domain.enums.SalaryType;
 import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.UserRole;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -54,6 +55,13 @@ public class Staff extends BaseEntity {
     @org.hibernate.annotations.BatchSize(size = 50)
     @Builder.Default
     private List<String> specialization = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "staff_portfolio_images", joinColumns = @JoinColumn(name = "staff_id"))
+    @Column(name = "image_url", nullable = false, columnDefinition = "TEXT")
+    @org.hibernate.annotations.BatchSize(size = 50)
+    @Builder.Default
+    private List<String> portfolioImages = new ArrayList<>();
 
     @Column(name = "bio")
     private String bio;
@@ -114,6 +122,25 @@ public class Staff extends BaseEntity {
 
     @Column(name = "bank_details", columnDefinition = "TEXT")
     private String bankDetails;
+
+    @Column(name = "position")
+    private String position;
+
+    @Column(name = "birthday")
+    private LocalDate birthday;
+
+    @Column(name = "tax_id")
+    private String taxId;
+
+    @Column(name = "iban")
+    private String iban;
+
+    @Column(name = "bank_card")
+    private String bankCard;
+
+    @Column(name = "available_for_online_booking", nullable = false)
+    @Builder.Default
+    private Boolean availableForOnlineBooking = true;
 
     public boolean isGoogleCalendarConnected() {
         return googleRefreshToken != null && !googleRefreshToken.isBlank();

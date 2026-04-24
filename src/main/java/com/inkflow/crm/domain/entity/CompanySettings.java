@@ -48,6 +48,26 @@ public class CompanySettings {
     @Builder.Default
     private Boolean emailAftercare = false;
 
+    @Column(name = "email_cancellation", nullable = false)
+    @Builder.Default
+    private Boolean emailCancellation = false;
+
+    @Column(name = "email_reschedule", nullable = false)
+    @Builder.Default
+    private Boolean emailReschedule = false;
+
+    @Column(name = "email_staff_new_appointment", nullable = false)
+    @Builder.Default
+    private Boolean emailStaffNewAppointment = false;
+
+    @Column(name = "email_staff_cancellation", nullable = false)
+    @Builder.Default
+    private Boolean emailStaffCancellation = false;
+
+    @Column(name = "email_staff_reschedule", nullable = false)
+    @Builder.Default
+    private Boolean emailStaffReschedule = false;
+
     @Column(name = "reminder_hours_before", nullable = false)
     private Integer reminderHoursBefore = 24;
 

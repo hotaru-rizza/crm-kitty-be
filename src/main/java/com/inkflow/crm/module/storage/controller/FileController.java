@@ -20,7 +20,7 @@ import java.util.Set;
 public class FileController {
 
     private static final Set<String> ALLOWED_FOLDERS = Set.of(
-            "avatars", "gallery", "sketches", "waivers", "documents"
+            "avatars", "gallery", "sketches", "waivers", "documents", "portfolio", "locations"
     );
 
     private static final long MAX_DIRECT_UPLOAD_SIZE = 5 * 1024 * 1024; // 5MB

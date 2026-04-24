@@ -173,6 +173,96 @@ public class EmailService {
         );
     }
 
+    public void sendCancellation(Appointment appointment) {
+        String email = appointment.getClient().getEmail();
+        if (email == null || email.isBlank()) return;
+        Tenant tenant = tenantRepository.findById(appointment.getTenantId()).orElse(null);
+        String studioName = tenant != null ? tenant.getName() : "INKAT";
+        String timezone = tenant != null ? tenant.getTimezone() : "Europe/Kyiv";
+        Map<String, String> custom = getCustomTemplate(appointment.getTenantId(), "CANCELLATION");
+        String customSubject = custom != null ? custom.get("subject") : null;
+        String customBody = custom != null ? custom.get("body") : null;
+        String html = EmailTemplates.cancellation(
+                appointment.getClient().getFirstName(),
+                appointment.getService().getTitle(),
+                appointment.getStartTime(), timezone, studioName, customSubject, customBody);
+        String subject = customSubject != null ? customSubject.replace("{{studio}}", studioName)
+                : "Запис скасовано — " + studioName;
+        sendAndLog(appointment.getTenantId(), email, appointment.getClient().getFullName(),
+                subject, html, EmailType.CANCELLATION, appointment.getId());
+    }
+
+    public void sendReschedule(Appointment appointment) {
+        String email = appointment.getClient().getEmail();
+        if (email == null || email.isBlank()) return;
+        Tenant tenant = tenantRepository.findById(appointment.getTenantId()).orElse(null);
+        String studioName = tenant != null ? tenant.getName() : "INKAT";
+        String timezone = tenant != null ? tenant.getTimezone() : "Europe/Kyiv";
+        Map<String, String> custom = getCustomTemplate(appointment.getTenantId(), "RESCHEDULE");
+        String customSubject = custom != null ? custom.get("subject") : null;
+        String customBody = custom != null ? custom.get("body") : null;
+        String html = EmailTemplates.reschedule(
+                appointment.getClient().getFirstName(),
+                appointment.getService().getTitle(),
+                appointment.getArtist().getFirstName() + " " + appointment.getArtist().getLastName(),
+                appointment.getStartTime(), timezone, studioName, customSubject, customBody);
+        String subject = customSubject != null ? customSubject.replace("{{studio}}", studioName)
+                : "Час запису змінено — " + studioName;
+        sendAndLog(appointment.getTenantId(), email, appointment.getClient().getFullName(),
+                subject, html, EmailType.RESCHEDULE, appointment.getId());
+    }
+
+    public void sendStaffNewAppointment(Appointment appointment) {
+        String email = appointment.getArtist().getEmail();
+        if (email == null || email.isBlank()) return;
+        Tenant tenant = tenantRepository.findById(appointment.getTenantId()).orElse(null);
+        String studioName = tenant != null ? tenant.getName() : "INKAT";
+        String timezone = tenant != null ? tenant.getTimezone() : "Europe/Kyiv";
+        String html = EmailTemplates.staffNewAppointment(
+                appointment.getArtist().getFirstName(),
+                appointment.getClient().getFirstName() + " " + appointment.getClient().getLastName(),
+                appointment.getService().getTitle(),
+                appointment.getStartTime(), timezone, studioName);
+        sendAndLog(appointment.getTenantId(), email,
+                appointment.getArtist().getFirstName() + " " + appointment.getArtist().getLastName(),
+                "Новий запис — " + appointment.getClient().getFirstName() + " " + appointment.getClient().getLastName(),
+                html, EmailType.STAFF_NEW_APPOINTMENT, appointment.getId());
+    }
+
+    public void sendStaffCancellation(Appointment appointment) {
+        String email = appointment.getArtist().getEmail();
+        if (email == null || email.isBlank()) return;
+        Tenant tenant = tenantRepository.findById(appointment.getTenantId()).orElse(null);
+        String studioName = tenant != null ? tenant.getName() : "INKAT";
+        String timezone = tenant != null ? tenant.getTimezone() : "Europe/Kyiv";
+        String html = EmailTemplates.staffCancellation(
+                appointment.getArtist().getFirstName(),
+                appointment.getClient().getFirstName() + " " + appointment.getClient().getLastName(),
+                appointment.getService().getTitle(),
+                appointment.getStartTime(), timezone, studioName);
+        sendAndLog(appointment.getTenantId(), email,
+                appointment.getArtist().getFirstName() + " " + appointment.getArtist().getLastName(),
+                "Запис скасовано — " + appointment.getClient().getFirstName() + " " + appointment.getClient().getLastName(),
+                html, EmailType.STAFF_CANCELLATION, appointment.getId());
+    }
+
+    public void sendStaffReschedule(Appointment appointment) {
+        String email = appointment.getArtist().getEmail();
+        if (email == null || email.isBlank()) return;
+        Tenant tenant = tenantRepository.findById(appointment.getTenantId()).orElse(null);
+        String studioName = tenant != null ? tenant.getName() : "INKAT";
+        String timezone = tenant != null ? tenant.getTimezone() : "Europe/Kyiv";
+        String html = EmailTemplates.staffReschedule(
+                appointment.getArtist().getFirstName(),
+                appointment.getClient().getFirstName() + " " + appointment.getClient().getLastName(),
+                appointment.getService().getTitle(),
+                appointment.getStartTime(), timezone, studioName);
+        sendAndLog(appointment.getTenantId(), email,
+                appointment.getArtist().getFirstName() + " " + appointment.getArtist().getLastName(),
+                "Час запису змінено — " + appointment.getClient().getFirstName() + " " + appointment.getClient().getLastName(),
+                html, EmailType.STAFF_RESCHEDULE, appointment.getId());
+    }
+
     public void sendManual(UUID tenantId, String recipientEmail, String recipientName, String subject, String textBody) {
         Tenant tenant = tenantRepository.findById(tenantId).orElse(null);
         String studioName = tenant != null ? tenant.getName() : "INKAT";

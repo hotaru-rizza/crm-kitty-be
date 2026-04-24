@@ -34,6 +34,9 @@ public class Location extends BaseEntity {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    @Column(name = "photo_url", columnDefinition = "TEXT")
+    private String photoUrl;
+
     @ManyToMany(mappedBy = "locations")
     @Builder.Default
     private Set<Staff> staff = new HashSet<>();

@@ -60,6 +60,7 @@ public interface LocationMapper {
                 .googleMapsLink(location.getGoogleMapsLink())
                 .color(location.getColor())
                 .isActive(location.getIsActive())
+                .photoUrl(location.getPhotoUrl())
                 .staff(staffList)
                 .stats(stats)
                 .createdAt(location.getCreatedAt())

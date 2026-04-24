@@ -253,6 +253,7 @@ public class StaffService {
                 .role(staff.getRole().getValue())
                 .calendarColor(staff.getCalendarColor())
                 .specialization(new ArrayList<>(staff.getSpecialization()))
+                .portfolioImages(new ArrayList<>(staff.getPortfolioImages()))
                 .bio(staff.getBio())
                 .status(staff.getStatus().getValue())
                 .locations(locations)

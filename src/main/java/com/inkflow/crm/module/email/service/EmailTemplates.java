@@ -200,6 +200,69 @@ public final class EmailTemplates {
         return wrap(subject, bodyHtml, studioName);
     }
 
+    public static String cancellation(String clientName, String serviceName,
+                                        Instant startTime, String timezone, String studioName,
+                                        String customSubject, String customBody) {
+        String dateStr = formatDateTime(startTime, timezone);
+        Map<String, String> vars = Map.of(
+                "client_name", clientName, "service", serviceName,
+                "datetime", dateStr, "studio", studioName
+        );
+        String body = customBody != null ? textToHtml(customBody, vars)
+                : textToHtml("Привіт, {{client_name}}! На жаль, ваш запис на {{service}} ({{datetime}}) скасовано.\n\nЗв'яжіться з нами для нового часу.", vars);
+        String subj = customSubject != null ? resolveBody(customSubject, vars) : "Запис скасовано — " + studioName;
+        body += buildInfoBlock(List.of("service", "datetime"), vars);
+        return wrap(subj, body, studioName);
+    }
+
+    public static String reschedule(String clientName, String serviceName, String artistName,
+                                     Instant newStartTime, String timezone, String studioName,
+                                     String customSubject, String customBody) {
+        String dateStr = formatDateTime(newStartTime, timezone);
+        Map<String, String> vars = Map.of(
+                "client_name", clientName, "service", serviceName,
+                "artist", artistName, "datetime", dateStr, "studio", studioName
+        );
+        String body = customBody != null ? textToHtml(customBody, vars)
+                : textToHtml("Привіт, {{client_name}}! Час вашого запису на {{service}} змінено.\n\nНовий час: {{datetime}}.", vars);
+        String subj = customSubject != null ? resolveBody(customSubject, vars) : "Час запису змінено — " + studioName;
+        body += buildInfoBlock(List.of("service", "artist", "datetime"), vars);
+        return wrap(subj, body, studioName);
+    }
+
+    public static String staffNewAppointment(String artistName, String clientName, String serviceName,
+                                              Instant startTime, String timezone, String studioName) {
+        String dateStr = formatDateTime(startTime, timezone);
+        Map<String, String> vars = Map.of(
+                "artist_name", artistName, "client_name", clientName,
+                "service", serviceName, "datetime", dateStr, "studio", studioName
+        );
+        String body = textToHtml("Привіт, {{artist_name}}! До вас новий запис.\n\nКлієнт: {{client_name}}\nПослуга: {{service}}\nЧас: {{datetime}}", vars);
+        return wrap("Новий запис — " + clientName, body, studioName);
+    }
+
+    public static String staffCancellation(String artistName, String clientName, String serviceName,
+                                            Instant startTime, String timezone, String studioName) {
+        String dateStr = formatDateTime(startTime, timezone);
+        Map<String, String> vars = Map.of(
+                "artist_name", artistName, "client_name", clientName,
+                "service", serviceName, "datetime", dateStr, "studio", studioName
+        );
+        String body = textToHtml("Привіт, {{artist_name}}! Клієнт {{client_name}} скасував запис.\n\nПослуга: {{service}}\nБув час: {{datetime}}", vars);
+        return wrap("Скасування запису — " + clientName, body, studioName);
+    }
+
+    public static String staffReschedule(String artistName, String clientName, String serviceName,
+                                          Instant newStartTime, String timezone, String studioName) {
+        String dateStr = formatDateTime(newStartTime, timezone);
+        Map<String, String> vars = Map.of(
+                "artist_name", artistName, "client_name", clientName,
+                "service", serviceName, "datetime", dateStr, "studio", studioName
+        );
+        String body = textToHtml("Привіт, {{artist_name}}! Час запису клієнта {{client_name}} змінено.\n\nПослуга: {{service}}\nНовий час: {{datetime}}", vars);
+        return wrap("Перенесення запису — " + clientName, body, studioName);
+    }
+
     public static String manual(String subject, String textBody, String studioName) {
         String body = """
             <div style="color:%s;font-size:15px;line-height:1.7;white-space:pre-wrap;">%s</div>

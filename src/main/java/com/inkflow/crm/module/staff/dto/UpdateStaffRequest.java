@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,6 +35,7 @@ public class UpdateStaffRequest {
     private String calendarColor;
 
     private List<String> specialization;
+    private List<String> portfolioImages;
     private String bio;
     private List<UUID> locationIds;
 
@@ -47,4 +49,10 @@ public class UpdateStaffRequest {
     private BigDecimal salaryRate;
 
     private String bankDetails;
+    private String position;
+    private LocalDate birthday;
+    private String taxId;
+    private String iban;
+    private String bankCard;
+    private Boolean availableForOnlineBooking;
 }

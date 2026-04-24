@@ -28,4 +28,5 @@ public class UpdateLocationRequest {
     private String color;
 
     private Boolean isActive;
+    private String photoUrl;
 }

@@ -154,8 +154,13 @@ public class AppointmentService {
 
         try {
             CompanySettings cs = companySettingsRepository.findByTenantId(tenantId).orElse(null);
-            if (cs != null && cs.getEmailConfirmations()) {
-                emailService.sendConfirmation(appointment);
+            if (cs != null) {
+                if (cs.getEmailConfirmations()) {
+                    emailService.sendConfirmation(appointment);
+                }
+                if (Boolean.TRUE.equals(cs.getEmailStaffNewAppointment())) {
+                    emailService.sendStaffNewAppointment(appointment);
+                }
             }
         } catch (Exception e) {
             // email failure should not break appointment creation
@@ -203,6 +208,10 @@ public class AppointmentService {
             appointment.setProject(project);
         }
 
+        AppointmentStatus previousStatus = appointment.getStatus();
+        boolean startTimeChanged = request.getStartTime() != null
+                && !request.getStartTime().equals(appointment.getStartTime());
+
         if (request.getStartTime() != null && request.getEndTime() != null) {
             if (appointmentRepository.existsConflictingAppointmentExcluding(
                     appointment.getArtist().getId(), request.getStartTime(), request.getEndTime(), id)) {
@@ -220,8 +229,6 @@ public class AppointmentService {
 
         appointment.calculateFinalPrice();
 
-        AppointmentStatus previousStatus = appointment.getStatus();
-
         if (request.getStatus() != null) {
             AppointmentStatus newStatus = AppointmentStatus.fromValue(request.getStatus());
             if (newStatus == AppointmentStatus.CANCELLED) {
@@ -238,16 +245,34 @@ public class AppointmentService {
         try {
             UUID tid = appointment.getTenantId();
             CompanySettings cs = companySettingsRepository.findByTenantId(tid).orElse(null);
-            if (cs != null && request.getStatus() != null) {
-                AppointmentStatus newStatus = AppointmentStatus.fromValue(request.getStatus());
-                if (newStatus == AppointmentStatus.CONFIRMED && previousStatus != AppointmentStatus.CONFIRMED
-                        && cs.getEmailConfirmations()
-                        && !emailService.wasAlreadySent(appointment.getId(), com.inkflow.crm.domain.enums.EmailType.CONFIRMATION)) {
-                    emailService.sendConfirmation(appointment);
+            if (cs != null) {
+                if (request.getStatus() != null) {
+                    AppointmentStatus newStatus = AppointmentStatus.fromValue(request.getStatus());
+                    if (newStatus == AppointmentStatus.CONFIRMED && previousStatus != AppointmentStatus.CONFIRMED
+                            && cs.getEmailConfirmations()
+                            && !emailService.wasAlreadySent(appointment.getId(), com.inkflow.crm.domain.enums.EmailType.CONFIRMATION)) {
+                        emailService.sendConfirmation(appointment);
+                    }
+                    if (newStatus == AppointmentStatus.DONE && previousStatus != AppointmentStatus.DONE
+                            && cs.getEmailAftercare()) {
+                        emailService.sendAftercare(appointment);
+                    }
+                    if (newStatus == AppointmentStatus.CANCELLED && previousStatus != AppointmentStatus.CANCELLED) {
+                        if (Boolean.TRUE.equals(cs.getEmailCancellation())) {
+                            emailService.sendCancellation(appointment);
+                        }
+                        if (Boolean.TRUE.equals(cs.getEmailStaffCancellation())) {
+                            emailService.sendStaffCancellation(appointment);
+                        }
+                    }
                 }
-                if (newStatus == AppointmentStatus.DONE && previousStatus != AppointmentStatus.DONE
-                        && cs.getEmailAftercare()) {
-                    emailService.sendAftercare(appointment);
+                if (startTimeChanged) {
+                    if (Boolean.TRUE.equals(cs.getEmailReschedule())) {
+                        emailService.sendReschedule(appointment);
+                    }
+                    if (Boolean.TRUE.equals(cs.getEmailStaffReschedule())) {
+                        emailService.sendStaffReschedule(appointment);
+                    }
                 }
             }
         } catch (Exception e) {

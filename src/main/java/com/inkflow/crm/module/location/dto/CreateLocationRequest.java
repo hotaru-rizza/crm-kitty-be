@@ -30,4 +30,6 @@ public class CreateLocationRequest {
     @NotBlank(message = "Color is required")
     @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "Color must be a valid hex color code")
     private String color;
+
+    private String photoUrl;
 }

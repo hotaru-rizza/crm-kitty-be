@@ -20,6 +20,7 @@ public class LocationDto {
     private String googleMapsLink;
     private String color;
     private Boolean isActive;
+    private String photoUrl;
     private Integer staffCount;
     private Instant createdAt;
 }
