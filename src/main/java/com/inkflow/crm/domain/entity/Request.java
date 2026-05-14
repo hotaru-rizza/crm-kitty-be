@@ -73,6 +73,40 @@ public class Request {
     @Column(name = "converted_at")
     private Instant convertedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "staff_id")
+    private Staff assignedStaff;
+
+    @Column(name = "consumer_user_id")
+    private java.util.UUID consumerUserId;
+
+    @Column(name = "tattoo_timing", length = 30)
+    private String tattooTiming;
+
+    @Column(name = "tattoo_size", length = 30)
+    private String tattooSize;
+
+    @Column(name = "body_zones", columnDefinition = "TEXT")
+    private String bodyZones;
+
+    @Column(name = "is_cover_up")
+    private Boolean isCoverUp;
+
+    @Column(name = "idea", columnDefinition = "TEXT")
+    private String idea;
+
+    @Column(name = "reference_urls", columnDefinition = "TEXT")
+    private String referenceUrls;
+
+    @Column(name = "city", length = 50)
+    private String city;
+
+    @Column(name = "contact_method", length = 20)
+    private String contactMethod;
+
+    @Column(name = "contact_value")
+    private String contactValue;
+
     public void markAsReplied() {
         this.status = RequestStatus.REPLIED;
         this.repliedAt = Instant.now();

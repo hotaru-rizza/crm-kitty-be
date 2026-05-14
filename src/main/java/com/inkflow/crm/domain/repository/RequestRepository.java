@@ -23,6 +23,8 @@ public interface RequestRepository extends JpaRepository<Request, UUID> {
     Page<Request> findByTenantIdAndSource(UUID tenantId, RequestSource source, Pageable pageable);
     long countByTenantIdAndStatus(UUID tenantId, RequestStatus status);
 
+    List<Request> findByConsumerUserIdOrderByCreatedAtDesc(UUID consumerUserId);
+
     @Query("SELECT r FROM Request r WHERE r.tenantId = :tenantId " +
            "AND (CAST(:status AS string) IS NULL OR r.status = :status) " +
            "AND (:sources IS NULL OR r.source IN :sources) " +

@@ -1,5 +1,6 @@
 package com.inkflow.crm.config;
 
+import com.inkflow.crm.module.consumer.security.ConsumerAuthFilter;
 import com.inkflow.crm.security.DemoTenantFilter;
 import com.inkflow.crm.security.JwtAuthenticationFilter;
 import com.inkflow.crm.security.SubscriptionFilter;
@@ -28,6 +29,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ConsumerAuthFilter consumerAuthFilter;
     private final SubscriptionFilter subscriptionFilter;
     private final DemoTenantFilter demoTenantFilter;
 
@@ -51,7 +53,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(subscriptionFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(consumerAuthFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(subscriptionFilter, ConsumerAuthFilter.class)
                 .addFilterAfter(demoTenantFilter, SubscriptionFilter.class);
 
         return http.build();

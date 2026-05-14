@@ -11,6 +11,7 @@ public enum RequestSource {
     WEBSITE("website", "Website"),
     REFERRAL("referral", "Referral"),
     WALK_IN("walk_in", "Walk-in"),
+    APP("app", "Mobile App"),
     OTHER("other", "Other");
 
     private final String value;

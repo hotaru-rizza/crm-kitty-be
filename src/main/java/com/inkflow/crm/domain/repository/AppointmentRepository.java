@@ -74,4 +74,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
             @Param("from") Instant from, 
             @Param("to") Instant to,
             @Param("excludeStatus") AppointmentStatus excludeStatus);
+
+    @EntityGraph(attributePaths = {"client", "artist"})
+    @Query("SELECT a FROM Appointment a WHERE a.startTime >= :from AND a.startTime < :to " +
+           "AND a.status IN ('NEW', 'CONFIRMED') AND a.deletedAt IS NULL")
+    List<Appointment> findUpcomingForReminders(@Param("from") Instant from, @Param("to") Instant to);
 }

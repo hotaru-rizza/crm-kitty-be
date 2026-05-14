@@ -2,6 +2,10 @@ spring:
   application:
     name: inkflow-crm
 
+  mvc:
+    async:
+      request-timeout: 120000
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5432/postgres?sslmode=disable}
     username: ${DB_USERNAME:postgres}
@@ -71,6 +75,26 @@ google:
     client-secret: ${GOOGLE_CLIENT_SECRET:}
     redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/public/google/callback}
     frontend-redirect: ${FRONTEND_URL:http://localhost:5173}/app/settings
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+
+huggingface:
+  api:
+    key: ${HUGGINGFACE_API_KEY:}
+
+unsplash:
+  api:
+    key: ${UNSPLASH_API_KEY:}
+    base-url: https://api.unsplash.com
+  seed:
+    query: tattoo
+    pages: 2
+    per-page: 25
+
+fcm:
+  server-key: ${FCM_SERVER_KEY:}
 
 logging:
   level:

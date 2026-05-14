@@ -142,6 +142,23 @@ public class Staff extends BaseEntity {
     @Builder.Default
     private Boolean availableForOnlineBooking = true;
 
+    @Column(name = "is_public", nullable = false)
+    @Builder.Default
+    private Boolean isPublic = false;
+
+    @Column(name = "hourly_rate", precision = 10, scale = 2)
+    private BigDecimal hourlyRate;
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "staff_dont_do", joinColumns = @JoinColumn(name = "staff_id"))
+    @Column(name = "item")
+    @org.hibernate.annotations.BatchSize(size = 50)
+    @Builder.Default
+    private List<String> dontDoList = new ArrayList<>();
+
+    @Column(name = "studio_photo_url", columnDefinition = "TEXT")
+    private String studioPhotoUrl;
+
     public boolean isGoogleCalendarConnected() {
         return googleRefreshToken != null && !googleRefreshToken.isBlank();
     }

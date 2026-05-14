@@ -37,6 +37,15 @@ public class Location extends BaseEntity {
     @Column(name = "photo_url", columnDefinition = "TEXT")
     private String photoUrl;
 
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
+    @Column(name = "city")
+    private String city;
+
     @ManyToMany(mappedBy = "locations")
     @Builder.Default
     private Set<Staff> staff = new HashSet<>();

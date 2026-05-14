@@ -75,6 +75,22 @@ public class FileStorageService {
     }
 
     /**
+     * Upload raw bytes with an explicit key (used by AI services)
+     */
+    public String uploadBytes(byte[] data, String key, String contentType) {
+        s3Client.putObject(
+                PutObjectRequest.builder()
+                        .bucket(r2Properties.getBucketName())
+                        .key(key)
+                        .contentType(contentType)
+                        .build(),
+                RequestBody.fromBytes(data)
+        );
+        log.info("Uploaded bytes to R2: {}", key);
+        return buildPublicUrl(key);
+    }
+
+    /**
      * Delete a file from R2 by its key
      */
     public void deleteFile(String key) {
