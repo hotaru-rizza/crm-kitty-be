@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.BatchSize;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -54,14 +55,14 @@ public class Staff extends BaseEntity {
     @Column(name = "specialization")
     @org.hibernate.annotations.BatchSize(size = 50)
     @Builder.Default
-    private List<String> specialization = new ArrayList<>();
+    private Set<String> specialization = new HashSet<>();
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "staff_portfolio_images", joinColumns = @JoinColumn(name = "staff_id"))
     @Column(name = "image_url", nullable = false, columnDefinition = "TEXT")
     @org.hibernate.annotations.BatchSize(size = 50)
     @Builder.Default
-    private List<String> portfolioImages = new ArrayList<>();
+    private Set<String> portfolioImages = new HashSet<>();
 
     @Column(name = "bio")
     private String bio;
@@ -84,7 +85,7 @@ public class Staff extends BaseEntity {
 
     @OneToMany(mappedBy = "staff", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<StaffSchedule> schedules = new ArrayList<>();
+    private Set<StaffSchedule> schedules = new HashSet<>();
 
     @OneToMany(mappedBy = "staff", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -152,9 +153,9 @@ public class Staff extends BaseEntity {
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "staff_dont_do", joinColumns = @JoinColumn(name = "staff_id"))
     @Column(name = "item")
-    @org.hibernate.annotations.BatchSize(size = 50)
+    @BatchSize(size = 50)
     @Builder.Default
-    private List<String> dontDoList = new ArrayList<>();
+    private Set<String> dontDoList = new HashSet<>();
 
     @Column(name = "studio_photo_url", columnDefinition = "TEXT")
     private String studioPhotoUrl;

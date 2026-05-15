@@ -91,7 +91,7 @@ unsplash:
   seed:
     query: tattoo
     pages: 2
-    per-page: 25
+    per-page: 50
 
 fcm:
   server-key: ${FCM_SERVER_KEY:}

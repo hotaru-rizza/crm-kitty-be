@@ -4,7 +4,9 @@ import com.inkflow.crm.module.catalog.type.VectorType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.Type;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -54,6 +56,7 @@ public class Tattoo {
     @Column(name = "alt_description", columnDefinition = "TEXT")
     private String altDescription;
 
+    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(columnDefinition = "TEXT[]")
     private String[] tags = new String[0];
 

@@ -17,8 +17,11 @@ public class PublicArtistController {
     private final PublicArtistService publicArtistService;
 
     @GetMapping
-    public List<PublicArtistDto> getAll() {
-        return publicArtistService.findAll();
+    public List<PublicArtistDto> getAll(
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String style,
+            @RequestParam(required = false) String q) {
+        return publicArtistService.findAll(city, style, q);
     }
 
     @GetMapping("/{id}")

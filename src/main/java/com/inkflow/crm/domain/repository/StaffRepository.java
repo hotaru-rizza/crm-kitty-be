@@ -62,11 +62,11 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
 
     long countByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, StaffStatus status);
 
-    @EntityGraph(attributePaths = {"locations", "schedules"})
-    @Query("SELECT s FROM Staff s WHERE s.isPublic = true AND s.deletedAt IS NULL AND s.status = 'WORKING'")
+    @EntityGraph(attributePaths = {"locations", "schedules", "specialization", "portfolioImages", "dontDoList"})
+    @Query("SELECT DISTINCT s FROM Staff s WHERE s.isPublic = true AND s.deletedAt IS NULL AND s.status = 'WORKING'")
     List<Staff> findAllPublicArtists();
 
-    @EntityGraph(attributePaths = {"locations", "schedules"})
-    @Query("SELECT s FROM Staff s WHERE s.isPublic = true AND s.deletedAt IS NULL AND s.status = 'WORKING' AND s.id = :id")
+    @EntityGraph(attributePaths = {"locations", "schedules", "specialization", "portfolioImages", "dontDoList"})
+    @Query("SELECT DISTINCT s FROM Staff s WHERE s.isPublic = true AND s.deletedAt IS NULL AND s.status = 'WORKING' AND s.id = :id")
     Optional<Staff> findPublicArtistById(@Param("id") UUID id);
 }
