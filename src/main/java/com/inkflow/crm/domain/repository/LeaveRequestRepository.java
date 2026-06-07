@@ -62,4 +62,88 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
             @Param("staffId") UUID staffId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT COUNT(lr) FROM LeaveRequest lr WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
+           "AND lr.status = 'PENDING'")
+    long countPending(@Param("tenantId") UUID tenantId);
+
+    @Query("SELECT lr FROM LeaveRequest lr WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
+           "ORDER BY lr.createdAt DESC")
+    Page<LeaveRequest> findAllByTenant(
+            @Param("tenantId") UUID tenantId,
+            Pageable pageable);
+
+    @Query("SELECT lr FROM LeaveRequest lr WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
+           "AND lr.status = 'APPROVED' " +
+           "AND lr.endDate >= :from AND lr.startDate <= :to " +
+           "ORDER BY lr.startDate ASC")
+    List<LeaveRequest> findApprovedInRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
+
+    @Query("SELECT lr FROM LeaveRequest lr WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
+           "AND lr.endDate >= :from AND lr.startDate <= :to " +
+           "ORDER BY lr.createdAt DESC")
+    Page<LeaveRequest> findAllByTenantAndDateRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            Pageable pageable);
+
+    @Query("SELECT lr FROM LeaveRequest lr WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
+           "AND lr.status = :status " +
+           "AND lr.endDate >= :from AND lr.startDate <= :to " +
+           "ORDER BY lr.createdAt DESC")
+    Page<LeaveRequest> findByStatusAndDateRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("status") LeaveStatus status,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            Pageable pageable);
+
+    @Query("SELECT COUNT(lr) FROM LeaveRequest lr JOIN lr.staff s JOIN s.locations l " +
+           "WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
+           "AND lr.status = 'PENDING' AND l.id = :locationId")
+    long countPendingByLocation(@Param("tenantId") UUID tenantId, @Param("locationId") UUID locationId);
+
+    @Query("SELECT DISTINCT lr FROM LeaveRequest lr JOIN lr.staff s JOIN s.locations l " +
+           "WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL AND l.id = :locationId " +
+           "ORDER BY lr.createdAt DESC")
+    Page<LeaveRequest> findAllByTenantAndLocation(
+            @Param("tenantId") UUID tenantId,
+            @Param("locationId") UUID locationId,
+            Pageable pageable);
+
+    @Query("SELECT DISTINCT lr FROM LeaveRequest lr JOIN lr.staff s JOIN s.locations l " +
+           "WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL AND l.id = :locationId " +
+           "AND lr.status = :status ORDER BY lr.createdAt DESC")
+    Page<LeaveRequest> findByStatusAndLocation(
+            @Param("tenantId") UUID tenantId,
+            @Param("status") LeaveStatus status,
+            @Param("locationId") UUID locationId,
+            Pageable pageable);
+
+    @Query("SELECT DISTINCT lr FROM LeaveRequest lr JOIN lr.staff s JOIN s.locations l " +
+           "WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL AND l.id = :locationId " +
+           "AND lr.endDate >= :from AND lr.startDate <= :to " +
+           "ORDER BY lr.createdAt DESC")
+    Page<LeaveRequest> findAllByTenantAndLocationAndDateRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("locationId") UUID locationId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            Pageable pageable);
+
+    @Query("SELECT DISTINCT lr FROM LeaveRequest lr JOIN lr.staff s JOIN s.locations l " +
+           "WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL AND l.id = :locationId " +
+           "AND lr.status = :status AND lr.endDate >= :from AND lr.startDate <= :to " +
+           "ORDER BY lr.createdAt DESC")
+    Page<LeaveRequest> findByStatusAndLocationAndDateRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("status") LeaveStatus status,
+            @Param("locationId") UUID locationId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            Pageable pageable);
 }

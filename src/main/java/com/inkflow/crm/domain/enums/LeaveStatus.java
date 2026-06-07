@@ -3,7 +3,8 @@ package com.inkflow.crm.domain.enums;
 public enum LeaveStatus {
     PENDING("Очікує"),
     APPROVED("Підтверджено"),
-    REJECTED("Відхилено");
+    REJECTED("Відхилено"),
+    CANCELLED("Скасовано");
 
     private final String displayName;
 

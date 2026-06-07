@@ -24,6 +24,7 @@ import java.util.UUID;
 public class PublicArtistService {
 
     private final StaffRepository staffRepository;
+    private final PortfolioService portfolioService;
 
     @Transactional(readOnly = true)
     public List<PublicArtistDto> findAll(String city, String style, String search) {
@@ -106,7 +107,7 @@ public class PublicArtistService {
                 staff.getInstagram(),
                 isOpen,
                 0,
-                List.copyOf(staff.getPortfolioImages()),
+                portfolioService.getShowcaseUrls(staff.getId()),
                 schedule,
                 Collections.emptyList(),
                 Collections.emptyList()

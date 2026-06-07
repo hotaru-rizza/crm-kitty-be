@@ -37,7 +37,7 @@ public class TenantContextFilter extends OncePerRequestFilter {
 
         if (tenantId != null) {
             try (Connection conn = dataSource.getConnection();
-                 PreparedStatement ps = conn.prepareStatement("SET app.current_tenant = ?")) {
+                 PreparedStatement ps = conn.prepareStatement("SELECT set_config('app.current_tenant', ?, false)")) {
                 ps.setString(1, tenantId.toString());
                 ps.execute();
             } catch (Exception e) {

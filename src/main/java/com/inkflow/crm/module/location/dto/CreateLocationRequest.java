@@ -22,7 +22,7 @@ public class CreateLocationRequest {
     @Size(max = 255, message = "Address must not exceed 255 characters")
     private String address;
 
-    @Size(max = 20, message = "Phone must not exceed 20 characters")
+    @Size(max = 500, message = "Phone must not exceed 500 characters")
     private String phone;
 
     private String googleMapsLink;
@@ -32,4 +32,6 @@ public class CreateLocationRequest {
     private String color;
 
     private String photoUrl;
+    private String navigationInstructions;
+    private String telegramContact;
 }

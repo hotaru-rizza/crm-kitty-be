@@ -24,6 +24,8 @@ public class LocationDetailDto {
     private String color;
     private Boolean isActive;
     private String photoUrl;
+    private String navigationInstructions;
+    private String telegramContact;
     private List<StaffSummaryDto> staff;
     private LocationStatsDto stats;
     private Instant createdAt;

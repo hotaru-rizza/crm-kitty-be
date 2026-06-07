@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface TattooRepository extends JpaRepository<Tattoo, Long> {
@@ -16,6 +17,8 @@ public interface TattooRepository extends JpaRepository<Tattoo, Long> {
     boolean existsBySourceAndSourceId(String source, String sourceId);
 
     boolean existsBySourceId(String sourceId);
+
+    List<Tattoo> findByStaffIdOrderBySortOrderAscCreatedAtDesc(UUID staffId);
 
     @Query(value = """
             SELECT * FROM tattoos
@@ -34,17 +37,26 @@ public interface TattooRepository extends JpaRepository<Tattoo, Long> {
 
     @Query(value = """
             SELECT * FROM tattoos
-            WHERE (:tag IS NULL OR :tag = ANY(tags))
+            WHERE status = 'READY'
+              AND (:tag IS NULL OR :tag = ANY(tags))
               AND (:author IS NULL OR author_name = :author)
+              AND (:staffId IS NULL OR staff_id = CAST(:staffId AS uuid))
             ORDER BY created_at DESC
             """,
             countQuery = """
             SELECT COUNT(*) FROM tattoos
-            WHERE (:tag IS NULL OR :tag = ANY(tags))
+            WHERE status = 'READY'
+              AND (:tag IS NULL OR :tag = ANY(tags))
               AND (:author IS NULL OR author_name = :author)
+              AND (:staffId IS NULL OR staff_id = CAST(:staffId AS uuid))
             """,
             nativeQuery = true)
-    Page<Tattoo> findByTagOrAll(@Param("tag") String tag, @Param("author") String author, Pageable pageable);
+    Page<Tattoo> findByTagOrAll(@Param("tag") String tag, @Param("author") String author,
+                                @Param("staffId") String staffId, Pageable pageable);
 
     List<Tattoo> findAllByIdIn(List<Long> ids);
+
+    long countByStaffIdAndShowcase(UUID staffId, boolean showcase);
+
+    List<Tattoo> findByStaffIdAndShowcaseTrueOrderBySortOrderAsc(UUID staffId);
 }

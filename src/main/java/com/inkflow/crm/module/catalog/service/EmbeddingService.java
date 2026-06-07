@@ -12,12 +12,14 @@ import java.util.Map;
 @Service
 public class EmbeddingService {
 
-    private static final String MODEL_URL =
-            "https://router.huggingface.co/hf-inference/models/intfloat/multilingual-e5-large-instruct";
     private static final int MAX_RETRIES = 3;
+    private static final long RETRY_BASE_DELAY_MS = 2000L;
 
     @Value("${huggingface.api.key}")
     private String apiKey;
+
+    @Value("${huggingface.api.model-url}")
+    private String modelUrl;
 
     private final RestClient restClient = RestClient.create();
 
@@ -33,7 +35,7 @@ public class EmbeddingService {
         for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
                 float[] vector = restClient.post()
-                        .uri(MODEL_URL)
+                        .uri(modelUrl)
                         .header("Authorization", "Bearer " + apiKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(Map.of("inputs", prefixedText))
@@ -52,7 +54,7 @@ public class EmbeddingService {
                 }
                 log.warn("Attempt {}/{} failed: {}. Retrying in {}s...",
                         attempt, MAX_RETRIES, e.getMessage(), attempt * 2);
-                sleep(attempt * 2000L);
+                sleep(attempt * RETRY_BASE_DELAY_MS);
             }
         }
         throw new IllegalStateException("unreachable");
