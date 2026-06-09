@@ -95,3 +95,13 @@ CREATE TABLE IF NOT EXISTS tattoos (
     UNIQUE(source, source_id)
 );
 CREATE INDEX IF NOT EXISTS idx_tattoos_source_id ON tattoos(source, source_id);
+
+-- Staff: is_service_provider flag
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS is_service_provider BOOLEAN NOT NULL DEFAULT true;
+
+-- Staff invites: is_service_provider flag + make calendar_color nullable
+ALTER TABLE staff_invites ADD COLUMN IF NOT EXISTS is_service_provider BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE staff_invites ALTER COLUMN calendar_color DROP NOT NULL;
+
+-- Set existing admins as non-service-providers
+UPDATE staff SET is_service_provider = false WHERE role = 'ADMIN';

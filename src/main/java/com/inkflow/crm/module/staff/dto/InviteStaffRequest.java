@@ -23,9 +23,10 @@ public class InviteStaffRequest {
     @Pattern(regexp = "^(admin|artist)$", message = "Role must be admin or artist")
     private String role;
 
-    @NotBlank(message = "Calendar color is required")
-    @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "Color must be a valid hex color code")
     private String calendarColor;
+
+    @Builder.Default
+    private Boolean isServiceProvider = true;
 
     @NotEmpty(message = "At least one location is required")
     private List<UUID> locationIds;

@@ -27,6 +27,7 @@ public class StaffDto {
     private List<String> specialization;
     private List<String> portfolioImages;
     private String status;
+    private String accountStatus;
     private List<UUID> locationIds;
     private String salaryType;
     private BigDecimal salaryRate;
@@ -37,5 +38,10 @@ public class StaffDto {
     private String iban;
     private String bankCard;
     private Boolean availableForOnlineBooking;
+    private Boolean isServiceProvider;
+    private String instagram;
+    private BigDecimal hourlyRate;
+    private List<String> dontDoList;
+    private String bio;
     private Instant createdAt;
 }

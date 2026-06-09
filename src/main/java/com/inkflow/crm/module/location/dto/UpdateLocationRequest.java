@@ -31,4 +31,5 @@ public class UpdateLocationRequest {
     private String photoUrl;
     private String navigationInstructions;
     private String telegramContact;
+    private String instagram;
 }

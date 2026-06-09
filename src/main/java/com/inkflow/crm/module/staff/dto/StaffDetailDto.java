@@ -28,12 +28,17 @@ public class StaffDetailDto {
     private List<String> portfolioImages;
     private String bio;
     private String status;
+    private String accountStatus;
     private List<LocationDto> locations;
     private List<ScheduleDto> schedule;
     private StaffStatsDto stats;
     private String salaryType;
     private BigDecimal salaryRate;
     private String bankDetails;
+    private Boolean isServiceProvider;
+    private String instagram;
+    private BigDecimal hourlyRate;
+    private List<String> dontDoList;
     private Instant createdAt;
     private Instant updatedAt;
 

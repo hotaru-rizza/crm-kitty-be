@@ -8,8 +8,7 @@ import lombok.RequiredArgsConstructor;
 public enum StaffStatus {
     WORKING("working", "Currently working"),
     ON_VACATION("on_vacation", "On vacation"),
-    SICK_LEAVE("sick_leave", "On sick leave"),
-    FIRED("fired", "No longer employed");
+    SICK_LEAVE("sick_leave", "On sick leave");
 
     private final String value;
     private final String description;

@@ -30,8 +30,9 @@ public class StaffController {
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String role,
-            @RequestParam(required = false) UUID locationId) {
-        PageResult<StaffDto> result = staffService.getAllStaff(pageRequest, search, role, locationId);
+            @RequestParam(required = false) UUID locationId,
+            @RequestParam(required = false) String accountStatus) {
+        PageResult<StaffDto> result = staffService.getAllStaff(pageRequest, search, role, locationId, accountStatus);
         return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
@@ -141,5 +142,42 @@ public class StaffController {
             @PathVariable UUID serviceId) {
         staffService.removeServiceFromStaff(id, serviceId);
         return ResponseEntity.ok(ApiResponse.empty());
+    }
+
+    @GetMapping("/{id}/future-appointments-count")
+    @RequirePermission("staff.edit")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> getFutureAppointmentsCount(@PathVariable UUID id) {
+        int count = staffService.getFutureAppointmentsCount(id);
+        return ResponseEntity.ok(ApiResponse.success(Map.of("count", count)));
+    }
+
+    @PostMapping("/{id}/reactivate")
+    @RequirePermission("staff.edit")
+    public ResponseEntity<ApiResponse<Void>> reactivateStaff(@PathVariable UUID id) {
+        staffService.reactivateStaff(id);
+        return ResponseEntity.ok(ApiResponse.empty());
+    }
+
+    @PostMapping("/{id}/deactivate")
+    @RequirePermission("staff.edit")
+    public ResponseEntity<ApiResponse<Void>> deactivateStaff(
+            @PathVariable UUID id,
+            @RequestBody(required = false) DeactivateStaffRequest request) {
+        staffService.deactivateStaff(id, request != null ? request : new DeactivateStaffRequest(false));
+        return ResponseEntity.ok(ApiResponse.empty());
+    }
+
+    @GetMapping("/{id}/faq")
+    @RequirePermission("staff.view")
+    public ResponseEntity<ApiResponse<List<StaffFaqDto>>> getFaq(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(staffService.getFaq(id)));
+    }
+
+    @PutMapping("/{id}/faq")
+    @RequirePermission("staff.edit")
+    public ResponseEntity<ApiResponse<List<StaffFaqDto>>> upsertFaq(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpsertFaqRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(staffService.upsertFaq(id, request)));
     }
 }

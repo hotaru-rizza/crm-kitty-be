@@ -1,5 +1,6 @@
 package com.inkflow.crm.domain.entity;
 
+import com.inkflow.crm.domain.enums.AccountStatus;
 import com.inkflow.crm.domain.enums.SalaryType;
 import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.UserRole;
@@ -74,6 +75,10 @@ public class Staff extends BaseEntity {
     @Column(name = "status", nullable = false)
     private StaffStatus status = StaffStatus.WORKING;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "account_status", nullable = false)
+    private AccountStatus accountStatus = AccountStatus.ACTIVE;
+
     @ManyToMany
     @JoinTable(
             name = "staff_locations",
@@ -147,6 +152,10 @@ public class Staff extends BaseEntity {
     @Builder.Default
     private Boolean isPublic = false;
 
+    @Column(name = "is_service_provider", nullable = false)
+    @Builder.Default
+    private Boolean isServiceProvider = true;
+
     @Column(name = "hourly_rate", precision = 10, scale = 2)
     private BigDecimal hourlyRate;
 
@@ -156,9 +165,6 @@ public class Staff extends BaseEntity {
     @BatchSize(size = 50)
     @Builder.Default
     private Set<String> dontDoList = new HashSet<>();
-
-    @Column(name = "studio_photo_url", columnDefinition = "TEXT")
-    private String studioPhotoUrl;
 
     public boolean isGoogleCalendarConnected() {
         return googleRefreshToken != null && !googleRefreshToken.isBlank();

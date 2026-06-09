@@ -9,6 +9,7 @@ import com.inkflow.crm.domain.entity.*;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
 import com.inkflow.crm.domain.enums.DayOfWeek;
 import com.inkflow.crm.domain.repository.*;
+import com.inkflow.crm.infrastructure.supabase.SupabaseAdminService;
 import com.inkflow.crm.module.location.dto.LocationDto;
 import com.inkflow.crm.module.staff.dto.*;
 import com.inkflow.crm.module.staff.mapper.StaffMapper;
@@ -36,20 +37,25 @@ public class StaffService {
     private final ArtistServicePricingRepository artistServicePricingRepository;
     private final StaffMapper staffMapper;
     private final EntityManager entityManager;
+    private final StaffFaqRepository staffFaqRepository;
+    private final SupabaseAdminService supabaseAdminService;
 
     @Transactional(readOnly = true)
-    public PageResult<StaffDto> getAllStaff(PageRequest pageRequest, String search, String role, UUID locationId) {
-        Page<Staff> page = getStaffPage(pageRequest, search, role, locationId);
+    public PageResult<StaffDto> getAllStaff(PageRequest pageRequest, String search, String role, UUID locationId, String accountStatus) {
+        Page<Staff> page = getStaffPage(pageRequest, search, role, locationId, accountStatus);
         List<StaffDto> data = staffMapper.toDtoList(page.getContent());
         return new PageResult<>(data, PaginationDto.from(page));
     }
 
-    private Page<Staff> getStaffPage(PageRequest pageRequest, String search, String role, UUID locationId) {
+    private Page<Staff> getStaffPage(PageRequest pageRequest, String search, String role, UUID locationId, String accountStatus) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        com.inkflow.crm.domain.enums.UserRole userRole = role != null 
-            ? com.inkflow.crm.domain.enums.UserRole.fromValue(role) 
+        com.inkflow.crm.domain.enums.UserRole userRole = role != null
+            ? com.inkflow.crm.domain.enums.UserRole.fromValue(role)
             : null;
-        return staffRepository.findWithFilters(tenantId, search, userRole, locationId, pageRequest.toPageable());
+        com.inkflow.crm.domain.enums.AccountStatus accStatus = accountStatus != null
+            ? com.inkflow.crm.domain.enums.AccountStatus.fromValue(accountStatus)
+            : null;
+        return staffRepository.findWithFilters(tenantId, search, userRole, locationId, accStatus, pageRequest.toPageable());
     }
 
     @Transactional(readOnly = true)
@@ -174,6 +180,7 @@ public class StaffService {
                 .email(request.getEmail())
                 .role(com.inkflow.crm.domain.enums.UserRole.fromValue(request.getRole()))
                 .calendarColor(request.getCalendarColor())
+                .isServiceProvider(request.getIsServiceProvider())
                 .token(token)
                 .expiresAt(expiresAt)
                 .invitedBy(currentUserId)
@@ -205,6 +212,7 @@ public class StaffService {
                 .phone(request.getPhone())
                 .role(invite.getRole())
                 .calendarColor(invite.getCalendarColor())
+                .isServiceProvider(invite.getIsServiceProvider())
                 .authUserId(request.getAuthUserId())
                 .status(com.inkflow.crm.domain.enums.StaffStatus.WORKING)
                 .build();
@@ -256,12 +264,17 @@ public class StaffService {
                 .portfolioImages(new ArrayList<>(staff.getPortfolioImages()))
                 .bio(staff.getBio())
                 .status(staff.getStatus().getValue())
+                .accountStatus(staff.getAccountStatus().getValue())
                 .locations(locations)
                 .schedule(schedule)
                 .stats(stats)
                 .salaryType(staff.getSalaryType() != null ? staff.getSalaryType().getValue() : "none")
                 .salaryRate(staff.getSalaryRate())
                 .bankDetails(staff.getBankDetails())
+                .isServiceProvider(staff.getIsServiceProvider())
+                .instagram(staff.getInstagram())
+                .hourlyRate(staff.getHourlyRate())
+                .dontDoList(new ArrayList<>(staff.getDontDoList()))
                 .createdAt(staff.getCreatedAt())
                 .updatedAt(staff.getUpdatedAt())
                 .build();
@@ -284,8 +297,6 @@ public class StaffService {
                 .upcomingAppointments(upcoming.size())
                 .build();
     }
-
-    // ======== Staff Services Management ========
 
     @Transactional(readOnly = true)
     public List<StaffServiceDto> getStaffServices(UUID staffId) {
@@ -394,6 +405,107 @@ public class StaffService {
 
         pricing = artistServicePricingRepository.save(pricing);
         return mapToStaffServiceDto(pricing);
+    }
+
+    @Transactional(readOnly = true)
+    public int getFutureAppointmentsCount(UUID staffId) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.staff(staffId.toString()));
+        List<Appointment> future = appointmentRepository.findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(
+                staffId,
+                List.of(AppointmentStatus.NEW, AppointmentStatus.CONFIRMED),
+                Instant.now());
+        return future.size();
+    }
+
+    @Transactional
+    public void reactivateStaff(UUID staffId) {
+        SecurityUtils.requireAdminAccess();
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        Staff staff = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.staff(staffId.toString()));
+        
+        if (staff.getAccountStatus() != com.inkflow.crm.domain.enums.AccountStatus.DEACTIVATED) {
+            throw new com.inkflow.crm.common.exception.BusinessRuleException(
+                    com.inkflow.crm.common.exception.ErrorCode.INVALID_STATUS_TRANSITION,
+                    "Staff member is not deactivated");
+        }
+        staff.setAccountStatus(com.inkflow.crm.domain.enums.AccountStatus.ACTIVE);
+        staffRepository.save(staff);
+    }
+
+    @Transactional
+    public void deactivateStaff(UUID staffId, DeactivateStaffRequest request) {
+        SecurityUtils.requireAdminAccess();
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+
+        Staff staff = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.staff(staffId.toString()));
+
+        if (staff.getAccountStatus() == com.inkflow.crm.domain.enums.AccountStatus.DEACTIVATED) {
+            throw new com.inkflow.crm.common.exception.BusinessRuleException(
+                    com.inkflow.crm.common.exception.ErrorCode.STAFF_ALREADY_DEACTIVATED,
+                    "Staff member is already deactivated");
+        }
+
+        if (request.isCancelFutureAppointments()) {
+            List<Appointment> future = appointmentRepository.findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(
+                    staffId,
+                    List.of(AppointmentStatus.NEW, AppointmentStatus.CONFIRMED),
+                    Instant.now());
+            future.forEach(a -> a.setStatus(AppointmentStatus.CANCELLED));
+            appointmentRepository.saveAll(future);
+        }
+
+        staff.setAccountStatus(com.inkflow.crm.domain.enums.AccountStatus.DEACTIVATED);
+        staff.setAvailableForOnlineBooking(false);
+        staffRepository.save(staff);
+
+        if (staff.getAuthUserId() != null) {
+            supabaseAdminService.revokeAllSessions(staff.getAuthUserId());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<StaffFaqDto> getFaq(UUID staffId) {
+        return staffFaqRepository.findByStaffIdOrderBySortOrderAsc(staffId).stream()
+                .map(f -> StaffFaqDto.builder()
+                        .id(f.getId())
+                        .question(f.getQuestion())
+                        .answer(f.getAnswer())
+                        .sortOrder(f.getSortOrder())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<StaffFaqDto> upsertFaq(UUID staffId, UpsertFaqRequest request) {
+        SecurityUtils.getCurrentTenantId();
+        staffFaqRepository.deleteByStaffId(staffId);
+        staffFaqRepository.flush();
+
+        List<StaffFaq> saved = new ArrayList<>();
+        List<UpsertFaqRequest.FaqItem> items = request.getItems() != null ? request.getItems() : List.of();
+        for (int i = 0; i < items.size(); i++) {
+            UpsertFaqRequest.FaqItem item = items.get(i);
+            StaffFaq faq = StaffFaq.builder()
+                    .staffId(staffId)
+                    .question(item.getQuestion())
+                    .answer(item.getAnswer())
+                    .sortOrder(i)
+                    .build();
+            saved.add(staffFaqRepository.save(faq));
+        }
+
+        return saved.stream()
+                .map(f -> StaffFaqDto.builder()
+                        .id(f.getId())
+                        .question(f.getQuestion())
+                        .answer(f.getAnswer())
+                        .sortOrder(f.getSortOrder())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private StaffServiceDto mapToStaffServiceDto(ArtistServicePricing pricing) {

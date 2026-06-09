@@ -3,6 +3,8 @@ package com.inkflow.crm.module.catalog.service;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.StaffSchedule;
+import com.inkflow.crm.domain.entity.StaffFaq;
+import com.inkflow.crm.domain.repository.StaffFaqRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.catalog.dto.PublicArtistDto;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class PublicArtistService {
 
     private final StaffRepository staffRepository;
     private final PortfolioService portfolioService;
+    private final StaffFaqRepository staffFaqRepository;
 
     @Transactional(readOnly = true)
     public List<PublicArtistDto> findAll(String city, String style, String search) {
@@ -71,9 +74,7 @@ public class PublicArtistService {
 
         String studioName = primaryLocation != null ? primaryLocation.getName() : null;
         String studioAddress = primaryLocation != null ? primaryLocation.getAddress() : null;
-        String studioPhoto = staff.getStudioPhotoUrl() != null
-                ? staff.getStudioPhotoUrl()
-                : (primaryLocation != null ? primaryLocation.getPhotoUrl() : null);
+        String studioPhoto = primaryLocation != null ? primaryLocation.getPhotoUrl() : null;
         Double lat = primaryLocation != null ? primaryLocation.getLatitude() : null;
         Double lng = primaryLocation != null ? primaryLocation.getLongitude() : null;
 
@@ -90,6 +91,15 @@ public class PublicArtistService {
                         staff.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now())
                 : 0;
 
+        String instagram = staff.getInstagram() != null && !staff.getInstagram().isBlank()
+                ? staff.getInstagram()
+                : (primaryLocation != null ? primaryLocation.getInstagram() : null);
+
+        List<PublicArtistDto.FaqEntry> faqEntries = staffFaqRepository
+                .findByStaffIdOrderBySortOrderAsc(staff.getId()).stream()
+                .map(f -> new PublicArtistDto.FaqEntry(f.getQuestion(), f.getAnswer()))
+                .toList();
+
         return new PublicArtistDto(
                 staff.getId(),
                 staff.getFullName(),
@@ -104,12 +114,12 @@ public class PublicArtistService {
                 lng,
                 List.copyOf(staff.getSpecialization()),
                 List.copyOf(staff.getDontDoList()),
-                staff.getInstagram(),
+                instagram,
                 isOpen,
                 0,
                 portfolioService.getShowcaseUrls(staff.getId()),
                 schedule,
-                Collections.emptyList(),
+                faqEntries,
                 Collections.emptyList()
         );
     }

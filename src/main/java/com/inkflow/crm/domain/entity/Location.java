@@ -52,6 +52,9 @@ public class Location extends BaseEntity {
     @Column(name = "city")
     private String city;
 
+    @Column(name = "instagram")
+    private String instagram;
+
     @ManyToMany(mappedBy = "locations")
     @Builder.Default
     private Set<Staff> staff = new HashSet<>();

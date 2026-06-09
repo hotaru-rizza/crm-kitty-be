@@ -39,7 +39,10 @@ public enum ErrorCode {
     TIME_SLOT_CONFLICT("TIME_SLOT_CONFLICT", "Time slot is already booked", HttpStatus.CONFLICT),
     
     // Status transitions
-    INVALID_STATUS_TRANSITION("INVALID_STATUS_TRANSITION", "Invalid status transition", HttpStatus.UNPROCESSABLE_ENTITY);
+    INVALID_STATUS_TRANSITION("INVALID_STATUS_TRANSITION", "Invalid status transition", HttpStatus.UNPROCESSABLE_ENTITY),
+
+    // Staff lifecycle
+    STAFF_ALREADY_DEACTIVATED("STAFF_ALREADY_DEACTIVATED", "Staff member is already deactivated", HttpStatus.CONFLICT);
 
     private final String code;
     private final String defaultMessage;
