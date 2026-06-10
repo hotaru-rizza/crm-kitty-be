@@ -156,7 +156,7 @@ public class PublicBookingService {
         if (toDate.isAfter(maxDate)) toDate = maxDate;
 
         // Get artist schedule
-        List<StaffSchedule> schedules = artist.getSchedules();
+        Set<StaffSchedule> schedules = artist.getSchedules();
         Map<com.inkflow.crm.domain.enums.DayOfWeek, StaffSchedule> scheduleMap = schedules.stream()
                 .collect(Collectors.toMap(StaffSchedule::getDayOfWeek, s -> s));
 
@@ -350,7 +350,7 @@ public class PublicBookingService {
                 .fullName(artist.getFullName())
                 .avatarUrl(artist.getAvatar())
                 .bio(artist.getBio())
-                .specialization(artist.getSpecialization())
+                .specialization(new ArrayList<>(artist.getSpecialization()))
                 .instagram(artist.getInstagram())
                 .calendarColor(artist.getCalendarColor())
                 .portfolioImages(new ArrayList<>()) // TODO: Get from gallery

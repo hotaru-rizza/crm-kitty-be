@@ -47,17 +47,15 @@ public class ConsumerAuthFilter extends OncePerRequestFilter {
     private JwkProvider jwkProvider;
 
     @PostConstruct
-    public void init() throws Exception {
-        jwkProvider = new JwkProviderBuilder(URI.create(jwksUri).toURL())
-                .cached(10, 24, TimeUnit.HOURS)
-                .rateLimited(10, 1, TimeUnit.MINUTES)
-                .build();
-    }
-
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
-        return !path.startsWith("/public/consumer/");
+    public void init() {
+        try {
+            jwkProvider = new JwkProviderBuilder(URI.create(jwksUri).toURL())
+                    .cached(10, 24, TimeUnit.HOURS)
+                    .rateLimited(10, 1, TimeUnit.MINUTES)
+                    .build();
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to initialize JwkProvider for URI: " + jwksUri, e);
+        }
     }
 
     @Override
@@ -95,7 +93,7 @@ public class ConsumerAuthFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(auth);
 
         } catch (Exception e) {
-            log.debug("Consumer JWT auth failed: {}", e.getMessage());
+            log.warn("Consumer JWT auth failed: {}", e.getMessage(), e);
         }
 
         filterChain.doFilter(request, response);

@@ -25,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -40,11 +42,14 @@ public class AppointmentService {
     private final LocationRepository locationRepository;
     private final ProjectRepository projectRepository;
     private final GalleryPhotoRepository galleryPhotoRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
     private final SettingsService settingsService;
     private final EmailService emailService;
     private final CompanySettingsRepository companySettingsRepository;
     private final GoogleCalendarSyncService googleCalendarSyncService;
     private final com.inkflow.crm.module.audit.AuditLogService auditLogService;
+
+    private static final ZoneId UKRAINE_ZONE = ZoneId.of("Europe/Kiev");
 
     @Transactional(readOnly = true)
     public PageResult<AppointmentDto> getAllAppointments(PageRequest pageRequest, AppointmentFilterRequest filter) {
@@ -119,6 +124,13 @@ public class AppointmentService {
 
         if (appointmentRepository.existsConflictingAppointment(request.getArtistId(), request.getStartTime(), request.getEndTime())) {
             throw BusinessRuleException.timeSlotConflict();
+        }
+
+        LocalDate appointmentDate = request.getStartTime().atZone(UKRAINE_ZONE).toLocalDate();
+        List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate(
+                tenantId, request.getArtistId(), appointmentDate);
+        if (!activeLeaves.isEmpty()) {
+            throw new BusinessRuleException("Майстер відсутній у цей день (відпустка/вихідний)");
         }
 
         Project project = null;

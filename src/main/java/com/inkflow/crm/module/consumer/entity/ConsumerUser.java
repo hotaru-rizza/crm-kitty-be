@@ -31,17 +31,17 @@ public class ConsumerUser {
     @Column(name = "ai_tokens")
     private int aiTokens = 5;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "consumer_saved_tattoos", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "tattoo_id")
     private List<Long> savedTattooIds = new ArrayList<>();
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "consumer_saved_artists", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "artist_id")
     private List<String> savedArtistIds = new ArrayList<>();
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "consumer_favorite_generations", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "generation_id")
     private List<UUID> favoriteGenerationIds = new ArrayList<>();

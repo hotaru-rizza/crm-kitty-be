@@ -9,6 +9,7 @@ public record PublicArtistDto(
         String name,
         String avatar,
         String bio,
+        int experience,
         BigDecimal hourlyRate,
         String studioName,
         String studioAddress,
@@ -19,8 +20,13 @@ public record PublicArtistDto(
         List<String> dontDoList,
         String instagramUrl,
         boolean isOpen,
+        int savesCount,
         List<String> portfolio,
-        List<ScheduleEntry> schedule
+        List<ScheduleEntry> schedule,
+        List<FaqEntry> faq,
+        List<ReviewEntry> reviews
 ) {
     public record ScheduleEntry(String day, String hours) {}
+    public record FaqEntry(String question, String answer) {}
+    public record ReviewEntry(String id, String name, int rating, String text, String date) {}
 }

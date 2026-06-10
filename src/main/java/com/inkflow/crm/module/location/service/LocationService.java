@@ -115,6 +115,9 @@ public class LocationService {
                 .googleMapsLink(location.getGoogleMapsLink())
                 .color(location.getColor())
                 .isActive(location.getIsActive())
+                .photoUrl(location.getPhotoUrl())
+                .navigationInstructions(location.getNavigationInstructions())
+                .telegramContact(location.getTelegramContact())
                 .staffCount((int) location.getStaff().stream().filter(s -> s.getDeletedAt() == null).count())
                 .createdAt(location.getCreatedAt())
                 .build();

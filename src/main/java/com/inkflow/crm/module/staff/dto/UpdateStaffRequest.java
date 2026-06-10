@@ -55,4 +55,8 @@ public class UpdateStaffRequest {
     private String iban;
     private String bankCard;
     private Boolean availableForOnlineBooking;
+    private Boolean isServiceProvider;
+    private String instagram;
+    private BigDecimal hourlyRate;
+    private List<String> dontDoList;
 }

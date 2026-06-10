@@ -1,7 +1,9 @@
 package com.inkflow.crm.module.catalog.controller;
 
 import com.inkflow.crm.module.catalog.dto.TattooDto;
+import com.inkflow.crm.module.catalog.dto.TattooStyleDto;
 import com.inkflow.crm.module.catalog.repository.TattooRepository;
+import com.inkflow.crm.module.catalog.repository.TattooStyleRepository;
 import com.inkflow.crm.module.catalog.service.EmbeddingService;
 import com.inkflow.crm.module.catalog.service.TattooTaggerService;
 import com.inkflow.crm.module.catalog.service.UnsplashSeederService;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/public/catalog/tattoos")
@@ -20,6 +23,7 @@ import java.util.Map;
 public class TattooController {
 
     private final TattooRepository tattooRepository;
+    private final TattooStyleRepository tattooStyleRepository;
     private final UnsplashSeederService seederService;
     private final TattooTaggerService taggerService;
     private final EmbeddingService embeddingService;
@@ -29,9 +33,10 @@ public class TattooController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String tag,
-            @RequestParam(required = false) String author
+            @RequestParam(required = false) String author,
+            @RequestParam(required = false) String staffId
     ) {
-        return tattooRepository.findByTagOrAll(tag, author, PageRequest.of(page, size))
+        return tattooRepository.findByTagOrAll(tag, author, staffId, PageRequest.of(page, size))
                 .map(TattooDto::from);
     }
 
@@ -70,6 +75,18 @@ public class TattooController {
         return tattooRepository.findAllById(ids).stream()
                 .map(TattooDto::from)
                 .toList();
+    }
+
+    @GetMapping("/styles")
+    public List<TattooStyleDto> getStyles() {
+        return tattooStyleRepository.findByActiveTrueOrderBySortOrderAsc().stream()
+                .map(TattooStyleDto::from)
+                .toList();
+    }
+
+    @GetMapping("/tags")
+    public Set<String> getAvailableTags() {
+        return taggerService.getAvailableTags();
     }
 
     @PostMapping("/seed")

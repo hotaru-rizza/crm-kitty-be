@@ -25,7 +25,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/public/consumer/requests")
 @RequiredArgsConstructor
-public class PublicBookingController {
+public class ConsumerBookingController {
 
     private final RequestRepository requestRepository;
     private final StaffRepository staffRepository;

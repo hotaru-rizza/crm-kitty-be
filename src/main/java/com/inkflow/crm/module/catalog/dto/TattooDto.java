@@ -4,23 +4,30 @@ import com.inkflow.crm.module.catalog.entity.Tattoo;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 public record TattooDto(
         Long id,
+        UUID staffId,
+        String status,
         String imageUrl,
         String thumbnailUrl,
-        int width,
-        int height,
+        Integer width,
+        Integer height,
         String blurHash,
         String dominantColor,
         String authorName,
         String authorUrl,
         String description,
-        List<String> tags
+        String altDescription,
+        List<String> tags,
+        boolean showcase
 ) {
     public static TattooDto from(Tattoo t) {
         return new TattooDto(
                 t.getId(),
+                t.getStaffId(),
+                t.getStatus().name(),
                 t.getImageUrl(),
                 t.getThumbnailUrl(),
                 t.getWidth(),
@@ -29,8 +36,10 @@ public record TattooDto(
                 t.getDominantColor(),
                 t.getAuthorName(),
                 t.getAuthorUrl(),
-                t.getDescription() != null ? t.getDescription() : t.getAltDescription(),
-                t.getTags() != null ? Arrays.asList(t.getTags()) : List.of()
+                t.getDescription(),
+                t.getAltDescription(),
+                t.getTags() != null ? Arrays.asList(t.getTags()) : List.of(),
+                t.isShowcase()
         );
     }
 }

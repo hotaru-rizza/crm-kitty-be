@@ -36,8 +36,12 @@ public class StaffInvite {
     @Column(name = "role", nullable = false)
     private UserRole role;
 
-    @Column(name = "calendar_color", nullable = false)
+    @Column(name = "calendar_color")
     private String calendarColor;
+
+    @Column(name = "is_service_provider", nullable = false)
+    @Builder.Default
+    private Boolean isServiceProvider = true;
 
     @Column(name = "token", nullable = false, unique = true)
     private String token;

@@ -3,13 +3,20 @@ package com.inkflow.crm.module.catalog.service;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.StaffSchedule;
+import com.inkflow.crm.domain.entity.StaffFaq;
+import com.inkflow.crm.domain.repository.StaffFaqRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.catalog.dto.PublicArtistDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,10 +26,15 @@ import java.util.UUID;
 public class PublicArtistService {
 
     private final StaffRepository staffRepository;
+    private final PortfolioService portfolioService;
+    private final StaffFaqRepository staffFaqRepository;
 
     @Transactional(readOnly = true)
-    public List<PublicArtistDto> findAll() {
+    public List<PublicArtistDto> findAll(String city, String style, String search) {
         return staffRepository.findAllPublicArtists().stream()
+                .filter(s -> matchesCity(s, city))
+                .filter(s -> matchesStyle(s, style))
+                .filter(s -> matchesSearch(s, search))
                 .map(this::toDto)
                 .toList();
     }
@@ -33,41 +45,82 @@ public class PublicArtistService {
                 .map(this::toDto);
     }
 
+    private boolean matchesCity(Staff staff, String city) {
+        if (city == null || city.isBlank()) return true;
+        return staff.getLocations().stream()
+                .anyMatch(loc -> loc.getAddress() != null &&
+                        loc.getAddress().toLowerCase().contains(city.toLowerCase()));
+    }
+
+    private boolean matchesStyle(Staff staff, String style) {
+        if (style == null || style.isBlank()) return true;
+        return staff.getSpecialization().stream()
+                .anyMatch(s -> s.equalsIgnoreCase(style));
+    }
+
+    private boolean matchesSearch(Staff staff, String search) {
+        if (search == null || search.isBlank()) return true;
+        String q = search.toLowerCase();
+        String fullName = staff.getFullName().toLowerCase();
+        boolean nameMatch = fullName.contains(q);
+        boolean studioMatch = staff.getLocations().stream()
+                .anyMatch(loc -> (loc.getName() != null && loc.getName().toLowerCase().contains(q))
+                        || (loc.getAddress() != null && loc.getAddress().toLowerCase().contains(q)));
+        return nameMatch || studioMatch;
+    }
+
     private PublicArtistDto toDto(Staff staff) {
         Location primaryLocation = staff.getLocations().stream().findFirst().orElse(null);
 
         String studioName = primaryLocation != null ? primaryLocation.getName() : null;
         String studioAddress = primaryLocation != null ? primaryLocation.getAddress() : null;
-        String studioPhoto = staff.getStudioPhotoUrl() != null
-                ? staff.getStudioPhotoUrl()
-                : (primaryLocation != null ? primaryLocation.getPhotoUrl() : null);
+        String studioPhoto = primaryLocation != null ? primaryLocation.getPhotoUrl() : null;
         Double lat = primaryLocation != null ? primaryLocation.getLatitude() : null;
         Double lng = primaryLocation != null ? primaryLocation.getLongitude() : null;
 
         List<PublicArtistDto.ScheduleEntry> schedule = staff.getSchedules().stream()
                 .sorted((a, b) -> Integer.compare(a.getDayOfWeek().getOrder(), b.getDayOfWeek().getOrder()))
                 .map(this::toScheduleEntry)
+                .distinct()
                 .toList();
 
         boolean isOpen = isCurrentlyOpen(staff.getSchedules());
+
+        int experience = staff.getCreatedAt() != null
+                ? (int) ChronoUnit.YEARS.between(
+                        staff.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now())
+                : 0;
+
+        String instagram = staff.getInstagram() != null && !staff.getInstagram().isBlank()
+                ? staff.getInstagram()
+                : (primaryLocation != null ? primaryLocation.getInstagram() : null);
+
+        List<PublicArtistDto.FaqEntry> faqEntries = staffFaqRepository
+                .findByStaffIdOrderBySortOrderAsc(staff.getId()).stream()
+                .map(f -> new PublicArtistDto.FaqEntry(f.getQuestion(), f.getAnswer()))
+                .toList();
 
         return new PublicArtistDto(
                 staff.getId(),
                 staff.getFullName(),
                 staff.getAvatar(),
                 staff.getBio(),
+                Math.max(experience, 1),
                 staff.getHourlyRate(),
                 studioName,
                 studioAddress,
                 studioPhoto,
                 lat,
                 lng,
-                staff.getSpecialization(),
-                staff.getDontDoList(),
-                staff.getInstagram(),
+                List.copyOf(staff.getSpecialization()),
+                List.copyOf(staff.getDontDoList()),
+                instagram,
                 isOpen,
-                staff.getPortfolioImages(),
-                schedule
+                0,
+                portfolioService.getShowcaseUrls(staff.getId()),
+                schedule,
+                faqEntries,
+                Collections.emptyList()
         );
     }
 
@@ -83,8 +136,8 @@ public class PublicArtistService {
         return time != null ? String.format("%02d:%02d", time.getHour(), time.getMinute()) : "—";
     }
 
-    private boolean isCurrentlyOpen(List<StaffSchedule> schedules) {
-        java.time.DayOfWeek today = java.time.LocalDate.now().getDayOfWeek();
+    private boolean isCurrentlyOpen(java.util.Collection<StaffSchedule> schedules) {
+        java.time.DayOfWeek today = LocalDate.now().getDayOfWeek();
         LocalTime now = LocalTime.now();
         return schedules.stream()
                 .filter(s -> s.getDayOfWeek().name().equals(today.name()))

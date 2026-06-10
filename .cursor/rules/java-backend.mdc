@@ -1,0 +1,58 @@
+---
+description: Java backend code quality and structure rules
+alwaysApply: false
+---
+# Code Quality
+
+- Follow DRY. Avoid duplicated logic, duplicated literals, and duplicated code.
+- Avoid magic numbers, magic strings, and hardcoded values.
+- Reuse existing constants, enums, configuration values, and shared utilities whenever possible.
+- If a value may be reused or may change, extract it into a named constant or `application.yml` config.
+- For grouped config properties, use `@ConfigurationProperties` record/class (see existing examples: `R2Properties`, `GoogleCalendarProperties`). Do NOT scatter multiple `@Value` fields — one properties class per config prefix.
+- Prefer descriptive names over comments.
+
+# Maintainability
+
+- Keep methods focused on a single responsibility.
+- Extract complex logic into small, well-named methods.
+- Avoid deep nesting when possible.
+- Prefer simple, readable solutions over clever ones.
+- Remove obvious duplication encountered during implementation.
+
+# Architecture
+
+- НИКАКИХ ручных парсеров — ТОЛЬКО DTO, где это можно использовать.
+- DTOs / records for data → `dto/` package. NEVER inside a service, controller, or any other class.
+- Entities → `entity/` package.
+- Enums → `entity/` or `enums/` package (check existing).
+- Mapping logic → `mapper/` package (see existing: `LocationMapper`, `ClientMapper`, `StaffMapper`). Do NOT put `toEntity()` / `toDto()` / `from()` methods inside services, controllers, or DTOs.
+- Controllers thin — delegate to services immediately.
+- Business logic in services.
+- Separate validation from business logic.
+- Avoid god classes and overly large methods.
+- Extract reusable logic into dedicated components.
+- Do not blindly copy poor existing patterns.
+- Follow existing project conventions only when they are reasonable and maintainable.
+- When existing code is messy, improve the local design around the touched area.
+- Keep changes scoped and avoid unnecessary large rewrites.
+- Prefer incremental refactoring over big architectural changes.
+- Introduce abstractions only when they reduce duplication or improve readability.
+- If there is a conflict between existing style and clean code, prioritize maintainability while keeping compatibility.
+
+# Before creating any new type or file
+
+1. Check where similar files live in the project (`dto/`, `entity/`, `service/`, `mapper/`, `config/`, etc.).
+2. Follow the same package and naming convention.
+3. If a list, enum, or constant already exists elsewhere — reference it, don't duplicate.
+4. If the module needs mapping — check if a `mapper/` folder exists in sibling modules and follow the same pattern.
+5. If the module needs external config — check if a `@ConfigurationProperties` class exists for that prefix; create one if not.
+
+# Before finishing
+
+1. Is there duplicated logic?
+2. Are there magic values?
+3. Can existing project utilities or abstractions be reused?
+4. Does every method have a single responsibility?
+5. Is the solution consistent with the existing codebase?
+6. Does the code become easier to maintain after the change?
+7. Are all IDE warnings resolved (resource leaks, dead code, condition always true/false)?

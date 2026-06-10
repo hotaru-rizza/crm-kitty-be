@@ -61,6 +61,8 @@ public interface LocationMapper {
                 .color(location.getColor())
                 .isActive(location.getIsActive())
                 .photoUrl(location.getPhotoUrl())
+                .navigationInstructions(location.getNavigationInstructions())
+                .telegramContact(location.getTelegramContact())
                 .staff(staffList)
                 .stats(stats)
                 .createdAt(location.getCreatedAt())

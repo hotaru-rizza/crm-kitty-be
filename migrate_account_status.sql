@@ -1,0 +1,1 @@
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS account_status VARCHAR(50) NOT NULL DEFAULT 'active';

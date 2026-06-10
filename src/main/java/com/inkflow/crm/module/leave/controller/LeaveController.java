@@ -1,17 +1,21 @@
 package com.inkflow.crm.module.leave.controller;
 
 import com.inkflow.crm.common.dto.ApiResponse;
+import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.module.leave.dto.CreateLeaveRequest;
 import com.inkflow.crm.module.leave.dto.LeaveRequestDto;
 import com.inkflow.crm.module.leave.dto.UpdateLeaveStatusRequest;
 import com.inkflow.crm.module.leave.service.LeaveService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,6 +25,29 @@ import java.util.UUID;
 public class LeaveController {
 
     private final LeaveService leaveService;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<LeaveRequestDto>>> getAllLeaves(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String leaveType,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) UUID locationId,
+            @RequestParam(required = false) List<UUID> staffIds,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        LocalDate fromDate = parseDate(from);
+        LocalDate toDate = parseDate(to);
+        Page<LeaveRequestDto> result = leaveService.getAllLeaves(status, leaveType, fromDate, toDate, locationId, staffIds, page, size);
+        return ResponseEntity.ok(ApiResponse.success(result.getContent(), PaginationDto.from(result)));
+    }
+
+    @GetMapping("/pending-count")
+    public ResponseEntity<ApiResponse<Long>> getPendingCount(
+            @RequestParam(required = false) UUID locationId) {
+        long count = leaveService.getPendingCount(locationId);
+        return ResponseEntity.ok(ApiResponse.success(count));
+    }
 
     @GetMapping("/staff/{staffId}")
     public ResponseEntity<ApiResponse<List<LeaveRequestDto>>> getLeavesByStaffId(
@@ -58,6 +85,12 @@ public class LeaveController {
         return ResponseEntity.ok(ApiResponse.success(leave));
     }
 
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<LeaveRequestDto>> cancelLeave(@PathVariable UUID id) {
+        LeaveRequestDto leave = leaveService.cancelLeave(id);
+        return ResponseEntity.ok(ApiResponse.success(leave));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteLeave(@PathVariable UUID id) {
         leaveService.deleteLeave(id);
@@ -70,5 +103,22 @@ public class LeaveController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         boolean onLeave = leaveService.isStaffOnLeave(staffId, date);
         return ResponseEntity.ok(ApiResponse.success(onLeave));
+    }
+
+    @GetMapping("/calendar")
+    public ResponseEntity<ApiResponse<List<LeaveRequestDto>>> getLeavesForCalendar(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        List<LeaveRequestDto> leaves = leaveService.getApprovedLeavesForDateRange(from, to);
+        return ResponseEntity.ok(ApiResponse.success(leaves));
+    }
+
+    private LocalDate parseDate(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return LocalDate.parse(value);
+        } catch (Exception e) {
+            return Instant.parse(value).atZone(ZoneId.systemDefault()).toLocalDate();
+        }
     }
 }

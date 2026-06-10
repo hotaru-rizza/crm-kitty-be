@@ -37,6 +37,12 @@ public class Location extends BaseEntity {
     @Column(name = "photo_url", columnDefinition = "TEXT")
     private String photoUrl;
 
+    @Column(name = "navigation_instructions", columnDefinition = "TEXT")
+    private String navigationInstructions;
+
+    @Column(name = "telegram_contact")
+    private String telegramContact;
+
     @Column(name = "latitude")
     private Double latitude;
 
@@ -45,6 +51,9 @@ public class Location extends BaseEntity {
 
     @Column(name = "city")
     private String city;
+
+    @Column(name = "instagram")
+    private String instagram;
 
     @ManyToMany(mappedBy = "locations")
     @Builder.Default

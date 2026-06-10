@@ -1,7 +1,6 @@
 package com.inkflow.crm.module.catalog.service;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.inkflow.crm.module.catalog.dto.UnsplashApiDto;
 import com.inkflow.crm.module.catalog.entity.Tattoo;
 import com.inkflow.crm.module.catalog.repository.TattooRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,12 +9,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
-import java.util.List;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UnsplashSeederService {
+
+    private static final long PAGE_DELAY_MS = 200L;
 
     private final TattooRepository tattooRepository;
     private final EmbeddingService embeddingService;
@@ -42,22 +41,22 @@ public class UnsplashSeederService {
         int saved = 0;
         for (int page = 1; page <= pages; page++) {
             try {
-                SearchResponse response = restClient.get()
+                UnsplashApiDto.SearchResponse response = restClient.get()
                         .uri(baseUrl + "/search/photos?query={q}&page={p}&per_page={pp}&order_by=relevant",
                                 query, page, perPage)
                         .header("Authorization", "Client-ID " + apiKey)
                         .retrieve()
-                        .body(SearchResponse.class);
+                        .body(UnsplashApiDto.SearchResponse.class);
 
                 if (response == null || response.results() == null) break;
 
-                for (UnsplashPhoto photo : response.results()) {
-                    if (tattooRepository.existsBySourceAndSourceId("unsplash", photo.id())) continue;
+                for (UnsplashApiDto.Photo photo : response.results()) {
+                    if (tattooRepository.existsBySourceAndSourceId(Tattoo.SOURCE_UNSPLASH, photo.id())) continue;
                     tattooRepository.save(toEntity(photo));
                     saved++;
                 }
                 log.info("Seeded page {}/{}, total saved so far: {}", page, pages, saved);
-                Thread.sleep(200);
+                Thread.sleep(PAGE_DELAY_MS);
             } catch (Exception e) {
                 log.error("Failed on page {}: {}", page, e.getMessage());
             }
@@ -66,9 +65,9 @@ public class UnsplashSeederService {
         return saved;
     }
 
-    private Tattoo toEntity(UnsplashPhoto photo) {
+    private Tattoo toEntity(UnsplashApiDto.Photo photo) {
         Tattoo t = new Tattoo();
-        t.setSource("unsplash");
+        t.setSource(Tattoo.SOURCE_UNSPLASH);
         t.setSourceId(photo.id());
         t.setImageUrl(photo.urls().regular());
         t.setThumbnailUrl(photo.urls().small());
@@ -82,44 +81,7 @@ public class UnsplashSeederService {
         t.setAltDescription(photo.altDescription());
         String[] tags = taggerService.tagFromText(photo.altDescription(), photo.description());
         t.setTags(tags);
-        t.setEmbedding(embeddingService.embedPassage(buildEmbedText(photo, tags)));
+        t.setEmbedding(embeddingService.embedPassage(t.buildEmbedText()));
         return t;
     }
-
-    private String buildEmbedText(UnsplashPhoto photo, String[] tags) {
-        StringBuilder sb = new StringBuilder();
-        if (photo.altDescription() != null) sb.append(photo.altDescription()).append(". ");
-        if (photo.description() != null) sb.append(photo.description()).append(". ");
-        if (tags.length > 0) sb.append("Tags: ").append(String.join(", ", tags));
-        return sb.toString().trim();
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record SearchResponse(List<UnsplashPhoto> results, int total) {}
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record UnsplashPhoto(
-            String id,
-            int width,
-            int height,
-            @JsonProperty("blur_hash") String blurHash,
-            String color,
-            String description,
-            @JsonProperty("alt_description") String altDescription,
-            Urls urls,
-            UnsplashUser user,
-            List<UnsplashTag> tags
-    ) {}
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record Urls(String raw, String full, String regular, String small, String thumb) {}
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record UnsplashUser(String name, UserLinks links) {}
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record UserLinks(String html) {}
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record UnsplashTag(String title) {}
 }
