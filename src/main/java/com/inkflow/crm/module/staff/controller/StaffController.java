@@ -18,11 +18,13 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/staff")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Staff")
 public class StaffController {
 
     private final StaffService staffService;

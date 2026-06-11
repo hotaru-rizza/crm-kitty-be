@@ -24,11 +24,13 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/emails")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Email")
 public class EmailController {
 
     private final EmailService emailService;

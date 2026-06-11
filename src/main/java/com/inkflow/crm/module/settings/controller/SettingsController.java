@@ -14,11 +14,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/settings")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Settings")
 public class SettingsController {
 
     private final SettingsService settingsService;

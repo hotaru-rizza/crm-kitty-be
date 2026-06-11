@@ -12,10 +12,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/public/artists")
 @RequiredArgsConstructor
+@Tag(name = "Consumer · Artists")
 public class PublicArtistController {
 
     private final PublicArtistService publicArtistService;

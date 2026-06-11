@@ -51,6 +51,8 @@ inkflow:
   default-timezone: ${INKFLOW_DEFAULT_TIMEZONE:Europe/Kyiv}
   default-language: ${INKFLOW_DEFAULT_LANGUAGE:uk}
   default-start-page: ${INKFLOW_DEFAULT_START_PAGE:/calendar}
+  openapi:
+    enabled: ${OPENAPI_ENABLED:false}
   cors:
     allowed-origins:
       - ${FRONTEND_URL:http://localhost:5173}
@@ -115,6 +117,14 @@ unsplash:
 fcm:
   server-key: ${FCM_SERVER_KEY:}
 
+monobank:
+  acquiring:
+    token: ${MONOBANK_TOKEN:}
+    api-url: https://api.monobank.ua
+    webhook-url: ${APP_BASE_URL:http://localhost:8080}/api/payments/monobank/webhook
+    redirect-url: ${FRONTEND_URL:http://localhost:5173}/app/calendar
+    invoice-validity-seconds: 3600
+
 logging:
   level:
     root: INFO
@@ -122,6 +132,19 @@ logging:
     org.springframework.security: WARN
     org.hibernate.SQL: OFF
     org.hibernate.type.descriptor.sql.BasicBinder: OFF
+
+springdoc:
+  api-docs:
+    enabled: ${inkflow.openapi.enabled:false}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${inkflow.openapi.enabled:false}
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+    doc-expansion: none
+  show-actuator: false
+  packages-to-scan: com.inkflow.crm.module
 
 management:
   endpoints:
@@ -145,6 +168,10 @@ spring:
 
   flyway:
     enabled: false
+
+inkflow:
+  openapi:
+    enabled: true
 
 logging:
   level:
@@ -175,10 +202,12 @@ logging:
     root: WARN
     com.inkflow: INFO
 
-monobank:
-  acquiring:
-    token: ${MONOBANK_TOKEN:}
-    api-url: https://api.monobank.ua
-    webhook-url: ${APP_BASE_URL:http://localhost:8080}/api/payments/monobank/webhook
-    redirect-url: ${FRONTEND_URL:http://localhost:5173}/app/calendar
-    invoice-validity-seconds: 3600
+---
+spring:
+  config:
+    activate:
+      on-profile: staging
+
+inkflow:
+  openapi:
+    enabled: true

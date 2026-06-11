@@ -1,0 +1,19 @@
+meta {
+  name: List appointments
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/appointments?page=0&size=20
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{crm_token}}
+}
+
+headers {
+  X-Location-Id: {{location_id}}
+}

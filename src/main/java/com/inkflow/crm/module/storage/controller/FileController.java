@@ -16,11 +16,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Map;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/files")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Files")
 public class FileController {
 
     private static final long MAX_DIRECT_UPLOAD_BYTES = 5L * 1024 * 1024;

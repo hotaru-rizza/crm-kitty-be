@@ -19,9 +19,16 @@ public class InkflowProperties {
     private String defaultLanguage = "uk";
     private String defaultStartPage = "/calendar";
     private Cors cors = new Cors();
+    private Openapi openapi = new Openapi();
 
     public ZoneId defaultZoneId() {
         return ZoneId.of(defaultTimezone);
+    }
+
+    @Getter
+    @Setter
+    public static class Openapi {
+        private boolean enabled = false;
     }
 
     @Getter

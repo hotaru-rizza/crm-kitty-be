@@ -19,11 +19,13 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/requests")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Requests")
 public class RequestController {
 
     private final RequestService requestService;

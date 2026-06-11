@@ -21,11 +21,13 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/leaves")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Leave")
 public class LeaveController {
 
     private final LeaveService leaveService;

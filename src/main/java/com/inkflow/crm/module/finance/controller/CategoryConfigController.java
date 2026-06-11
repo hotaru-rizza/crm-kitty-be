@@ -13,11 +13,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/finance/categories")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Finance")
 public class CategoryConfigController {
 
     private final CategoryConfigService service;

@@ -77,6 +77,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/actuator/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
                                 "/staff/accept-invite",
                                 "/staff/invite/info/**",
                                 "/onboarding",

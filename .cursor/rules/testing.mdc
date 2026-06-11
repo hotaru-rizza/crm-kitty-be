@@ -6,7 +6,7 @@ alwaysApply: false
 
 **Подход: Quality-first.** Сначала регрессии в бизнес-логике и API-контрактах; JaCoCo — только sanity-check в конце волны, не цель каждого теста.
 
-Living backlog: `docs/TEST_QUALITY_BACKLOG.md`
+Living backlog: `docs/TESTING.md`
 
 ## Workflow (каждая волна)
 

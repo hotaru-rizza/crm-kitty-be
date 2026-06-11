@@ -16,11 +16,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/appointments")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Appointments")
 public class AppointmentController {
 
     private final AppointmentService appointmentService;

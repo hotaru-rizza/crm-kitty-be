@@ -15,11 +15,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/public/consumer/requests")
 @RequiredArgsConstructor
+@Tag(name = "Consumer · Booking")
 public class ConsumerBookingController {
 
     private final ConsumerBookingService consumerBookingService;

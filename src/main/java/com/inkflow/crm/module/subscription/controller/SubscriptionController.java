@@ -8,11 +8,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/subscription")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Subscription")
 public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;

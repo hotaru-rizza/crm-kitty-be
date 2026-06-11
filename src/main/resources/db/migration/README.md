@@ -31,3 +31,11 @@ Reads `.env` (`SPRING_DATASOURCE_URL`, `DB_USERNAME`, `DB_PASSWORD`) or accepts 
 | prod    | none     | enabled (configure in deployment) |
 
 Do not re-enable `ddl-auto: update` in production.
+
+## Dev seed data
+
+Mock tenant data for local PostgreSQL:
+
+```bash
+psql "$DATABASE_URL" -f scripts/db/seed.sql
+```

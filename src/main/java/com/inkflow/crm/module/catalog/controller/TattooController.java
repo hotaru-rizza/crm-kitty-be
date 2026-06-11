@@ -13,11 +13,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Set;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/public/catalog/tattoos")
 @RequiredArgsConstructor
+@Tag(name = "Consumer · Catalog")
 public class TattooController {
 
     private final TattooCatalogService tattooCatalogService;

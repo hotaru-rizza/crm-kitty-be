@@ -15,10 +15,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "CRM · Integrations")
 public class GoogleCalendarController {
 
     private final GoogleCalendarSyncService syncService;

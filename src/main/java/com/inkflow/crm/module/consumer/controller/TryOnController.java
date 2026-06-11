@@ -13,11 +13,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/public/consumer/try-on")
 @RequiredArgsConstructor
+@Tag(name = "Consumer · AI")
 public class TryOnController {
 
     private final GeminiTattooService geminiService;

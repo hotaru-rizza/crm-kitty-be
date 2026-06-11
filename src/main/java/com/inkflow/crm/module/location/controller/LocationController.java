@@ -16,11 +16,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/locations")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Locations")
 public class LocationController {
 
     private final LocationService locationService;

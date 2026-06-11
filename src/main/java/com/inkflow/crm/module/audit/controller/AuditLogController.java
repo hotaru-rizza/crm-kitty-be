@@ -14,10 +14,12 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/audit-log")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Audit")
 public class AuditLogController {
 
     private final AuditLogService service;

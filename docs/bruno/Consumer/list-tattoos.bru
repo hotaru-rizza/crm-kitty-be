@@ -1,0 +1,15 @@
+meta {
+  name: List tattoos (feed)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/public/catalog/tattoos?page=0&size=20
+  body: none
+  auth: none
+}
+
+docs {
+  Public feed — no auth.
+}

@@ -13,11 +13,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/payments")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Payments")
 public class PaymentController {
 
     private final PaymentService paymentService;

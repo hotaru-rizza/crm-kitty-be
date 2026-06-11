@@ -17,11 +17,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/clients")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Clients")
 public class ClientController {
 
     private final ClientService clientService;

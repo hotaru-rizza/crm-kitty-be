@@ -16,11 +16,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/staff/{staffId}/portfolio")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Portfolio")
 public class PortfolioController {
 
     private final PortfolioService portfolioService;

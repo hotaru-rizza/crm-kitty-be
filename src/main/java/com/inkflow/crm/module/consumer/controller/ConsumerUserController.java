@@ -15,11 +15,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
 @RequestMapping("/public/consumer/users")
 @RequiredArgsConstructor
+@Tag(name = "Consumer · Profile")
 public class ConsumerUserController {
 
     private final ConsumerUserService consumerUserService;
