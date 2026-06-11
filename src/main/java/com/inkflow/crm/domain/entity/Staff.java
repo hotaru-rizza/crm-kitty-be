@@ -159,6 +159,12 @@ public class Staff extends BaseEntity {
     @Column(name = "hourly_rate", precision = 10, scale = 2)
     private BigDecimal hourlyRate;
 
+    @Column(name = "ui_language")
+    private String uiLanguage;
+
+    @Column(name = "start_page")
+    private String startPage;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "staff_dont_do", joinColumns = @JoinColumn(name = "staff_id"))
     @Column(name = "item")

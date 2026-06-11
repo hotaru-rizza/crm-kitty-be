@@ -9,7 +9,7 @@ public class PresignedUploadRequest {
 
     @NotBlank
     @Pattern(regexp = "^[a-z_]+$", message = "Folder must contain only lowercase letters and underscores")
-    private String folder; // e.g. "avatars", "gallery", "waivers", "sketches"
+    private String folder;
 
     @NotBlank
     private String filename;

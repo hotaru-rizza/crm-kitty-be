@@ -1,48 +1,78 @@
 package com.inkflow.crm.module.catalog.service;
 
+import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
-import com.inkflow.crm.domain.entity.StaffSchedule;
 import com.inkflow.crm.domain.entity.StaffFaq;
+import com.inkflow.crm.domain.entity.StaffSchedule;
 import com.inkflow.crm.domain.repository.StaffFaqRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.catalog.dto.PublicArtistDto;
+import com.inkflow.crm.module.catalog.support.PortfolioShowcaseResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PublicArtistService {
 
     private final StaffRepository staffRepository;
-    private final PortfolioService portfolioService;
     private final StaffFaqRepository staffFaqRepository;
+    private final PortfolioShowcaseResolver showcaseResolver;
+    private final InkflowProperties inkflowProperties;
 
     @Transactional(readOnly = true)
     public List<PublicArtistDto> findAll(String city, String style, String search) {
-        return staffRepository.findAllPublicArtists().stream()
-                .filter(s -> matchesCity(s, city))
-                .filter(s -> matchesStyle(s, style))
-                .filter(s -> matchesSearch(s, search))
-                .map(this::toDto)
+        List<Staff> artists = staffRepository.findAllPublicArtists().stream()
+                .filter(staff -> matchesCity(staff, city))
+                .filter(staff -> matchesStyle(staff, style))
+                .filter(staff -> matchesSearch(staff, search))
+                .toList();
+
+        if (artists.isEmpty()) {
+            return List.of();
+        }
+
+        List<UUID> staffIds = artists.stream().map(Staff::getId).toList();
+        Map<UUID, List<String>> showcaseUrls = showcaseResolver.resolveUrlsBatch(staffIds);
+        Map<UUID, List<PublicArtistDto.FaqEntry>> faqByStaff = loadFaqEntries(staffIds);
+
+        return artists.stream()
+                .map(staff -> toDto(staff, showcaseUrls, faqByStaff))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public Optional<PublicArtistDto> findById(UUID id) {
         return staffRepository.findPublicArtistById(id)
-                .map(this::toDto);
+                .map(staff -> toDto(
+                        staff,
+                        showcaseResolver.resolveUrlsBatch(List.of(staff.getId())),
+                        loadFaqEntries(List.of(staff.getId()))
+                ));
+    }
+
+    private Map<UUID, List<PublicArtistDto.FaqEntry>> loadFaqEntries(List<UUID> staffIds) {
+        return staffFaqRepository.findByStaffIdInOrderByStaffIdAscSortOrderAsc(staffIds).stream()
+                .collect(Collectors.groupingBy(
+                        StaffFaq::getStaffId,
+                        Collectors.mapping(
+                                faq -> new PublicArtistDto.FaqEntry(faq.getQuestion(), faq.getAnswer()),
+                                Collectors.toList()
+                        )
+                ));
     }
 
     private boolean matchesCity(Staff staff, String city) {
@@ -69,7 +99,10 @@ public class PublicArtistService {
         return nameMatch || studioMatch;
     }
 
-    private PublicArtistDto toDto(Staff staff) {
+    private PublicArtistDto toDto(
+            Staff staff,
+            Map<UUID, List<String>> showcaseUrls,
+            Map<UUID, List<PublicArtistDto.FaqEntry>> faqByStaff) {
         Location primaryLocation = staff.getLocations().stream().findFirst().orElse(null);
 
         String studioName = primaryLocation != null ? primaryLocation.getName() : null;
@@ -84,21 +117,20 @@ public class PublicArtistService {
                 .distinct()
                 .toList();
 
-        boolean isOpen = isCurrentlyOpen(staff.getSchedules());
+        ZoneId zone = inkflowProperties.defaultZoneId();
+        boolean isOpen = isCurrentlyOpen(staff.getSchedules(), zone);
 
         int experience = staff.getCreatedAt() != null
                 ? (int) ChronoUnit.YEARS.between(
-                        staff.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now())
+                        staff.getCreatedAt().atZone(zone).toLocalDate(), LocalDate.now(zone))
                 : 0;
 
         String instagram = staff.getInstagram() != null && !staff.getInstagram().isBlank()
                 ? staff.getInstagram()
                 : (primaryLocation != null ? primaryLocation.getInstagram() : null);
 
-        List<PublicArtistDto.FaqEntry> faqEntries = staffFaqRepository
-                .findByStaffIdOrderBySortOrderAsc(staff.getId()).stream()
-                .map(f -> new PublicArtistDto.FaqEntry(f.getQuestion(), f.getAnswer()))
-                .toList();
+        List<PublicArtistDto.FaqEntry> faqEntries = faqByStaff.getOrDefault(staff.getId(), List.of());
+        List<String> showcase = showcaseUrls.getOrDefault(staff.getId(), List.of());
 
         return new PublicArtistDto(
                 staff.getId(),
@@ -117,7 +149,7 @@ public class PublicArtistService {
                 instagram,
                 isOpen,
                 0,
-                portfolioService.getShowcaseUrls(staff.getId()),
+                showcase,
                 schedule,
                 faqEntries,
                 Collections.emptyList()
@@ -136,9 +168,9 @@ public class PublicArtistService {
         return time != null ? String.format("%02d:%02d", time.getHour(), time.getMinute()) : "—";
     }
 
-    private boolean isCurrentlyOpen(java.util.Collection<StaffSchedule> schedules) {
-        java.time.DayOfWeek today = LocalDate.now().getDayOfWeek();
-        LocalTime now = LocalTime.now();
+    private boolean isCurrentlyOpen(java.util.Collection<StaffSchedule> schedules, ZoneId zone) {
+        java.time.DayOfWeek today = LocalDate.now(zone).getDayOfWeek();
+        LocalTime now = LocalTime.now(zone);
         return schedules.stream()
                 .filter(s -> s.getDayOfWeek().name().equals(today.name()))
                 .anyMatch(s -> s.isWorkingAt(now));

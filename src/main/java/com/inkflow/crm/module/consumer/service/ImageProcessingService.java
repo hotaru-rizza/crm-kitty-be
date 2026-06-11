@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.consumer.service;
 
+import com.inkflow.crm.module.consumer.dto.ProcessedImagesDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -12,250 +13,332 @@ import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.util.Base64;
 
+/**
+ * Prepares body + tattoo sketch images for AI try-on and blends model output back onto the original photo.
+ */
 @Slf4j
 @Service
 public class ImageProcessingService {
 
-    private static final int MAX_SIDE = 1024;
+    private static final int MAX_BODY_SIDE_PX = 1024;
+
+    /** Pixels brighter than this are treated as sketch paper background (fully transparent). */
+    private static final double BACKGROUND_OPAQUE_THRESHOLD = 180;
+
+    /** Fade paper background between this value and {@link #BACKGROUND_OPAQUE_THRESHOLD}. */
+    private static final double BACKGROUND_FADE_START = 140;
+
+    private static final double MASK_PADDING_FRACTION = 1.0 / 12.0;
+
+    /** Downscale factor for mask softening (resize down then back up). */
+    private static final int MASK_SOFTEN_DOWNSCALE_DIVISOR = 4;
 
     static {
         System.setProperty("java.awt.headless", "true");
     }
 
-    public record ProcessedImages(
-            String compositeDataUri,
-            String maskDataUri,
-            String originalBodyDataUri,
-            int width,
-            int height
-    ) {}
-
-    public ProcessedImages prepareImages(
+    /**
+     * Builds composite preview, inpainting mask, and normalized body image for Gemini try-on.
+     *
+     * @param placementXNorm horizontal tattoo anchor (top-left), 0..1 relative to body width
+     * @param placementYNorm vertical tattoo anchor (top-left), 0..1 relative to body height
+     * @param sizeNorm       tattoo width as fraction of body width
+     * @param rotationDeg    clockwise rotation in degrees
+     */
+    public ProcessedImagesDto prepareImages(
             String bodyImageSrc,
             String sketchImageSrc,
-            double xNorm, double yNorm,
-            double sizeNorm, double angleDeg
+            double placementXNorm,
+            double placementYNorm,
+            double sizeNorm,
+            double rotationDeg
     ) throws Exception {
-        BufferedImage bodyRaw = loadImage(bodyImageSrc);
-        BufferedImage sketchRaw = loadImage(sketchImageSrc);
+        BufferedImage loadedBody = loadImage(bodyImageSrc);
+        BufferedImage loadedSketch = loadImage(sketchImageSrc);
 
-        BufferedImage body = resizeKeepAspect(bodyRaw, MAX_SIDE);
-        int w = body.getWidth();
-        int h = body.getHeight();
+        BufferedImage normalizedBody = resizeKeepAspect(loadedBody, MAX_BODY_SIDE_PX);
+        int bodyWidth = normalizedBody.getWidth();
+        int bodyHeight = normalizedBody.getHeight();
 
-        int tattooSize = Math.max(1, (int) (sizeNorm * w));
-        int tattooX = (int) (xNorm * w);
-        int tattooY = (int) (yNorm * h);
+        int stampSizePx = Math.max(1, (int) (sizeNorm * bodyWidth));
+        int stampLeftPx = (int) (placementXNorm * bodyWidth);
+        int stampTopPx = (int) (placementYNorm * bodyHeight);
 
-        BufferedImage sketchResized = resizeTo(sketchRaw, tattooSize, tattooSize);
-        BufferedImage sketchClean = removeBackground(sketchResized);
+        BufferedImage resizedSketch = resizeTo(loadedSketch, stampSizePx, stampSizePx);
+        BufferedImage sketchWithoutPaper = removePaperBackground(resizedSketch);
 
-        BufferedImage composite = compositeMultiply(body, sketchClean, tattooX, tattooY, tattooSize, angleDeg);
-        BufferedImage mask = generateMask(w, h, tattooX, tattooY, tattooSize, angleDeg);
+        BufferedImage composite = compositeSketchOntoBody(
+                normalizedBody, sketchWithoutPaper, stampLeftPx, stampTopPx, stampSizePx, rotationDeg);
+        BufferedImage inpaintMask = buildInpaintMask(
+                bodyWidth, bodyHeight, stampLeftPx, stampTopPx, stampSizePx, rotationDeg);
 
-        return new ProcessedImages(
+        return new ProcessedImagesDto(
                 toJpegDataUri(composite),
-                toPngDataUri(mask),
-                toJpegDataUri(body),
-                w, h
+                toPngDataUri(inpaintMask),
+                toJpegDataUri(normalizedBody),
+                bodyWidth,
+                bodyHeight
         );
     }
 
+    /** Alpha-blends AI output with the original body using a grayscale mask (white = AI region). */
     public String blendWithMask(String aiResultSrc, String originalBodyDataUri, String maskDataUri) throws Exception {
         BufferedImage aiResult = loadImage(aiResultSrc);
         BufferedImage originalBody = loadImage(originalBodyDataUri);
         BufferedImage mask = loadImage(maskDataUri);
 
-        int w = originalBody.getWidth();
-        int h = originalBody.getHeight();
+        int width = originalBody.getWidth();
+        int height = originalBody.getHeight();
 
-        BufferedImage aiResized = resizeTo(aiResult, w, h);
-        BufferedImage maskResized = resizeTo(mask, w, h);
+        BufferedImage aiAligned = resizeTo(aiResult, width, height);
+        BufferedImage maskAligned = resizeTo(mask, width, height);
 
-        BufferedImage output = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        BufferedImage blended = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                int maskVal = maskResized.getRGB(x, y) & 0xFF;
-                float alpha = maskVal / 255.0f;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                float aiWeight = channel(maskAligned.getRGB(x, y), ColorChannel.RED) / 255.0f;
 
-                int origRgb = originalBody.getRGB(x, y);
-                int aiRgb = aiResized.getRGB(x, y);
+                Rgb original = Rgb.fromRgb(originalBody.getRGB(x, y));
+                Rgb generated = Rgb.fromRgb(aiAligned.getRGB(x, y));
+                Rgb pixel = original.lerp(generated, aiWeight);
 
-                int oR = (origRgb >> 16) & 0xFF;
-                int oG = (origRgb >> 8) & 0xFF;
-                int oB = origRgb & 0xFF;
-
-                int aR = (aiRgb >> 16) & 0xFF;
-                int aG = (aiRgb >> 8) & 0xFF;
-                int aB = aiRgb & 0xFF;
-
-                int fR = (int) (oR * (1 - alpha) + aR * alpha);
-                int fG = (int) (oG * (1 - alpha) + aG * alpha);
-                int fB = (int) (oB * (1 - alpha) + aB * alpha);
-
-                output.setRGB(x, y, (fR << 16) | (fG << 8) | fB);
+                blended.setRGB(x, y, pixel.toRgb());
             }
         }
 
-        return toJpegDataUri(output);
+        return toJpegDataUri(blended);
     }
 
     private BufferedImage loadImage(String src) throws Exception {
         if (src.startsWith("data:")) {
-            int commaIdx = src.indexOf(',');
-            byte[] bytes = Base64.getDecoder().decode(src.substring(commaIdx + 1));
-            BufferedImage img = ImageIO.read(new ByteArrayInputStream(bytes));
-            if (img == null) throw new IllegalArgumentException("Cannot decode base64 image data");
-            return img;
+            int commaIndex = src.indexOf(',');
+            byte[] bytes = Base64.getDecoder().decode(src.substring(commaIndex + 1));
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
+            if (image == null) {
+                throw new IllegalArgumentException("Cannot decode base64 image data");
+            }
+            return image;
         }
         byte[] bytes = URI.create(src).toURL().openStream().readAllBytes();
-        BufferedImage img = ImageIO.read(new ByteArrayInputStream(bytes));
-        if (img == null) throw new IllegalArgumentException("Cannot decode image from URL: " + src);
-        return img;
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
+        if (image == null) {
+            throw new IllegalArgumentException("Cannot decode image from URL: " + src);
+        }
+        return image;
     }
 
-    private BufferedImage resizeKeepAspect(BufferedImage src, int maxSide) {
-        int ow = src.getWidth(), oh = src.getHeight();
-        if (ow <= maxSide && oh <= maxSide) return src;
-        double scale = Math.min((double) maxSide / ow, (double) maxSide / oh);
-        int nw = (int) (ow * scale);
-        int nh = (int) (oh * scale);
-        return resizeTo(src, nw, nh);
+    private BufferedImage resizeKeepAspect(BufferedImage source, int maxSidePx) {
+        int sourceWidth = source.getWidth();
+        int sourceHeight = source.getHeight();
+        if (sourceWidth <= maxSidePx && sourceHeight <= maxSidePx) {
+            return source;
+        }
+        double scale = Math.min((double) maxSidePx / sourceWidth, (double) maxSidePx / sourceHeight);
+        int targetWidth = (int) (sourceWidth * scale);
+        int targetHeight = (int) (sourceHeight * scale);
+        return resizeTo(source, targetWidth, targetHeight);
     }
 
-    private BufferedImage resizeTo(BufferedImage src, int w, int h) {
-        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = out.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-        g.drawImage(src, 0, 0, w, h, null);
-        g.dispose();
-        return out;
+    private BufferedImage resizeTo(BufferedImage source, int targetWidth, int targetHeight) {
+        BufferedImage resized = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = resized.createGraphics();
+        graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        graphics.drawImage(source, 0, 0, targetWidth, targetHeight, null);
+        graphics.dispose();
+        return resized;
     }
 
-    private BufferedImage removeBackground(BufferedImage src) {
-        int w = src.getWidth(), h = src.getHeight();
-        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+    /**
+     * Makes light sketch paper transparent so only ink lines remain.
+     * Uses luminance thresholds tuned for white/near-white scanner backgrounds.
+     */
+    private BufferedImage removePaperBackground(BufferedImage sketch) {
+        int width = sketch.getWidth();
+        int height = sketch.getHeight();
+        BufferedImage withAlpha = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                int rgb = src.getRGB(x, y);
-                int r = (rgb >> 16) & 0xFF;
-                int g = (rgb >> 8) & 0xFF;
-                int b = rgb & 0xFF;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                Rgb pixel = Rgb.fromRgb(sketch.getRGB(x, y));
+                double luminance = pixel.luminance();
 
-                double brightness = (0.299 * r + 0.587 * g + 0.114 * b);
-
-                if (brightness > 180) {
-                    out.setRGB(x, y, 0x00FFFFFF);
-                } else if (brightness > 140) {
-                    int alpha = (int) (255 * (1.0 - (brightness - 140) / 40.0));
-                    out.setRGB(x, y, (alpha << 24) | (r << 16) | (g << 8) | b);
+                if (luminance > BACKGROUND_OPAQUE_THRESHOLD) {
+                    withAlpha.setRGB(x, y, 0x00FFFFFF);
+                } else if (luminance > BACKGROUND_FADE_START) {
+                    int alpha = (int) (255 * (1.0 - (luminance - BACKGROUND_FADE_START)
+                            / (BACKGROUND_OPAQUE_THRESHOLD - BACKGROUND_FADE_START)));
+                    withAlpha.setRGB(x, y, pixel.withAlpha(alpha));
                 } else {
-                    out.setRGB(x, y, (0xFF << 24) | (r << 16) | (g << 8) | b);
+                    withAlpha.setRGB(x, y, pixel.withAlpha(255));
                 }
             }
         }
-        return out;
+        return withAlpha;
     }
 
-    private BufferedImage compositeMultiply(
-            BufferedImage body, BufferedImage sketch,
-            int x, int y, int size, double angleDeg
+    /**
+     * Darkens body pixels under the sketch (multiply blend), then alpha-composites the sketch layer.
+     */
+    private BufferedImage compositeSketchOntoBody(
+            BufferedImage body,
+            BufferedImage sketch,
+            int stampLeftPx,
+            int stampTopPx,
+            int stampSizePx,
+            double rotationDeg
     ) {
-        int w = body.getWidth(), h = body.getHeight();
-        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = out.createGraphics();
-        g.drawImage(body, 0, 0, null);
-        g.dispose();
+        int width = body.getWidth();
+        int height = body.getHeight();
+        BufferedImage composite = copyToRgbCanvas(body);
 
-        BufferedImage sketchLayer = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D sg = sketchLayer.createGraphics();
-        sg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        sg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        AffineTransform at = new AffineTransform();
-        at.translate(x + size / 2.0, y + size / 2.0);
-        at.rotate(Math.toRadians(angleDeg));
-        at.translate(-size / 2.0, -size / 2.0);
-        sg.transform(at);
-        sg.drawImage(sketch, 0, 0, size, size, null);
-        sg.dispose();
+        BufferedImage sketchLayer = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D sketchGraphics = sketchLayer.createGraphics();
+        sketchGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        sketchGraphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        sketchGraphics.transform(stampTransform(stampLeftPx, stampTopPx, stampSizePx, rotationDeg, stampSizePx));
+        sketchGraphics.drawImage(sketch, 0, 0, stampSizePx, stampSizePx, null);
+        sketchGraphics.dispose();
 
-        for (int py = 0; py < h; py++) {
-            for (int px = 0; px < w; px++) {
-                int sRgba = sketchLayer.getRGB(px, py);
-                int alpha = (sRgba >> 24) & 0xFF;
-                if (alpha == 0) continue;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int sketchRgba = sketchLayer.getRGB(x, y);
+                int alpha = channel(sketchRgba, ColorChannel.ALPHA);
+                if (alpha == 0) {
+                    continue;
+                }
 
-                int bodyRgb = out.getRGB(px, py);
-                int bR = (bodyRgb >> 16) & 0xFF;
-                int bG = (bodyRgb >> 8) & 0xFF;
-                int bB = bodyRgb & 0xFF;
+                Rgb bodyPixel = Rgb.fromRgb(composite.getRGB(x, y));
+                Rgb sketchPixel = Rgb.fromRgb(sketchRgba);
+                Rgb multiplied = bodyPixel.multiply(sketchPixel);
+                float opacity = alpha / 255.0f;
+                Rgb blended = bodyPixel.lerp(multiplied, opacity);
 
-                int sR = (sRgba >> 16) & 0xFF;
-                int sG = (sRgba >> 8) & 0xFF;
-                int sB = sRgba & 0xFF;
-
-                int rR = (bR * sR) / 255;
-                int rG = (bG * sG) / 255;
-                int rB = (bB * sB) / 255;
-
-                float a = alpha / 255.0f;
-                int fR = (int) (bR * (1 - a) + rR * a);
-                int fG = (int) (bG * (1 - a) + rG * a);
-                int fB = (int) (bB * (1 - a) + rB * a);
-
-                out.setRGB(px, py, (fR << 16) | (fG << 8) | fB);
+                composite.setRGB(x, y, blended.toRgb());
             }
         }
 
-        return out;
+        return composite;
     }
 
-    private BufferedImage generateMask(
-            int w, int h,
-            int x, int y, int size, double angleDeg
+    /**
+     * White rounded rect on black — region Gemini should repaint. Soft edges via cheap downscale/upscale blur.
+     */
+    private BufferedImage buildInpaintMask(
+            int width,
+            int height,
+            int stampLeftPx,
+            int stampTopPx,
+            int stampSizePx,
+            double rotationDeg
     ) {
-        BufferedImage mask = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
-        Graphics2D g = mask.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        BufferedImage mask = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+        Graphics2D graphics = mask.createGraphics();
+        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        g.setColor(Color.BLACK);
-        g.fillRect(0, 0, w, h);
+        graphics.setColor(Color.BLACK);
+        graphics.fillRect(0, 0, width, height);
 
-        int padding = Math.max(4, size / 12);
-        int padded = size + padding * 2;
+        int paddingPx = Math.max(4, (int) (stampSizePx * MASK_PADDING_FRACTION));
+        int paddedSizePx = stampSizePx + paddingPx * 2;
 
-        AffineTransform at = new AffineTransform();
-        at.translate(x + size / 2.0, y + size / 2.0);
-        at.rotate(Math.toRadians(angleDeg));
-        at.translate(-padded / 2.0, -padded / 2.0);
-        g.transform(at);
+        graphics.transform(stampTransform(stampLeftPx, stampTopPx, stampSizePx, rotationDeg, paddedSizePx));
+        graphics.setColor(Color.WHITE);
+        graphics.fillRoundRect(0, 0, paddedSizePx, paddedSizePx, paddingPx * 3, paddingPx * 3);
+        graphics.dispose();
 
-        g.setColor(Color.WHITE);
-        g.fillRoundRect(0, 0, padded, padded, padding * 3, padding * 3);
-        g.dispose();
-
-        int smallW = Math.max(1, w / 4);
-        int smallH = Math.max(1, h / 4);
-        BufferedImage small = resizeTo(mask, smallW, smallH);
-        return resizeTo(small, w, h);
+        int smallWidth = Math.max(1, width / MASK_SOFTEN_DOWNSCALE_DIVISOR);
+        int smallHeight = Math.max(1, height / MASK_SOFTEN_DOWNSCALE_DIVISOR);
+        BufferedImage downscaled = resizeTo(mask, smallWidth, smallHeight);
+        return resizeTo(downscaled, width, height);
     }
 
-    private String toJpegDataUri(BufferedImage img) throws Exception {
-        BufferedImage rgb = new BufferedImage(img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = rgb.createGraphics();
-        g.drawImage(img, 0, 0, null);
-        g.dispose();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(rgb, "jpg", baos);
-        return "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(baos.toByteArray());
+    private static AffineTransform stampTransform(
+            int stampLeftPx,
+            int stampTopPx,
+            int stampSizePx,
+            double rotationDeg,
+            int drawSizePx
+    ) {
+        AffineTransform transform = new AffineTransform();
+        transform.translate(stampLeftPx + stampSizePx / 2.0, stampTopPx + stampSizePx / 2.0);
+        transform.rotate(Math.toRadians(rotationDeg));
+        transform.translate(-drawSizePx / 2.0, -drawSizePx / 2.0);
+        return transform;
     }
 
-    private String toPngDataUri(BufferedImage img) throws Exception {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(img, "png", baos);
-        return "data:image/png;base64," + Base64.getEncoder().encodeToString(baos.toByteArray());
+    private static BufferedImage copyToRgbCanvas(BufferedImage source) {
+        BufferedImage copy = new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = copy.createGraphics();
+        graphics.drawImage(source, 0, 0, null);
+        graphics.dispose();
+        return copy;
+    }
+
+    private String toJpegDataUri(BufferedImage image) throws Exception {
+        BufferedImage rgbCanvas = copyToRgbCanvas(image);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(rgbCanvas, "jpg", output);
+        return "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(output.toByteArray());
+    }
+
+    private String toPngDataUri(BufferedImage image) throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", output);
+        return "data:image/png;base64," + Base64.getEncoder().encodeToString(output.toByteArray());
+    }
+
+    private static int channel(int packedColor, ColorChannel channel) {
+        return switch (channel) {
+            case RED -> (packedColor >> 16) & 0xFF;
+            case GREEN -> (packedColor >> 8) & 0xFF;
+            case BLUE -> packedColor & 0xFF;
+            case ALPHA -> (packedColor >> 24) & 0xFF;
+        };
+    }
+
+    private enum ColorChannel {
+        RED, GREEN, BLUE, ALPHA
+    }
+
+    private record Rgb(int red, int green, int blue) {
+
+        static Rgb fromRgb(int packedRgb) {
+            return new Rgb(
+                    (packedRgb >> 16) & 0xFF,
+                    (packedRgb >> 8) & 0xFF,
+                    packedRgb & 0xFF
+            );
+        }
+
+        double luminance() {
+            return 0.299 * red + 0.587 * green + 0.114 * blue;
+        }
+
+        Rgb multiply(Rgb other) {
+            return new Rgb(
+                    red * other.red / 255,
+                    green * other.green / 255,
+                    blue * other.blue / 255
+            );
+        }
+
+        Rgb lerp(Rgb other, float weight) {
+            float inverse = 1.0f - weight;
+            return new Rgb(
+                    (int) (red * inverse + other.red * weight),
+                    (int) (green * inverse + other.green * weight),
+                    (int) (blue * inverse + other.blue * weight)
+            );
+        }
+
+        int toRgb() {
+            return (red << 16) | (green << 8) | blue;
+        }
+
+        int withAlpha(int alpha) {
+            return (alpha << 24) | toRgb();
+        }
     }
 }

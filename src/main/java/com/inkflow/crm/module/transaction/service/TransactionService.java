@@ -8,8 +8,10 @@ import com.inkflow.crm.domain.entity.*;
 import com.inkflow.crm.domain.enums.*;
 import com.inkflow.crm.domain.repository.*;
 import com.inkflow.crm.module.transaction.dto.*;
+import com.inkflow.crm.module.transaction.mapper.TransactionMapper;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,22 +19,23 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AppointmentRepository appointmentRepository;
     private final StaffRepository staffRepository;
     private final LocationRepository locationRepository;
+    private final TransactionMapper transactionMapper;
 
     @Transactional(readOnly = true)
     public PageResult<TransactionDto> getAllTransactions(PageRequest pageRequest, String type, String category, Instant from, Instant to, UUID staffId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Page<Transaction> page = resolveTransactionPage(pageRequest, type, category, from, to, staffId, tenantId);
-        List<TransactionDto> data = page.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
+        List<TransactionDto> data = page.getContent().stream().map(transactionMapper::toDto).toList();
         return new PageResult<>(data, PaginationDto.from(page));
     }
 
@@ -66,7 +69,7 @@ public class TransactionService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Transaction transaction = transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.transaction(id.toString()));
-        return mapToDto(transaction);
+        return transactionMapper.toDto(transaction);
     }
 
     @Transactional
@@ -105,7 +108,8 @@ public class TransactionService {
                 .build();
 
         transaction = transactionRepository.save(transaction);
-        return mapToDto(transaction);
+        log.info("Transaction created: tenantId={} transactionId={}", tenantId, transaction.getId());
+        return transactionMapper.toDto(transaction);
     }
 
     @Transactional
@@ -116,6 +120,7 @@ public class TransactionService {
                 .orElseThrow(() -> ResourceNotFoundException.transaction(id.toString()));
         transaction.softDelete();
         transactionRepository.save(transaction);
+        log.info("Transaction deleted: tenantId={} transactionId={}", tenantId, id);
     }
 
     @Transactional(readOnly = true)
@@ -183,27 +188,6 @@ public class TransactionService {
                 .byPaymentMethod(byPaymentMethod)
                 .byArtist(byArtist)
                 .byDate(byDate)
-                .build();
-    }
-
-    private TransactionDto mapToDto(Transaction transaction) {
-        return TransactionDto.builder()
-                .id(transaction.getId())
-                .type(transaction.getType().getValue())
-                .category(transaction.getCategory().getValue())
-                .amount(transaction.getAmount())
-                .paymentMethod(transaction.getPaymentMethod().getValue())
-                .description(transaction.getDescription())
-                .appointmentId(transaction.getAppointment() != null ? transaction.getAppointment().getId() : null)
-                .staffId(transaction.getStaff() != null ? transaction.getStaff().getId() : null)
-                .staffName(transaction.getStaff() != null ? transaction.getStaff().getFullName() : null)
-                .locationId(transaction.getLocation().getId())
-                .locationName(transaction.getLocation().getName())
-                .date(transaction.getDate())
-                .cashAmount(transaction.getCashAmount())
-                .cardAmount(transaction.getCardAmount())
-                .tipAmount(transaction.getTipAmount())
-                .createdAt(transaction.getCreatedAt())
                 .build();
     }
 }

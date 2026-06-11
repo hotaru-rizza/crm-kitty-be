@@ -19,9 +19,9 @@ public class StaffServiceDto {
     private String description;
     private String pricingType;
     private BigDecimal basePrice;
-    private BigDecimal customPrice; // Staff-specific price (null if using base)
+    private BigDecimal customPrice;
     private Integer baseDuration;
-    private Integer customDuration; // Staff-specific duration (null if using base)
+    private Integer customDuration;
     private String color;
     private Boolean isActive;
 }

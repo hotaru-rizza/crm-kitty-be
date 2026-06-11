@@ -1,0 +1,15 @@
+meta {
+  name: Consumer profile
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/public/consumer/users/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{consumer_token}}
+}

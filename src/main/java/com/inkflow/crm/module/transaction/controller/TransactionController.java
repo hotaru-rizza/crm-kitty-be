@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.transaction.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
@@ -8,6 +9,7 @@ import com.inkflow.crm.module.transaction.service.TransactionService;
 import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,16 +20,19 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Slf4j
 @RestController
 @RequestMapping("/transactions")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Finance")
 public class TransactionController {
 
     private final TransactionService transactionService;
 
     @GetMapping
-    @RequirePermission("finance.view")
+    @RequirePermission(Permission.FINANCE_VIEW)
     public ResponseEntity<ApiResponse<List<TransactionDto>>> getAllTransactions(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String type,
@@ -40,19 +45,14 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
-    @RequirePermission("finance.view")
+    @RequirePermission(Permission.FINANCE_VIEW)
     public ResponseEntity<ApiResponse<TransactionDto>> getTransaction(@PathVariable UUID id) {
         TransactionDto transaction = transactionService.getTransactionById(id);
         return ResponseEntity.ok(ApiResponse.success(transaction));
     }
 
-    /**
-     * Get finance stats. Supports either:
-     * - period: "month", "week", "year" (calculates from/to automatically)
-     * - from/to: explicit date range
-     */
     @GetMapping("/stats")
-    @RequirePermission("finance.view")
+    @RequirePermission(Permission.FINANCE_VIEW)
     public ResponseEntity<ApiResponse<FinanceStatsDto>> getFinanceStats(
             @RequestParam(required = false) String period,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
@@ -91,15 +91,19 @@ public class TransactionController {
     }
 
     @PostMapping
-    @RequirePermission("finance.create")
+    @RequirePermission(Permission.FINANCE_CREATE)
     public ResponseEntity<ApiResponse<TransactionDto>> createTransaction(@Valid @RequestBody CreateTransactionRequest request) {
         TransactionDto transaction = transactionService.createTransaction(request);
+        log.info("Transaction created via API: transactionId={} type={}", transaction.getId(), transaction.getType());
+
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(transaction));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteTransaction(@PathVariable UUID id) {
         transactionService.deleteTransaction(id);
+        log.info("Transaction deleted via API: transactionId={}", id);
+
         return ResponseEntity.ok(ApiResponse.empty());
     }
 }

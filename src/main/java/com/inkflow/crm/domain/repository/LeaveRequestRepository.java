@@ -23,13 +23,13 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
     @Query("SELECT lr FROM LeaveRequest lr WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
            "AND lr.staff.id = :staffId AND lr.status = :status ORDER BY lr.startDate DESC")
     List<LeaveRequest> findByStaffIdAndStatus(
-            @Param("tenantId") UUID tenantId, 
+            @Param("tenantId") UUID tenantId,
             @Param("staffId") UUID staffId,
             @Param("status") LeaveStatus status);
 
     @Query("SELECT lr FROM LeaveRequest lr WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
            "AND lr.staff.id = :staffId " +
-           "AND lr.status = 'APPROVED' " +
+           "AND lr.status = com.inkflow.crm.domain.enums.LeaveStatus.APPROVED " +
            "AND lr.startDate <= :date AND lr.endDate >= :date")
     List<LeaveRequest> findActiveLeaveForDate(
             @Param("tenantId") UUID tenantId,
@@ -38,7 +38,7 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
 
     @Query("SELECT lr FROM LeaveRequest lr WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
            "AND lr.staff.id = :staffId " +
-           "AND lr.status = 'APPROVED' " +
+           "AND lr.status = com.inkflow.crm.domain.enums.LeaveStatus.APPROVED " +
            "AND ((lr.startDate BETWEEN :startDate AND :endDate) OR (lr.endDate BETWEEN :startDate AND :endDate) " +
            "OR (lr.startDate <= :startDate AND lr.endDate >= :endDate))")
     List<LeaveRequest> findOverlappingLeaves(
@@ -64,7 +64,7 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
             @Param("endDate") LocalDate endDate);
 
     @Query("SELECT COUNT(lr) FROM LeaveRequest lr WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
-           "AND lr.status = 'PENDING'")
+           "AND lr.status = com.inkflow.crm.domain.enums.LeaveStatus.PENDING")
     long countPending(@Param("tenantId") UUID tenantId);
 
     @Query("SELECT lr FROM LeaveRequest lr WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
@@ -74,7 +74,7 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
             Pageable pageable);
 
     @Query("SELECT lr FROM LeaveRequest lr WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
-           "AND lr.status = 'APPROVED' " +
+           "AND lr.status = com.inkflow.crm.domain.enums.LeaveStatus.APPROVED " +
            "AND lr.endDate >= :from AND lr.startDate <= :to " +
            "ORDER BY lr.startDate ASC")
     List<LeaveRequest> findApprovedInRange(
@@ -104,7 +104,7 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
 
     @Query("SELECT COUNT(lr) FROM LeaveRequest lr JOIN lr.staff s JOIN s.locations l " +
            "WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
-           "AND lr.status = 'PENDING' AND l.id = :locationId")
+           "AND lr.status = com.inkflow.crm.domain.enums.LeaveStatus.PENDING AND l.id = :locationId")
     long countPendingByLocation(@Param("tenantId") UUID tenantId, @Param("locationId") UUID locationId);
 
     @Query("SELECT DISTINCT lr FROM LeaveRequest lr JOIN lr.staff s JOIN s.locations l " +

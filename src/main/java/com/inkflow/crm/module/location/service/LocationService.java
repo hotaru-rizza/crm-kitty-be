@@ -14,6 +14,7 @@ import com.inkflow.crm.module.location.dto.*;
 import com.inkflow.crm.module.location.mapper.LocationMapper;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LocationService {
 
     private final LocationRepository locationRepository;
@@ -41,7 +43,7 @@ public class LocationService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Page<Location> page = locationRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
         List<LocationDto> data = page.getContent().stream()
-                .map(this::mapWithStaffCount)
+                .map(locationMapper::toDtoWithStaffCount)
                 .toList();
         return new PageResult<>(data, PaginationDto.from(page));
     }
@@ -51,7 +53,7 @@ public class LocationService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Location location = locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.location(id.toString()));
-        
+
         LocationDetailDto.LocationStatsDto stats = calculateStats(location);
         return locationMapper.toDetailDto(location, stats);
     }
@@ -65,7 +67,8 @@ public class LocationService {
         location.setTenantId(tenantId);
 
         location = locationRepository.save(location);
-        return mapWithStaffCount(location);
+        log.info("Location created: tenantId={} locationId={}", tenantId, location.getId());
+        return locationMapper.toDtoWithStaffCount(location);
     }
 
     @Transactional
@@ -78,7 +81,8 @@ public class LocationService {
 
         locationMapper.updateEntity(request, location);
         location = locationRepository.save(location);
-        return mapWithStaffCount(location);
+        log.info("Location updated: tenantId={} locationId={}", tenantId, id);
+        return locationMapper.toDtoWithStaffCount(location);
     }
 
     @Transactional
@@ -91,6 +95,7 @@ public class LocationService {
 
         location.softDelete();
         locationRepository.save(location);
+        log.info("Location deleted: tenantId={} locationId={}", tenantId, id);
     }
 
     @Transactional
@@ -104,23 +109,7 @@ public class LocationService {
         List<Staff> staffList = staffRepository.findAllById(request.getStaffIds());
         location.setStaff(new HashSet<>(staffList));
         locationRepository.save(location);
-    }
-
-    private LocationDto mapWithStaffCount(Location location) {
-        return LocationDto.builder()
-                .id(location.getId())
-                .name(location.getName())
-                .address(location.getAddress())
-                .phone(location.getPhone())
-                .googleMapsLink(location.getGoogleMapsLink())
-                .color(location.getColor())
-                .isActive(location.getIsActive())
-                .photoUrl(location.getPhotoUrl())
-                .navigationInstructions(location.getNavigationInstructions())
-                .telegramContact(location.getTelegramContact())
-                .staffCount((int) location.getStaff().stream().filter(s -> s.getDeletedAt() == null).count())
-                .createdAt(location.getCreatedAt())
-                .build();
+        log.info("Staff assigned to location: tenantId={} locationId={} count={}", tenantId, locationId, staffList.size());
     }
 
     private LocationDetailDto.LocationStatsDto calculateStats(Location location) {

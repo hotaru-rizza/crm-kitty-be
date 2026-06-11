@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.analytics;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.module.analytics.dto.AppointmentAnalyticsDto;
 import com.inkflow.crm.module.analytics.dto.ClientAnalyticsDto;
@@ -14,16 +15,18 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/analytics")
 @RequiredArgsConstructor
+@Tag(name = "CRM · Analytics")
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
 
     @GetMapping("/appointments")
-    @RequirePermission({"calendar.view_all", "calendar.view_own"})
+    @RequirePermission({Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
     public ResponseEntity<ApiResponse<AppointmentAnalyticsDto>> getAppointmentAnalytics(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
@@ -33,7 +36,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/staff")
-    @RequirePermission({"calendar.view_all", "calendar.view_own"})
+    @RequirePermission({Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
     public ResponseEntity<ApiResponse<List<StaffPerformanceDto>>> getStaffPerformance(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
@@ -42,7 +45,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/services")
-    @RequirePermission({"calendar.view_all", "calendar.view_own"})
+    @RequirePermission({Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
     public ResponseEntity<ApiResponse<List<ServicePopularityDto>>> getServicePopularity(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
@@ -51,7 +54,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/clients")
-    @RequirePermission({"clients.view_all", "clients.view_own"})
+    @RequirePermission({Permission.CLIENTS_VIEW_ALL, Permission.CLIENTS_VIEW_OWN})
     public ResponseEntity<ApiResponse<ClientAnalyticsDto>> getClientAnalytics(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
@@ -61,7 +64,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/pnl")
-    @RequirePermission({"finance.view"})
+    @RequirePermission({Permission.FINANCE_VIEW})
     public ResponseEntity<ApiResponse<PnlDto>> getPnl(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {

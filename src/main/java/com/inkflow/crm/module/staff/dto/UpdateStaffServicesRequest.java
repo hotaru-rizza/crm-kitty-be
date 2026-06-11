@@ -15,10 +15,10 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateStaffServicesRequest {
-    
+
     @NotNull(message = "Services list is required")
     private List<ServiceAssignment> services;
-    
+
     @Data
     @Builder
     @NoArgsConstructor
@@ -26,8 +26,8 @@ public class UpdateStaffServicesRequest {
     public static class ServiceAssignment {
         @NotNull(message = "Service ID is required")
         private UUID serviceId;
-        
-        private BigDecimal customPrice; // Optional: staff-specific price
-        private Integer customDuration; // Optional: staff-specific duration
+
+        private BigDecimal customPrice;
+        private Integer customDuration;
     }
 }

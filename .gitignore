@@ -1,4 +1,6 @@
 HELP.md
+.DS_Store
+**/.DS_Store
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -39,3 +41,6 @@ build/
 
 # Локальні Spring overrides (секрети не в git)
 **/application-local.yml
+
+# Postman — generated / local only (see scripts/postman/)
+docs/postman/

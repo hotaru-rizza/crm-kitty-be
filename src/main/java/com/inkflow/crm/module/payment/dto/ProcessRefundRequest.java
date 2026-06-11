@@ -28,5 +28,5 @@ public class ProcessRefundRequest {
     private String reason;
 
     @NotBlank(message = "Payment method is required")
-    private String paymentMethod; // Method used for refund (usually same as original)
+    private String paymentMethod;
 }

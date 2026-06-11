@@ -39,49 +39,94 @@ public class UnsplashSeederService {
 
     public int seed() {
         int saved = 0;
+
         for (int page = 1; page <= pages; page++) {
-            try {
-                UnsplashApiDto.SearchResponse response = restClient.get()
-                        .uri(baseUrl + "/search/photos?query={q}&page={p}&per_page={pp}&order_by=relevant",
-                                query, page, perPage)
-                        .header("Authorization", "Client-ID " + apiKey)
-                        .retrieve()
-                        .body(UnsplashApiDto.SearchResponse.class);
+            PageSeedResult result = seedPage(page, saved);
 
-                if (response == null || response.results() == null) break;
-
-                for (UnsplashApiDto.Photo photo : response.results()) {
-                    if (tattooRepository.existsBySourceAndSourceId(Tattoo.SOURCE_UNSPLASH, photo.id())) continue;
-                    tattooRepository.save(toEntity(photo));
-                    saved++;
-                }
-                log.info("Seeded page {}/{}, total saved so far: {}", page, pages, saved);
-                Thread.sleep(PAGE_DELAY_MS);
-            } catch (Exception e) {
-                log.error("Failed on page {}: {}", page, e.getMessage());
+            if (result.shouldStop()) {
+                break;
             }
+
+            saved += result.savedCount();
         }
+
         log.info("Seeding complete. Total new records: {}", saved);
         return saved;
     }
 
+    private PageSeedResult seedPage(int page, int savedSoFar) {
+        try {
+            UnsplashApiDto.SearchResponse response = fetchPage(page);
+
+            if (response == null || response.results() == null) {
+                return PageSeedResult.stop();
+            }
+
+            int pageSaved = savePhotos(response);
+
+            log.info("Seeded page {}/{}, total saved so far: {}", page, pages, savedSoFar + pageSaved);
+            Thread.sleep(PAGE_DELAY_MS);
+
+            return PageSeedResult.saved(pageSaved);
+        } catch (Exception e) {
+            log.error("Failed on page {}: {}", page, e.getMessage());
+            return PageSeedResult.saved(0);
+        }
+    }
+
+    private record PageSeedResult(int savedCount, boolean shouldStop) {
+        static PageSeedResult stop() {
+            return new PageSeedResult(0, true);
+        }
+
+        static PageSeedResult saved(int count) {
+            return new PageSeedResult(count, false);
+        }
+    }
+
+    private UnsplashApiDto.SearchResponse fetchPage(int page) {
+        return restClient.get()
+                .uri(baseUrl + "/search/photos?query={q}&page={p}&per_page={pp}&order_by=relevant",
+                        query, page, perPage)
+                .header("Authorization", "Client-ID " + apiKey)
+                .retrieve()
+                .body(UnsplashApiDto.SearchResponse.class);
+    }
+
+    private int savePhotos(UnsplashApiDto.SearchResponse response) {
+        int saved = 0;
+
+        for (UnsplashApiDto.Photo photo : response.results()) {
+            if (tattooRepository.existsBySourceAndSourceId(Tattoo.SOURCE_UNSPLASH, photo.id())) {
+                continue;
+            }
+
+            tattooRepository.save(toEntity(photo));
+            saved++;
+        }
+
+        return saved;
+    }
+
     private Tattoo toEntity(UnsplashApiDto.Photo photo) {
-        Tattoo t = new Tattoo();
-        t.setSource(Tattoo.SOURCE_UNSPLASH);
-        t.setSourceId(photo.id());
-        t.setImageUrl(photo.urls().regular());
-        t.setThumbnailUrl(photo.urls().small());
-        t.setWidth(photo.width());
-        t.setHeight(photo.height());
-        t.setBlurHash(photo.blurHash());
-        t.setDominantColor(photo.color());
-        t.setAuthorName(photo.user().name());
-        t.setAuthorUrl(photo.user().links().html() + "?utm_source=inkflow&utm_medium=referral");
-        t.setDescription(photo.description());
-        t.setAltDescription(photo.altDescription());
+        Tattoo tattoo = new Tattoo();
+        tattoo.setSource(Tattoo.SOURCE_UNSPLASH);
+        tattoo.setSourceId(photo.id());
+        tattoo.setImageUrl(photo.urls().regular());
+        tattoo.setThumbnailUrl(photo.urls().small());
+        tattoo.setWidth(photo.width());
+        tattoo.setHeight(photo.height());
+        tattoo.setBlurHash(photo.blurHash());
+        tattoo.setDominantColor(photo.color());
+        tattoo.setAuthorName(photo.user().name());
+        tattoo.setAuthorUrl(photo.user().links().html() + "?utm_source=inkflow&utm_medium=referral");
+        tattoo.setDescription(photo.description());
+        tattoo.setAltDescription(photo.altDescription());
+
         String[] tags = taggerService.tagFromText(photo.altDescription(), photo.description());
-        t.setTags(tags);
-        t.setEmbedding(embeddingService.embedPassage(t.buildEmbedText()));
-        return t;
+        tattoo.setTags(tags);
+        tattoo.setEmbedding(embeddingService.embedPassage(tattoo.buildEmbedText()));
+
+        return tattoo;
     }
 }

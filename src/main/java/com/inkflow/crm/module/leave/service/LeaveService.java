@@ -3,7 +3,6 @@ package com.inkflow.crm.module.leave.service;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
-import com.inkflow.crm.security.SecurityUtils;
 import com.inkflow.crm.domain.entity.LeaveRequest;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.LeaveStatus;
@@ -14,10 +13,13 @@ import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.leave.dto.CreateLeaveRequest;
 import com.inkflow.crm.module.leave.dto.LeaveRequestDto;
 import com.inkflow.crm.module.leave.dto.UpdateLeaveStatusRequest;
+import com.inkflow.crm.module.leave.dto.LeaveQueryParts;
 import com.inkflow.crm.module.leave.mapper.LeaveRequestMapper;
+import com.inkflow.crm.security.SecurityUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -31,10 +33,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LeaveService {
 
     private final LeaveRequestRepository leaveRequestRepository;
@@ -45,29 +47,164 @@ public class LeaveService {
     @Transactional(readOnly = true)
     public List<LeaveRequestDto> getLeavesByStaffId(UUID staffId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<LeaveRequest> leaves = leaveRequestRepository.findByStaffId(tenantId, staffId);
-        return leaveMapper.toDtoList(leaves);
+        return leaveMapper.toDtoList(leaveRequestRepository.findByStaffId(tenantId, staffId));
     }
 
     @Transactional(readOnly = true)
     public List<LeaveRequestDto> getLeavesByStaffIdAndDateRange(UUID staffId, LocalDate startDate, LocalDate endDate) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<LeaveRequest> leaves = leaveRequestRepository.findByStaffIdAndDateRange(tenantId, staffId, startDate, endDate);
-        return leaveMapper.toDtoList(leaves);
+        return leaveMapper.toDtoList(leaveRequestRepository.findByStaffIdAndDateRange(tenantId, staffId, startDate, endDate));
     }
 
     @Transactional(readOnly = true)
     public LeaveRequestDto getLeaveById(UUID id) {
-        LeaveRequest leave = findLeaveById(id);
-        return leaveMapper.toDto(leave);
+        return leaveMapper.toDto(requireLeave(id));
     }
 
     @Transactional(readOnly = true)
-    public Page<LeaveRequestDto> getAllLeaves(String status, String leaveType, LocalDate from, LocalDate to,
-                                              UUID locationId, List<UUID> staffIds, int page, int size) {
+    public Page<LeaveRequestDto> getAllLeaves(
+            String status,
+            String leaveType,
+            LocalDate from,
+            LocalDate to,
+            UUID locationId,
+            List<UUID> staffIds,
+            int page,
+            int size) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Pageable pageable = PageRequest.of(page, size);
 
+        LeaveQueryParts query = buildFilterQuery(tenantId, status, leaveType, from, to, locationId, staffIds);
+        TypedQuery<LeaveRequest> dataQuery = entityManager.createQuery(query.dataJpql(), LeaveRequest.class);
+        TypedQuery<Long> countQuery = entityManager.createQuery(query.countJpql(), Long.class);
+        query.params().forEach((key, value) -> {
+            dataQuery.setParameter(key, value);
+            countQuery.setParameter(key, value);
+        });
+
+        long total = countQuery.getSingleResult();
+        dataQuery.setFirstResult((int) pageable.getOffset());
+        dataQuery.setMaxResults(pageable.getPageSize());
+
+        Page<LeaveRequest> leavePage = new PageImpl<>(dataQuery.getResultList(), pageable, total);
+        return leavePage.map(leaveMapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public long getPendingCount(UUID locationId) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        if (locationId != null) {
+            return leaveRequestRepository.countPendingByLocation(tenantId, locationId);
+        }
+        return leaveRequestRepository.countPending(tenantId);
+    }
+
+    @Transactional
+    public LeaveRequestDto createLeave(CreateLeaveRequest request) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        UUID currentUserId = SecurityUtils.getCurrentUserId();
+
+        Staff staff = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getStaffId(), tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.staff(request.getStaffId().toString()));
+
+        validateDateRange(request.getStartDate(), request.getEndDate());
+        validateNoOverlap(tenantId, request.getStaffId(), request.getStartDate(), request.getEndDate(), null);
+
+        LeaveType leaveType = parseLeaveType(request.getLeaveType());
+        boolean autoApprove = isAutoApproveEligible(currentUserId, staff);
+
+        LeaveRequest leave = LeaveRequest.builder()
+                .tenantId(tenantId)
+                .staff(staff)
+                .leaveType(leaveType)
+                .status(autoApprove ? LeaveStatus.APPROVED : LeaveStatus.PENDING)
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .reason(request.getReason())
+                .notes(request.getNotes())
+                .build();
+
+        if (autoApprove) {
+            applyApproval(leave, currentUserId);
+        }
+
+        leave = leaveRequestRepository.save(leave);
+        log.info("Leave created: tenantId={} leaveId={} staffId={}", tenantId, leave.getId(), staff.getId());
+        return leaveMapper.toDto(leave);
+    }
+
+    @Transactional
+    public LeaveRequestDto updateLeaveStatus(UUID id, UpdateLeaveStatusRequest request) {
+        LeaveRequest leave = requireLeave(id);
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        UUID currentUserId = SecurityUtils.getCurrentUserId();
+        LeaveStatus newStatus = parseLeaveStatus(request.getStatus());
+
+        if (newStatus == LeaveStatus.PENDING) {
+            throw new BusinessRuleException("Cannot set status back to PENDING");
+        }
+
+        if (newStatus == LeaveStatus.APPROVED) {
+            validateNoOverlap(tenantId, leave.getStaff().getId(), leave.getStartDate(), leave.getEndDate(), leave.getId());
+        }
+
+        leave.setStatus(newStatus);
+
+        if (newStatus == LeaveStatus.APPROVED || newStatus == LeaveStatus.REJECTED) {
+            applyApproval(leave, currentUserId);
+        }
+        if (request.getNotes() != null) {
+            leave.setNotes(request.getNotes());
+        }
+
+        leave = leaveRequestRepository.save(leave);
+        log.info("Leave status updated: tenantId={} leaveId={} status={}", tenantId, id, newStatus);
+        return leaveMapper.toDto(leave);
+    }
+
+    @Transactional
+    public LeaveRequestDto cancelLeave(UUID id) {
+        LeaveRequest leave = requireLeave(id);
+
+        if (leave.getStatus() == LeaveStatus.REJECTED) {
+            throw new BusinessRuleException("Cannot cancel a rejected leave request");
+        }
+
+        leave.setStatus(LeaveStatus.CANCELLED);
+        leave = leaveRequestRepository.save(leave);
+
+        log.info("Leave cancelled: tenantId={} leaveId={}", leave.getTenantId(), id);
+        return leaveMapper.toDto(leave);
+    }
+
+    @Transactional
+    public void deleteLeave(UUID id) {
+        LeaveRequest leave = requireLeave(id);
+        leave.softDelete();
+        leaveRequestRepository.save(leave);
+        log.info("Leave deleted: tenantId={} leaveId={}", leave.getTenantId(), id);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isStaffOnLeave(UUID staffId, LocalDate date) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        return !leaveRequestRepository.findActiveLeaveForDate(tenantId, staffId, date).isEmpty();
+    }
+
+    @Transactional(readOnly = true)
+    public List<LeaveRequestDto> getApprovedLeavesForDateRange(LocalDate from, LocalDate to) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        return leaveMapper.toDtoList(leaveRequestRepository.findApprovedInRange(tenantId, from, to));
+    }
+
+    private LeaveQueryParts buildFilterQuery(
+            UUID tenantId,
+            String status,
+            String leaveType,
+            LocalDate from,
+            LocalDate to,
+            UUID locationId,
+            List<UUID> staffIds) {
         StringBuilder jpql = new StringBuilder("SELECT DISTINCT lr FROM LeaveRequest lr JOIN lr.staff s");
         StringBuilder countJpql = new StringBuilder("SELECT COUNT(DISTINCT lr) FROM LeaveRequest lr JOIN lr.staff s");
         Map<String, Object> params = new HashMap<>();
@@ -77,22 +214,19 @@ public class LeaveService {
             countJpql.append(" JOIN s.locations l");
         }
 
-        String where = " WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL";
-        jpql.append(where);
-        countJpql.append(where);
+        jpql.append(" WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL");
+        countJpql.append(" WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL");
         params.put("tenantId", tenantId);
 
         if (status != null && !status.isEmpty()) {
-            LeaveStatus leaveStatus = LeaveStatus.valueOf(status.toUpperCase());
             jpql.append(" AND lr.status = :status");
             countJpql.append(" AND lr.status = :status");
-            params.put("status", leaveStatus);
+            params.put("status", LeaveStatus.valueOf(status.toUpperCase()));
         }
         if (leaveType != null && !leaveType.isEmpty()) {
-            LeaveType lt = LeaveType.valueOf(leaveType.toUpperCase());
             jpql.append(" AND lr.leaveType = :leaveType");
             countJpql.append(" AND lr.leaveType = :leaveType");
-            params.put("leaveType", lt);
+            params.put("leaveType", LeaveType.valueOf(leaveType.toUpperCase()));
         }
         if (from != null && to != null) {
             jpql.append(" AND lr.endDate >= :from AND lr.startDate <= :to");
@@ -112,173 +246,68 @@ public class LeaveService {
         }
 
         jpql.append(" ORDER BY lr.createdAt DESC");
-
-        TypedQuery<LeaveRequest> query = entityManager.createQuery(jpql.toString(), LeaveRequest.class);
-        TypedQuery<Long> countQuery = entityManager.createQuery(countJpql.toString(), Long.class);
-        params.forEach((k, v) -> { query.setParameter(k, v); countQuery.setParameter(k, v); });
-
-        long total = countQuery.getSingleResult();
-        query.setFirstResult((int) pageable.getOffset());
-        query.setMaxResults(pageable.getPageSize());
-
-        Page<LeaveRequest> leavePage = new PageImpl<>(query.getResultList(), pageable, total);
-        return leavePage.map(leaveMapper::toDto);
+        return new LeaveQueryParts(jpql.toString(), countJpql.toString(), params);
     }
 
-    @Transactional(readOnly = true)
-    public long getPendingCount(UUID locationId) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        if (locationId != null) {
-            return leaveRequestRepository.countPendingByLocation(tenantId, locationId);
-        }
-        return leaveRequestRepository.countPending(tenantId);
-    }
-
-    @Transactional
-    public LeaveRequestDto createLeave(CreateLeaveRequest request) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        UUID currentUserId = SecurityUtils.getCurrentUserId();
-        
-        Staff staff = staffRepository.findById(request.getStaffId())
-                .orElseThrow(() -> ResourceNotFoundException.staff(request.getStaffId().toString()));
-
-        if (request.getEndDate().isBefore(request.getStartDate())) {
+    private void validateDateRange(LocalDate start, LocalDate end) {
+        if (end.isBefore(start)) {
             throw new BusinessRuleException("End date cannot be before start date");
         }
+    }
 
-        List<LeaveRequest> overlapping = leaveRequestRepository.findOverlappingLeaves(
-                tenantId, request.getStaffId(), request.getStartDate(), request.getEndDate());
-        if (!overlapping.isEmpty()) {
+    private void validateNoOverlap(UUID tenantId, UUID staffId, LocalDate start, LocalDate end, UUID excludeId) {
+        List<LeaveRequest> overlapping = leaveRequestRepository.findOverlappingLeaves(tenantId, staffId, start, end);
+        boolean hasConflict = overlapping.stream()
+                .anyMatch(leave -> excludeId == null || !leave.getId().equals(excludeId));
+
+        if (hasConflict) {
             throw new BusinessRuleException("Leave request overlaps with existing approved leave");
         }
+    }
 
-        LeaveType leaveType;
+    private LeaveType parseLeaveType(String value) {
         try {
-            leaveType = LeaveType.valueOf(request.getLeaveType().toUpperCase());
+            return LeaveType.valueOf(value.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new BusinessRuleException("Invalid leave type: " + request.getLeaveType());
+            throw new BusinessRuleException("Invalid leave type: " + value);
         }
-
-        boolean shouldAutoApprove = isAutoApproveEligible(currentUserId, staff);
-
-        LeaveRequest leave = LeaveRequest.builder()
-                .tenantId(tenantId)
-                .staff(staff)
-                .leaveType(leaveType)
-                .status(shouldAutoApprove ? LeaveStatus.APPROVED : LeaveStatus.PENDING)
-                .startDate(request.getStartDate())
-                .endDate(request.getEndDate())
-                .reason(request.getReason())
-                .notes(request.getNotes())
-                .build();
-
-        if (shouldAutoApprove) {
-            Staff approver = staffRepository.findByAuthUserIdAndDeletedAtIsNull(currentUserId.toString())
-                    .orElse(null);
-            leave.setApprovedBy(approver);
-            leave.setApprovedAt(Instant.now());
-        }
-
-        leave = leaveRequestRepository.save(leave);
-        return leaveMapper.toDto(leave);
     }
 
-    @Transactional
-    public LeaveRequestDto updateLeaveStatus(UUID id, UpdateLeaveStatusRequest request) {
-        LeaveRequest leave = findLeaveById(id);
-        UUID currentUserId = SecurityUtils.getCurrentUserId();
-
-        LeaveStatus newStatus;
+    private LeaveStatus parseLeaveStatus(String value) {
         try {
-            newStatus = LeaveStatus.valueOf(request.getStatus().toUpperCase());
+            return LeaveStatus.valueOf(value.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new BusinessRuleException("Invalid status: " + request.getStatus());
+            throw new BusinessRuleException("Invalid status: " + value);
         }
-
-        if (newStatus == LeaveStatus.PENDING) {
-            throw new BusinessRuleException("Cannot set status back to PENDING");
-        }
-
-        if (newStatus == LeaveStatus.APPROVED) {
-            UUID tenantId = SecurityUtils.getCurrentTenantId();
-            UUID leaveId = leave.getId();
-            List<LeaveRequest> overlapping = leaveRequestRepository.findOverlappingLeaves(
-                    tenantId, leave.getStaff().getId(), leave.getStartDate(), leave.getEndDate());
-            overlapping = overlapping.stream()
-                    .filter(l -> !l.getId().equals(leaveId))
-                    .collect(Collectors.toList());
-            if (!overlapping.isEmpty()) {
-                throw new BusinessRuleException("Leave request overlaps with existing approved leave");
-            }
-        }
-
-        leave.setStatus(newStatus);
-        
-        if (newStatus == LeaveStatus.APPROVED || newStatus == LeaveStatus.REJECTED) {
-            Staff approver = staffRepository.findByAuthUserIdAndDeletedAtIsNull(currentUserId.toString())
-                    .orElse(null);
-            leave.setApprovedBy(approver);
-            leave.setApprovedAt(Instant.now());
-        }
-
-        if (request.getNotes() != null) {
-            leave.setNotes(request.getNotes());
-        }
-
-        leave = leaveRequestRepository.save(leave);
-        return leaveMapper.toDto(leave);
     }
 
-    @Transactional
-    public LeaveRequestDto cancelLeave(UUID id) {
-        LeaveRequest leave = findLeaveById(id);
-
-        if (leave.getStatus() == LeaveStatus.REJECTED) {
-            throw new BusinessRuleException("Cannot cancel a rejected leave request");
-        }
-
-        leave.setStatus(LeaveStatus.CANCELLED);
-        leave = leaveRequestRepository.save(leave);
-        return leaveMapper.toDto(leave);
-    }
-
-    @Transactional
-    public void deleteLeave(UUID id) {
-        LeaveRequest leave = findLeaveById(id);
-        leave.softDelete();
-        leaveRequestRepository.save(leave);
-    }
-
-    @Transactional(readOnly = true)
-    public boolean isStaffOnLeave(UUID staffId, LocalDate date) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate(tenantId, staffId, date);
-        return !activeLeaves.isEmpty();
-    }
-
-    @Transactional(readOnly = true)
-    public List<LeaveRequestDto> getApprovedLeavesForDateRange(LocalDate from, LocalDate to) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<LeaveRequest> leaves = leaveRequestRepository.findApprovedInRange(tenantId, from, to);
-        return leaveMapper.toDtoList(leaves);
+    private void applyApproval(LeaveRequest leave, UUID currentUserId) {
+        Staff approver = staffRepository.findByAuthUserIdAndDeletedAtIsNull(currentUserId.toString()).orElse(null);
+        leave.setApprovedBy(approver);
+        leave.setApprovedAt(Instant.now());
     }
 
     private boolean isAutoApproveEligible(UUID currentUserId, Staff targetStaff) {
-        Staff currentStaff = staffRepository.findByAuthUserIdAndDeletedAtIsNull(currentUserId.toString())
-                .orElse(null);
-        if (currentStaff == null) return false;
-
-        if (currentStaff.getRole() == UserRole.OWNER) return true;
+        Staff currentStaff = staffRepository.findByAuthUserIdAndDeletedAtIsNull(currentUserId.toString()).orElse(null);
+        if (currentStaff == null) {
+            return false;
+        }
+        if (currentStaff.getRole() == UserRole.OWNER) {
+            return true;
+        }
 
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        long activeStaffCount = staffRepository.countByTenantIdAndDeletedAtIsNull(tenantId);
-        if (activeStaffCount <= 1) return true;
-
-        return false;
+        return staffRepository.countByTenantIdAndDeletedAtIsNull(tenantId) <= 1;
     }
 
-    private LeaveRequest findLeaveById(UUID id) {
-        return leaveRequestRepository.findById(id)
+    private LeaveRequest requireLeave(UUID id) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        LeaveRequest leave = leaveRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.NOT_FOUND, "Leave request not found: " + id));
+
+        if (!tenantId.equals(leave.getTenantId()) || leave.getDeletedAt() != null) {
+            throw new ResourceNotFoundException(ErrorCode.NOT_FOUND, "Leave request not found: " + id);
+        }
+        return leave;
     }
 }

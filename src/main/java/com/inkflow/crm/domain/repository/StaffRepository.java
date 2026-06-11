@@ -71,10 +71,10 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
     long countByTenantIdAndDeletedAtIsNull(UUID tenantId);
 
     @EntityGraph(attributePaths = {"locations", "schedules", "specialization", "portfolioImages", "dontDoList"})
-    @Query("SELECT DISTINCT s FROM Staff s WHERE s.isPublic = true AND s.isServiceProvider = true AND s.deletedAt IS NULL AND s.status = 'WORKING'")
+    @Query("SELECT DISTINCT s FROM Staff s WHERE s.isPublic = true AND s.isServiceProvider = true AND s.deletedAt IS NULL AND s.status = com.inkflow.crm.domain.enums.StaffStatus.WORKING")
     List<Staff> findAllPublicArtists();
 
     @EntityGraph(attributePaths = {"locations", "schedules", "specialization", "portfolioImages", "dontDoList"})
-    @Query("SELECT DISTINCT s FROM Staff s WHERE s.isPublic = true AND s.isServiceProvider = true AND s.deletedAt IS NULL AND s.status = 'WORKING' AND s.id = :id")
+    @Query("SELECT DISTINCT s FROM Staff s WHERE s.isPublic = true AND s.isServiceProvider = true AND s.deletedAt IS NULL AND s.status = com.inkflow.crm.domain.enums.StaffStatus.WORKING AND s.id = :id")
     Optional<Staff> findPublicArtistById(@Param("id") UUID id);
 }

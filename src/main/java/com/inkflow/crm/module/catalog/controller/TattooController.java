@@ -1,112 +1,72 @@
 package com.inkflow.crm.module.catalog.controller;
 
+import com.inkflow.crm.common.dto.ApiResponse;
+import com.inkflow.crm.common.dto.ApiResponses;
 import com.inkflow.crm.module.catalog.dto.TattooDto;
 import com.inkflow.crm.module.catalog.dto.TattooStyleDto;
-import com.inkflow.crm.module.catalog.repository.TattooRepository;
-import com.inkflow.crm.module.catalog.repository.TattooStyleRepository;
-import com.inkflow.crm.module.catalog.service.EmbeddingService;
-import com.inkflow.crm.module.catalog.service.TattooTaggerService;
-import com.inkflow.crm.module.catalog.service.UnsplashSeederService;
+import com.inkflow.crm.module.catalog.service.TattooCatalogService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Slf4j
 @RestController
 @RequestMapping("/public/catalog/tattoos")
 @RequiredArgsConstructor
+@Tag(name = "Consumer · Catalog")
 public class TattooController {
 
-    private final TattooRepository tattooRepository;
-    private final TattooStyleRepository tattooStyleRepository;
-    private final UnsplashSeederService seederService;
-    private final TattooTaggerService taggerService;
-    private final EmbeddingService embeddingService;
+    private final TattooCatalogService tattooCatalogService;
 
     @GetMapping
-    public Page<TattooDto> getFeed(
+    public ResponseEntity<ApiResponse<List<TattooDto>>> getFeed(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String tag,
             @RequestParam(required = false) String author,
-            @RequestParam(required = false) String staffId
-    ) {
-        return tattooRepository.findByTagOrAll(tag, author, staffId, PageRequest.of(page, size))
-                .map(TattooDto::from);
+            @RequestParam(required = false) String staffId) {
+        return ApiResponses.page(
+                tattooCatalogService.getFeed(tag, author, staffId, PageRequest.of(page, size))
+        );
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TattooDto> getById(@PathVariable Long id) {
-        return tattooRepository.findById(id)
-                .map(TattooDto::from)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<ApiResponse<TattooDto>> getById(@PathVariable Long id) {
+        return ApiResponses.ok(tattooCatalogService.getById(id));
     }
 
     @GetMapping("/search")
-    public List<TattooDto> search(
+    public ResponseEntity<ApiResponse<List<TattooDto>>> search(
             @RequestParam String q,
-            @RequestParam(defaultValue = "20") int limit
-    ) {
-        float[] embedding = embeddingService.embed(q);
-        String pgVector = toVectorString(embedding);
-        return tattooRepository.findByEmbedding(pgVector, limit)
-                .stream().map(TattooDto::from).toList();
+            @RequestParam(defaultValue = "20") int limit) {
+        return ApiResponses.ok(tattooCatalogService.search(q, limit));
     }
 
     @GetMapping("/{id}/similar")
-    public List<TattooDto> getSimilar(
+    public ResponseEntity<ApiResponse<List<TattooDto>>> getSimilar(
             @PathVariable Long id,
-            @RequestParam(defaultValue = "12") int limit
-    ) {
-        return tattooRepository.findSimilar(id, limit)
-                .stream()
-                .map(TattooDto::from)
-                .toList();
+            @RequestParam(defaultValue = "12") int limit) {
+        return ApiResponses.ok(tattooCatalogService.getSimilar(id, limit));
     }
 
     @GetMapping("/by-ids")
-    public List<TattooDto> getByIds(@RequestParam List<Long> ids) {
-        return tattooRepository.findAllById(ids).stream()
-                .map(TattooDto::from)
-                .toList();
+    public ResponseEntity<ApiResponse<List<TattooDto>>> getByIds(@RequestParam List<Long> ids) {
+        return ApiResponses.ok(tattooCatalogService.getByIds(ids));
     }
 
     @GetMapping("/styles")
-    public List<TattooStyleDto> getStyles() {
-        return tattooStyleRepository.findByActiveTrueOrderBySortOrderAsc().stream()
-                .map(TattooStyleDto::from)
-                .toList();
+    public ResponseEntity<ApiResponse<List<TattooStyleDto>>> getStyles() {
+        return ApiResponses.ok(tattooCatalogService.getStyles());
     }
 
     @GetMapping("/tags")
-    public Set<String> getAvailableTags() {
-        return taggerService.getAvailableTags();
-    }
-
-    @PostMapping("/seed")
-    public ResponseEntity<Map<String, Object>> seed() {
-        int count = seederService.seed();
-        return ResponseEntity.ok(Map.of("saved", count, "total", tattooRepository.count()));
-    }
-
-    @PostMapping("/retag")
-    public ResponseEntity<Map<String, Object>> retag() {
-        int count = taggerService.retagAll();
-        return ResponseEntity.ok(Map.of("retagged", count));
-    }
-
-    private String toVectorString(float[] v) {
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < v.length; i++) {
-            if (i > 0) sb.append(",");
-            sb.append(v[i]);
-        }
-        return sb.append("]").toString();
+    public ResponseEntity<ApiResponse<Set<String>>> getAvailableTags() {
+        return ApiResponses.ok(tattooCatalogService.getAvailableTags());
     }
 }

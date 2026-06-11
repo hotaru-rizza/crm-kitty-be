@@ -6,10 +6,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 
-/**
- * Webhook payload sent by Monobank Acquiring API.
- * Docs: https://api.monobank.ua/docs/acquiring.html#tag/Merchantapi/operation/invoiceWebhook
- */
+
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MonobankWebhookPayload {
@@ -17,11 +14,11 @@ public class MonobankWebhookPayload {
     @JsonProperty("invoiceId")
     private String invoiceId;
 
-    /** created | processing | hold | success | failure | reversed | expired */
+
     @JsonProperty("status")
     private String status;
 
-    /** Amount in kopecks */
+
     @JsonProperty("amount")
     private Long amount;
 
@@ -37,7 +34,7 @@ public class MonobankWebhookPayload {
     @JsonProperty("modifiedDate")
     private String modifiedDate;
 
-    /** Our own reference — appointmentId */
+
     @JsonProperty("reference")
     private String reference;
 
@@ -70,7 +67,7 @@ public class MonobankWebhookPayload {
         }
     }
 
-    /** Converts Monobank kopecks to UAH */
+
     public BigDecimal getAmountDecimal() {
         return amount != null ? BigDecimal.valueOf(amount).movePointLeft(2) : BigDecimal.ZERO;
     }

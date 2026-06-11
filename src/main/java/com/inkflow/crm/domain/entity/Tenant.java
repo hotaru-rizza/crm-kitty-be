@@ -43,7 +43,7 @@ public class Tenant {
     private String language = "ua";
 
     @Column(name = "account_type", nullable = false)
-    private String accountType = "STUDIO"; // STUDIO | SOLO
+    private String accountType = "STUDIO";
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;

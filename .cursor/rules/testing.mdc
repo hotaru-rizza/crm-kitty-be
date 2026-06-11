@@ -1,0 +1,59 @@
+---
+description: Backend test quality — when writing or improving tests in crm-kitty-be
+alwaysApply: false
+---
+# Test quality (crm-kitty-be)
+
+**Подход: Quality-first.** Сначала регрессии в бизнес-логике и API-контрактах; JaCoCo — только sanity-check в конце волны, не цель каждого теста.
+
+Living backlog: `docs/TESTING.md`
+
+## Workflow (каждая волна)
+
+1. Взять пункт из backlog (категория E/A/B) или модуль с риском.
+2. Написать тест по чеклисту ниже.
+3. `./mvnw test` — всё зелёное.
+4. Опционально: JaCoCo snapshot → если осталось время, добить TOP красных `*Service` (не DTO/entity/mapper).
+
+## Не тестируем
+
+- DTO / mapper / repository / config — только если там **своя** логика.
+- Entity getters/setters — нет; domain-методы (`cancel()`, `canBeRefunded()`) — через **service unit** или отдельный unit entity, если сложно.
+
+## Before adding a test
+
+Ask: **«Какой регресс этот тест поймает?»** If only "JaCoCo line hit" — prefer unit test on service branch, or mark as intentional smoke in backlog.
+
+## Minimum bar (new integration test)
+
+1. **401** without auth (if endpoint is secured).
+2. **Happy path** with realistic payload from `IntegrationTestData.seedTenant()` or extensions.
+3. **Business assertion** — at least ONE of:
+   - repository load + field/status/count assertion
+   - `@MockBean` verify on external client (email, FCM, Gemini, R2)
+   - tenant isolation (other tenant gets 404/403)
+
+Do NOT stop at `status().isOk()` + `jsonPath("$.success").value(true)` alone.
+
+## Minimum bar (new unit test)
+
+- Cover **branch** or **business rule**, not getter/setter or trivial mapper pass-through.
+- Name: `should<Expected>When<Condition>`.
+- Use `@ExtendWith(MockitoExtension.class)`; mock repos, test service in isolation.
+
+## Patterns to reuse
+
+- `@IntegrationTest` + `IntegrationTestData` + `SecurityTestSupport.crmUser()` / `consumerUser()`.
+- `@MockBean` for external APIs (Resend, Gemini, Google, R2) — OK on controller; pair with service unit test for logic.
+- H2 limitations: see backlog section D — don't fight JSONB/pgvector in integration; cover in unit instead.
+
+## Anti-patterns
+
+- Copy-paste 5 repository `@Autowired` without using them in assertions.
+- One giant test method covering create + list + delete.
+- `@MockBean` the service under test on its own controller (tests nothing real).
+- Chasing coverage % with empty exists() assertions.
+
+## When touching existing smoke tests
+
+Improve one assertion or add one negative case per PR — see backlog category for that module.

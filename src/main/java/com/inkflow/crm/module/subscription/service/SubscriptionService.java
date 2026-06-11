@@ -1,7 +1,6 @@
 package com.inkflow.crm.module.subscription.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.domain.entity.Subscription;
 import com.inkflow.crm.domain.repository.SubscriptionRepository;
@@ -30,15 +29,13 @@ import java.util.UUID;
 public class SubscriptionService {
 
     private static final int TRIAL_DAYS = 14;
-    private static final int SUBSCRIPTION_MONTHS = 1;
+    private static final int SUBSCRIPTION_PERIOD_DAYS = 30;
     private static final BigDecimal STANDARD_PRICE = BigDecimal.valueOf(399);
     private static final int CCY_UAH = 980;
 
     private final SubscriptionRepository subscriptionRepository;
     private final MonobankConfig monobankConfig;
     private final ObjectMapper objectMapper;
-
-    // ── Public API ────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public SubscriptionDto getCurrentSubscription() {
@@ -52,7 +49,6 @@ public class SubscriptionService {
         return subscriptionRepository.findByTenantId(tenantId)
                 .map(Subscription::isActive)
                 .orElseGet(() -> {
-                    // Tenant existed before subscription system — auto-create trial
                     createTrialForTenant(tenantId);
                     return true;
                 });
@@ -94,9 +90,6 @@ public class SubscriptionService {
                 .build();
     }
 
-    /**
-     * Called from MonobankService webhook when a subscription payment succeeds.
-     */
     @Transactional
     public void activateSubscription(UUID tenantId, String monobankInvoiceId) {
         Subscription sub = subscriptionRepository.findByTenantId(tenantId)
@@ -109,16 +102,13 @@ public class SubscriptionService {
 
         sub.setPlan("STANDARD");
         sub.setStatus("ACTIVE");
-        sub.setCurrentPeriodEnd(periodStart.plus(30, ChronoUnit.DAYS));
+        sub.setCurrentPeriodEnd(periodStart.plus(SUBSCRIPTION_PERIOD_DAYS, ChronoUnit.DAYS));
         sub.setLastInvoiceId(monobankInvoiceId);
         subscriptionRepository.save(sub);
 
         log.info("Subscription activated for tenant {}, valid until {}", tenantId, sub.getCurrentPeriodEnd());
     }
 
-    /**
-     * Create a TRIAL subscription on first onboarding.
-     */
     @Transactional
     public Subscription createTrialForTenant(UUID tenantId) {
         return subscriptionRepository.findByTenantId(tenantId).orElseGet(() -> {
@@ -133,8 +123,6 @@ public class SubscriptionService {
             return subscriptionRepository.save(sub);
         });
     }
-
-    // ── Internal ──────────────────────────────────────────────────────────────
 
     private Subscription getOrCreateTrial(UUID tenantId) {
         return subscriptionRepository.findByTenantId(tenantId)

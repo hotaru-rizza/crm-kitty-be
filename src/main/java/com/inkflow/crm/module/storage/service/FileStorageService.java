@@ -1,6 +1,8 @@
 package com.inkflow.crm.module.storage.service;
 
 import com.inkflow.crm.config.R2Properties;
+import com.inkflow.crm.module.storage.dto.PresignedUploadResult;
+import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 import java.io.InputStream;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -21,17 +24,16 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FileStorageService {
 
+    public static final Set<String> ALLOWED_FOLDERS = Set.of(
+            "avatars", "gallery", "sketches", "portfolio", "locations"
+    );
+
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
     private final R2Properties r2Properties;
 
-    /**
-     * Generate a presigned PUT URL — browser uploads directly to R2
-     * No file passes through our server
-     */
     public PresignedUploadResult generatePresignedUploadUrl(String folder, String originalFilename, String contentType) {
-        String ext = extractExtension(originalFilename);
-        String key = folder + "/" + UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
+        String key = buildTenantKey(folder, originalFilename);
 
         PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
                 .signatureDuration(Duration.ofMinutes(15))
@@ -53,12 +55,8 @@ public class FileStorageService {
         );
     }
 
-    /**
-     * Upload file through backend (for small files like avatars)
-     */
     public String uploadFile(String folder, String originalFilename, String contentType, InputStream inputStream, long contentLength) {
-        String ext = extractExtension(originalFilename);
-        String key = folder + "/" + UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
+        String key = buildTenantKey(folder, originalFilename);
 
         s3Client.putObject(
                 PutObjectRequest.builder()
@@ -74,9 +72,6 @@ public class FileStorageService {
         return buildPublicUrl(key);
     }
 
-    /**
-     * Upload raw bytes with an explicit key (used by AI services)
-     */
     public String uploadBytes(byte[] data, String key, String contentType) {
         s3Client.putObject(
                 PutObjectRequest.builder()
@@ -90,10 +85,9 @@ public class FileStorageService {
         return buildPublicUrl(key);
     }
 
-    /**
-     * Delete a file from R2 by its key
-     */
     public void deleteFile(String key) {
+        validateDeleteKey(key);
+
         try {
             s3Client.deleteObject(DeleteObjectRequest.builder()
                     .bucket(r2Properties.getBucketName())
@@ -105,16 +99,13 @@ public class FileStorageService {
         }
     }
 
-    /**
-     * Extract key from a full public URL
-     */
     public String extractKeyFromUrl(String url) {
         if (url == null || url.isBlank()) return null;
         String publicUrl = r2Properties.getPublicUrl();
         if (publicUrl != null && !publicUrl.isBlank() && url.startsWith(publicUrl)) {
             return url.substring(publicUrl.length()).replaceAll("^/+", "");
         }
-        // Fallback: extract path after bucket name
+
         int idx = url.indexOf(r2Properties.getBucketName());
         if (idx >= 0) {
             return url.substring(idx + r2Properties.getBucketName().length()).replaceAll("^/+", "");
@@ -122,12 +113,48 @@ public class FileStorageService {
         return null;
     }
 
+    private String buildTenantKey(String folder, String originalFilename) {
+        String ext = extractExtension(originalFilename);
+        String suffix = UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        return tenantId + "/" + folder + "/" + suffix;
+    }
+
+    private void validateDeleteKey(String key) {
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("Key is required");
+        }
+        if (key.contains("..")) {
+            throw new IllegalArgumentException("Invalid key");
+        }
+
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        String tenantPrefix = tenantId + "/";
+        if (!key.startsWith(tenantPrefix)) {
+            throw new IllegalArgumentException("Invalid key");
+        }
+
+        validateFolderInPath(key.substring(tenantPrefix.length()));
+    }
+
+    private void validateFolderInPath(String path) {
+        int slashIndex = path.indexOf('/');
+        if (slashIndex <= 0) {
+            throw new IllegalArgumentException("Invalid key");
+        }
+
+        String folder = path.substring(0, slashIndex);
+        if (!ALLOWED_FOLDERS.contains(folder)) {
+            throw new IllegalArgumentException("Invalid folder in key: " + folder);
+        }
+    }
+
     private String buildPublicUrl(String key) {
         String publicUrl = r2Properties.getPublicUrl();
         if (publicUrl != null && !publicUrl.isBlank()) {
             return publicUrl.replaceAll("/+$", "") + "/" + key;
         }
-        // Return R2 dev URL if public URL is not configured
+
         return "https://" + r2Properties.getAccountId() + ".r2.cloudflarestorage.com/"
                 + r2Properties.getBucketName() + "/" + key;
     }
@@ -136,12 +163,4 @@ public class FileStorageService {
         if (filename == null || !filename.contains(".")) return "";
         return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
-
-    public record PresignedUploadResult(
-            String key,
-            String uploadUrl,
-            String method,
-            Map<String, java.util.List<String>> headers,
-            String fileUrl
-    ) {}
 }

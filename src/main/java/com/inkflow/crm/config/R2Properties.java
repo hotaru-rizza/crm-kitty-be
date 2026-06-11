@@ -15,6 +15,6 @@ public class R2Properties {
     private String secretAccessKey;
     private String bucketName;
     private String publicUrl;
-    /** Якщо false — не робити HeadBucket при старті (тести). */
+
     private boolean verifyConnection = true;
 }

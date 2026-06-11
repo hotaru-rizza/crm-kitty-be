@@ -1,9 +1,11 @@
 package com.inkflow.crm.module.onboarding.service;
 
+import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.entity.CompanySettings;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.Tenant;
+import com.inkflow.crm.domain.enums.AccountStatus;
 import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.CompanySettingsRepository;
@@ -31,18 +33,38 @@ public class OnboardingService {
     private final LocationRepository locationRepository;
     private final CompanySettingsRepository companySettingsRepository;
     private final SubscriptionService subscriptionService;
+    private final InkflowProperties inkflowProperties;
 
     @Transactional
     public OnboardingResponse completeOnboarding(UUID supabaseUserId, String email, OnboardingRequest request) {
+        return staffRepository.findByAuthUserIdAndDeletedAtIsNull(supabaseUserId.toString())
+                .map(existing -> toExistingResponse(existing))
+                .orElseGet(() -> createNewTenant(supabaseUserId, email, request));
+    }
+
+    private OnboardingResponse toExistingResponse(Staff existing) {
+        log.info("Onboarding skipped — user already has staff record: {}", existing.getId());
+        return OnboardingResponse.builder()
+                .userId(existing.getId())
+                .tenantId(existing.getTenantId())
+                .tenantName(tenantRepository.findById(existing.getTenantId())
+                        .map(Tenant::getName)
+                        .orElse(null))
+                .role(existing.getRole().getValue())
+                .success(true)
+                .build();
+    }
+
+    private OnboardingResponse createNewTenant(UUID supabaseUserId, String email, OnboardingRequest request) {
         log.info("Starting onboarding for user: {}", email);
 
-        // 1. Create Tenant
+
         String accountType = "solo".equalsIgnoreCase(request.getTeamSize()) ? "SOLO" : "STUDIO";
         Tenant tenant = Tenant.builder()
                 .name(request.getCompanyName())
                 .subdomain(generateSubdomain(request.getCompanyName()))
                 .currency("UAH")
-                .timezone("Europe/Kyiv")
+                .timezone(inkflowProperties.getDefaultTimezone())
                 .language("ua")
                 .accountType(accountType)
                 .isActive(true)
@@ -50,7 +72,7 @@ public class OnboardingService {
         tenant = tenantRepository.save(tenant);
         log.info("Created tenant: {}", tenant.getId());
 
-        // 2. Create Owner Staff
+
         Staff owner = Staff.builder()
                 .authUserId(supabaseUserId.toString())
                 .tenantId(tenant.getId())
@@ -59,12 +81,13 @@ public class OnboardingService {
                 .lastName(request.getLastName())
                 .role(UserRole.OWNER)
                 .status(StaffStatus.WORKING)
+                .accountStatus(AccountStatus.ACTIVE)
                 .calendarColor("#6366f1")
                 .build();
         owner = staffRepository.save(owner);
         log.info("Created owner staff: {}", owner.getId());
 
-        // 3. Create default Location
+
         Location defaultLocation = Location.builder()
                 .tenantId(tenant.getId())
                 .name("Основна студія")
@@ -75,7 +98,7 @@ public class OnboardingService {
                 .build();
         locationRepository.save(defaultLocation);
 
-        // 4. Create default CompanySettings
+
         CompanySettings settings = CompanySettings.builder()
                 .tenant(tenant)
                 .smsReminders(false)
@@ -90,7 +113,7 @@ public class OnboardingService {
                 .build();
         companySettingsRepository.save(settings);
 
-        // 5. Create 14-day free trial subscription
+
         subscriptionService.createTrialForTenant(tenant.getId());
 
         return OnboardingResponse.builder()

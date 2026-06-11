@@ -24,7 +24,7 @@ public class ReminderScheduler {
     private final CompanySettingsRepository companySettingsRepository;
     private final EmailService emailService;
 
-    @Scheduled(fixedRate = 900_000) // every 15 minutes
+    @Scheduled(fixedRate = 900_000)
     public void processReminders() {
         log.debug("Running reminder scheduler...");
 

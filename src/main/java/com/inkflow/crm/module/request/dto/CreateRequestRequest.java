@@ -8,15 +8,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateRequestRequest {
-
-    private UUID tenantId;
 
     @NotBlank(message = "Source is required")
     @Pattern(regexp = "^(instagram|telegram|website|referral|walk_in|other)$", message = "Invalid source")

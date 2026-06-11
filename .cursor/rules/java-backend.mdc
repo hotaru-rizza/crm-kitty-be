@@ -2,6 +2,16 @@
 description: Java backend code quality and structure rules
 alwaysApply: false
 ---
+# Readability & logging (project standard)
+
+- Methods should be short and readable; extract named private methods when a block exceeds ~15–20 lines.
+- Leave visual «air» between logical steps: validate → load → mutate → respond (blank line between blocks).
+- Prefer early returns over deep nesting.
+- Log mutations at INFO with context: `tenantId`, entity id/type, action.
+- Never swallow exceptions silently — side effects may fail without breaking the main flow, but must emit at least `log.warn` with ids and message.
+- Controllers: no repositories, no business logic, no `@Transactional` — delegate to service immediately.
+- **Controller mutation logging:** every `@PostMapping`, `@PutMapping`, `@PatchMapping`, `@DeleteMapping` must log once at INFO **after** the service call succeeds, before `return`. Format: `"<Entity> <action> via API: key={}"` with relevant ids. Blank line between `log.info` and `return`. GET-only endpoints do not need mutation logs.
+
 # Code Quality
 
 - Follow DRY. Avoid duplicated logic, duplicated literals, and duplicated code.
@@ -10,6 +20,7 @@ alwaysApply: false
 - If a value may be reused or may change, extract it into a named constant or `application.yml` config.
 - For grouped config properties, use `@ConfigurationProperties` record/class (see existing examples: `R2Properties`, `GoogleCalendarProperties`). Do NOT scatter multiple `@Value` fields — one properties class per config prefix.
 - Prefer descriptive names over comments.
+- **NEVER** add comments that narrate what the code does (`// Get the staff`, `// Save to DB`, `// Return response`, etc.). Comments are only allowed to explain non-obvious **why**, not **what**.
 
 # Maintainability
 

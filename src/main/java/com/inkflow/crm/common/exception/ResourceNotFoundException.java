@@ -37,12 +37,4 @@ public class ResourceNotFoundException extends ApiException {
     public static ResourceNotFoundException transaction(String id) {
         return new ResourceNotFoundException(ErrorCode.TRANSACTION_NOT_FOUND, "Transaction not found: " + id);
     }
-
-    public static ResourceNotFoundException waiverTemplate(String id) {
-        return new ResourceNotFoundException(ErrorCode.WAIVER_TEMPLATE_NOT_FOUND, "Waiver template not found: " + id);
-    }
-
-    public static ResourceNotFoundException promotion(String id) {
-        return new ResourceNotFoundException(ErrorCode.NOT_FOUND, "Promotion not found: " + id);
-    }
 }

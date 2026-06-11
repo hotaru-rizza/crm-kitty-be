@@ -55,10 +55,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     List<Object[]> sumIncomeByDayAndDateRangeForStaff(@Param("tenantId") UUID tenantId, @Param("staffId") UUID staffId, @Param("from") Instant from, @Param("to") Instant to);
 
     long countByTenantIdAndDateBetweenAndDeletedAtIsNull(UUID tenantId, Instant from, Instant to);
-    
+
     @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.tenantId = :tenantId AND t.location.id = :locationId AND t.type = 'INCOME' AND t.date >= :from AND t.date < :to AND t.deletedAt IS NULL")
     BigDecimal sumRevenueByLocationAndDateRange(@Param("tenantId") UUID tenantId, @Param("locationId") UUID locationId, @Param("from") Instant from, @Param("to") Instant to);
 
-    // Payment-related queries
+
     List<Transaction> findByAppointmentIdAndDeletedAtIsNullOrderByDateDesc(UUID appointmentId);
 }

@@ -27,6 +27,18 @@ resend:
   from-name: Test
 
 supabase:
+  url: https://test.supabase.co
   jwt:
     issuer: https://test.supabase.co/auth/v1
     jwks-uri: https://test.supabase.co/auth/v1/.well-known/jwks.json
+
+inkflow:
+  cors:
+    allowed-origins:
+      - http://localhost:5173
+    allow-credentials: true
+
+google:
+  calendar:
+    client-id: test-client
+    client-secret: test-secret

@@ -19,7 +19,7 @@ public class OnboardingRequest {
     @Size(min = 2, max = 100)
     private String companyName;
 
-    private String teamSize; // "solo", "small", "medium"
+    private String teamSize;
 
-    private String instagram; // optional
+    private String instagram;
 }

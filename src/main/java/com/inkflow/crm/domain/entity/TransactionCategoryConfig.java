@@ -24,7 +24,7 @@ public class TransactionCategoryConfig extends BaseEntity {
     @Column(name = "color")
     private String color;
 
-    /** INCOME, EXPENSE, NEUTRAL */
+
     @Column(name = "pl_type", nullable = false)
     private String plType;
 

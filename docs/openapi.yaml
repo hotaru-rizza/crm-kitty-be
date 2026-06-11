@@ -1,0 +1,7033 @@
+openapi: 3.1.0
+info:
+  title: InkFlow CRM API
+  description: |
+    REST API for InkFlow tattoo studio platform.
+
+    Base path: /api (server context-path).
+
+    Response envelope: ApiResponse<T> - see docs/API_FORMAT.md.
+
+    Auth:
+    - CRM (admin mobile / web): Supabase JWT in Authorization Bearer header.
+      Custom claims: tenant_id, role, location_ids (via Supabase hook).
+    - Consumer (B2C app): Supabase JWT for /public/consumer/** routes.
+    - Public reads: GET /public/catalog/** and GET /public/artists/** - no token.
+  contact:
+    name: InkFlow
+    email: dev@inkflow.studio
+  license:
+    name: Proprietary
+  version: 1.0.0
+servers:
+- url: /api
+  description: Current host (context-path included)
+paths:
+  /staff/{staffId}/portfolio/showcase:
+    put:
+      tags:
+      - CRM Â· Portfolio
+      operationId: setShowcase
+      parameters:
+      - name: staffId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetShowcaseRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListTattooDto"
+  /staff/{id}/services:
+    get:
+      tags:
+      - CRM Â· Staff
+      operationId: getStaffServices
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListStaffServiceDto"
+    put:
+      tags:
+      - CRM Â· Staff
+      operationId: updateStaffServices
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStaffServicesRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListStaffServiceDto"
+  /staff/{id}/services/{serviceId}:
+    put:
+      tags:
+      - CRM Â· Staff
+      operationId: updateStaffServicePricing
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: serviceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddStaffServiceRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseStaffServiceDto"
+    post:
+      tags:
+      - CRM Â· Staff
+      operationId: addServiceToStaff
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: serviceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddStaffServiceRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseStaffServiceDto"
+    delete:
+      tags:
+      - CRM Â· Staff
+      operationId: removeServiceFromStaff
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: serviceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /staff/{id}/schedule:
+    put:
+      tags:
+      - CRM Â· Staff
+      operationId: updateSchedule
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateScheduleRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /staff/{id}/faq:
+    get:
+      tags:
+      - CRM Â· Staff
+      operationId: getFaq
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListStaffFaqDto"
+    put:
+      tags:
+      - CRM Â· Staff
+      operationId: upsertFaq
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertFaqRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListStaffFaqDto"
+  /settings/roles/{role}:
+    put:
+      tags:
+      - CRM Â· Settings
+      operationId: updateRolePermissions
+      parameters:
+      - name: role
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRolePermissionsRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRolePermissionsDto"
+  /finance/categories/{key}:
+    put:
+      tags:
+      - CRM Â· Finance
+      operationId: upsert
+      parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryConfigUpsertRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCategoryConfigDto"
+  /emails/templates/{type}:
+    put:
+      tags:
+      - CRM Â· Email
+      operationId: updateTemplate
+      parameters:
+      - name: type
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailTemplateDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseEmailTemplateDto"
+    delete:
+      tags:
+      - CRM Â· Email
+      operationId: resetTemplate
+      parameters:
+      - name: type
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /transactions:
+    get:
+      tags:
+      - CRM Â· Finance
+      operationId: getAllTransactions
+      parameters:
+      - name: pageRequest
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/PageRequest"
+      - name: type
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: staffId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListTransactionDto"
+    post:
+      tags:
+      - CRM Â· Finance
+      operationId: createTransaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransactionRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseTransactionDto"
+  /subscription/checkout:
+    post:
+      tags:
+      - CRM Â· Subscription
+      operationId: checkout
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseSubscriptionCheckoutResponse"
+  /staff:
+    get:
+      tags:
+      - CRM Â· Staff
+      operationId: getAllStaff
+      parameters:
+      - name: pageRequest
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/PageRequest"
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: role
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: locationId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: accountStatus
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListStaffDto"
+    post:
+      tags:
+      - CRM Â· Staff
+      operationId: createStaff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStaffRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseStaffDto"
+  /staff/{staffId}/portfolio:
+    get:
+      tags:
+      - CRM Â· Portfolio
+      operationId: getPortfolio
+      parameters:
+      - name: staffId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListTattooDto"
+    post:
+      tags:
+      - CRM Â· Portfolio
+      operationId: upload
+      parameters:
+      - name: staffId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkUploadRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListTattooDto"
+  /staff/{id}/reactivate:
+    post:
+      tags:
+      - CRM Â· Staff
+      operationId: reactivateStaff
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /staff/{id}/deactivate:
+    post:
+      tags:
+      - CRM Â· Staff
+      operationId: deactivateStaff
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeactivateStaffRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /staff/invite:
+    post:
+      tags:
+      - CRM Â· Staff
+      operationId: inviteStaff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteStaffRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMapStringString"
+  /staff/accept-invite:
+    post:
+      tags:
+      - CRM Â· Staff
+      operationId: acceptInvite
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptInviteRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseStaffDto"
+  /services:
+    get:
+      tags:
+      - CRM Â· Services
+      operationId: getAllServices
+      parameters:
+      - name: pageRequest
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/PageRequest"
+      - name: active
+        in: query
+        required: false
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListServiceDto"
+    post:
+      tags:
+      - CRM Â· Services
+      operationId: createService
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseServiceDto"
+  /requests:
+    get:
+      tags:
+      - CRM Â· Requests
+      operationId: getAllRequests
+      parameters:
+      - name: pageRequest
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/PageRequest"
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: source
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: locationId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListRequestDto"
+    post:
+      tags:
+      - CRM Â· Requests
+      operationId: createRequest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRequestRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRequestDto"
+  /requests/{id}/convert:
+    post:
+      tags:
+      - CRM Â· Requests
+      operationId: convertToClient
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvertRequestRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseClientDto"
+  /public/consumer/users/me/saved-tattoos/{tattooId}:
+    post:
+      tags:
+      - Consumer Â· Profile
+      operationId: saveTattoo
+      parameters:
+      - name: tattooId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseConsumerUserDto"
+    delete:
+      tags:
+      - Consumer Â· Profile
+      operationId: unsaveTattoo
+      parameters:
+      - name: tattooId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseConsumerUserDto"
+  /public/consumer/users/me/saved-artists/{artistId}:
+    post:
+      tags:
+      - Consumer Â· Profile
+      operationId: saveArtist
+      parameters:
+      - name: artistId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseConsumerUserDto"
+    delete:
+      tags:
+      - Consumer Â· Profile
+      operationId: unsaveArtist
+      parameters:
+      - name: artistId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseConsumerUserDto"
+  /public/consumer/users/me/generations:
+    post:
+      tags:
+      - Consumer Â· Profile
+      operationId: saveGeneration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveGenerationRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseConsumerUserDto"
+  /public/consumer/users/me/favorite-generations/{generationId}:
+    post:
+      tags:
+      - Consumer Â· Profile
+      operationId: favoriteGeneration
+      parameters:
+      - name: generationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseConsumerUserDto"
+    delete:
+      tags:
+      - Consumer Â· Profile
+      operationId: unfavoriteGeneration
+      parameters:
+      - name: generationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseConsumerUserDto"
+  /public/consumer/try-on:
+    post:
+      tags:
+      - Consumer Â· AI
+      operationId: tryOn
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TryOnRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseTryOnResponse"
+  /public/consumer/requests:
+    post:
+      tags:
+      - Consumer Â· Booking
+      operationId: submitBookingRequest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsumerBookingRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseConsumerBookingResultDto"
+  /public/consumer/generate:
+    post:
+      tags:
+      - Consumer Â· AI
+      operationId: generate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseGenerateResponse"
+  /projects:
+    get:
+      tags:
+      - CRM Â· Projects
+      operationId: getAllProjects
+      parameters:
+      - name: pageRequest
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/PageRequest"
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: artistId
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+      - name: clientId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: onlyMine
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: locationId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListProjectDto"
+    post:
+      tags:
+      - CRM Â· Projects
+      operationId: createProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseProjectDto"
+  /projects/{id}/photos:
+    post:
+      tags:
+      - CRM Â· Projects
+      operationId: addPhoto
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddProjectPhotoRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePhotoDto"
+  /payments/refund:
+    post:
+      tags:
+      - CRM Â· Payments
+      operationId: processRefund
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProcessRefundRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePaymentDto"
+  /payments/process:
+    post:
+      tags:
+      - CRM Â· Payments
+      operationId: processPayment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProcessPaymentRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePaymentDto"
+  /payments/monobank/webhook:
+    post:
+      tags:
+      - System Â· Webhooks
+      operationId: webhook
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MonobankWebhookPayload"
+        required: true
+      responses:
+        "200":
+          description: OK
+  /payments/monobank/invoice:
+    post:
+      tags:
+      - System Â· Webhooks
+      operationId: createInvoice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOnlineInvoiceRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOnlineInvoiceDto"
+  /onboarding:
+    post:
+      tags:
+      - System Â· Onboarding
+      operationId: completeOnboarding
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOnboardingResponse"
+  /locations:
+    get:
+      tags:
+      - CRM Â· Locations
+      operationId: getAllLocations
+      parameters:
+      - name: pageRequest
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/PageRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListLocationDto"
+    post:
+      tags:
+      - CRM Â· Locations
+      operationId: createLocation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLocationRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseLocationDto"
+  /locations/{id}/staff:
+    post:
+      tags:
+      - CRM Â· Locations
+      operationId: assignStaff
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignStaffRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /leaves:
+    get:
+      tags:
+      - CRM Â· Leave
+      operationId: getAllLeaves
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: leaveType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: locationId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: staffIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListLeaveRequestDto"
+    post:
+      tags:
+      - CRM Â· Leave
+      operationId: createLeave
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLeaveRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseLeaveRequestDto"
+  /finance/categories:
+    get:
+      tags:
+      - CRM Â· Finance
+      operationId: getAll
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListCategoryConfigDto"
+    post:
+      tags:
+      - CRM Â· Finance
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryConfigUpsertRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCategoryConfigDto"
+  /files/upload:
+    post:
+      tags:
+      - CRM Â· Files
+      operationId: uploadFile
+      parameters:
+      - name: folder
+        in: query
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+              - file
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMapStringString"
+  /files/presign:
+    post:
+      tags:
+      - CRM Â· Files
+      operationId: getPresignedUrl
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PresignedUploadRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePresignedUploadResult"
+  /emails/send:
+    post:
+      tags:
+      - CRM Â· Email
+      operationId: send
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendEmailRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseSendEmailResultDto"
+  /clients:
+    get:
+      tags:
+      - CRM Â· Clients
+      operationId: getAllClients
+      parameters:
+      - name: pageRequest
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/PageRequest"
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: onlyMine
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: lost
+        in: query
+        required: false
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListClientDto"
+    post:
+      tags:
+      - CRM Â· Clients
+      operationId: createClient
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClientRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseClientDto"
+  /catalog/admin/tattoos/seed:
+    post:
+      tags:
+      - CRM Â· Catalog Admin
+      operationId: seed
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCatalogSeedResultDto"
+  /catalog/admin/tattoos/retag:
+    post:
+      tags:
+      - CRM Â· Catalog Admin
+      operationId: retag
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCatalogRetagResultDto"
+  /appointments:
+    get:
+      tags:
+      - CRM Â· Appointments
+      operationId: getAllAppointments
+      parameters:
+      - name: pageRequest
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/PageRequest"
+      - name: locationId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: artistIds
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+      - name: serviceId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListAppointmentDto"
+    post:
+      tags:
+      - CRM Â· Appointments
+      operationId: createAppointment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAppointmentRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAppointmentDto"
+  /appointments/{id}/photos:
+    post:
+      tags:
+      - CRM Â· Appointments
+      operationId: addPhoto_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddAppointmentPhotoRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePhotoDto"
+  /staff/{staffId}/portfolio/{tattooId}:
+    delete:
+      tags:
+      - CRM Â· Portfolio
+      operationId: delete
+      parameters:
+      - name: staffId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: tattooId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - CRM Â· Portfolio
+      operationId: update
+      parameters:
+      - name: staffId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: tattooId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTattooRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseTattooDto"
+  /staff/{id}:
+    get:
+      tags:
+      - CRM Â· Staff
+      operationId: getStaff
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseStaffDetailDto"
+    delete:
+      tags:
+      - CRM Â· Staff
+      operationId: deleteStaff
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - CRM Â· Staff
+      operationId: updateStaff
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStaffRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseStaffDto"
+  /settings/user:
+    get:
+      tags:
+      - CRM Â· Settings
+      operationId: getUserSettings
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseUserSettingsDto"
+    patch:
+      tags:
+      - CRM Â· Settings
+      operationId: updateUserSettings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserSettingsRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseUserSettingsDto"
+  /settings/company:
+    get:
+      tags:
+      - CRM Â· Settings
+      operationId: getCompanySettings
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCompanySettingsDto"
+    patch:
+      tags:
+      - CRM Â· Settings
+      operationId: updateCompanySettings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCompanySettingsRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCompanySettingsDto"
+  /settings:
+    get:
+      tags:
+      - CRM Â· Settings
+      operationId: getCompanySettings_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCompanySettingsDto"
+    patch:
+      tags:
+      - CRM Â· Settings
+      operationId: updateCompanySettings_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCompanySettingsRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCompanySettingsDto"
+  /services/{id}:
+    get:
+      tags:
+      - CRM Â· Services
+      operationId: getService
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseServiceDetailDto"
+    delete:
+      tags:
+      - CRM Â· Services
+      operationId: deleteService
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - CRM Â· Services
+      operationId: updateService
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateServiceRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseServiceDto"
+  /requests/{id}/status:
+    patch:
+      tags:
+      - CRM Â· Requests
+      operationId: updateRequestStatus
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRequestStatusRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRequestDto"
+  /public/consumer/users/me:
+    get:
+      tags:
+      - Consumer Â· Profile
+      operationId: getMe
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseConsumerUserDto"
+    patch:
+      tags:
+      - Consumer Â· Profile
+      operationId: updateMe
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateConsumerProfileRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseConsumerUserDto"
+  /projects/{id}:
+    get:
+      tags:
+      - CRM Â· Projects
+      operationId: getProject
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseProjectDto"
+    delete:
+      tags:
+      - CRM Â· Projects
+      operationId: deleteProject
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - CRM Â· Projects
+      operationId: updateProject
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseProjectDto"
+  /locations/{id}:
+    get:
+      tags:
+      - CRM Â· Locations
+      operationId: getLocation
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseLocationDetailDto"
+    delete:
+      tags:
+      - CRM Â· Locations
+      operationId: deleteLocation
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - CRM Â· Locations
+      operationId: updateLocation
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLocationRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseLocationDto"
+  /leaves/{id}/status:
+    patch:
+      tags:
+      - CRM Â· Leave
+      operationId: updateLeaveStatus
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLeaveStatusRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseLeaveRequestDto"
+  /leaves/{id}/cancel:
+    patch:
+      tags:
+      - CRM Â· Leave
+      operationId: cancelLeave
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseLeaveRequestDto"
+  /emails/settings:
+    get:
+      tags:
+      - CRM Â· Email
+      operationId: getEmailSettings
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseEmailSettingsDto"
+    patch:
+      tags:
+      - CRM Â· Email
+      operationId: updateEmailSettings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailSettingsDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseEmailSettingsDto"
+  /clients/{id}:
+    get:
+      tags:
+      - CRM Â· Clients
+      operationId: getClient
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseClientDetailDto"
+    delete:
+      tags:
+      - CRM Â· Clients
+      operationId: deleteClient
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - CRM Â· Clients
+      operationId: updateClient
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClientRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseClientDto"
+  /appointments/{id}:
+    get:
+      tags:
+      - CRM Â· Appointments
+      operationId: getAppointment
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAppointmentDetailDto"
+    delete:
+      tags:
+      - CRM Â· Appointments
+      operationId: deleteAppointment
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - CRM Â· Appointments
+      operationId: updateAppointment
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAppointmentDto"
+  /transactions/{id}:
+    get:
+      tags:
+      - CRM Â· Finance
+      operationId: getTransaction
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseTransactionDto"
+    delete:
+      tags:
+      - CRM Â· Finance
+      operationId: deleteTransaction
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /transactions/stats:
+    get:
+      tags:
+      - CRM Â· Finance
+      operationId: getFinanceStats
+      parameters:
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: staffId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseFinanceStatsDto"
+  /subscription:
+    get:
+      tags:
+      - CRM Â· Subscription
+      operationId: getCurrent
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseSubscriptionDto"
+  /staff/{id}/google/status:
+    get:
+      tags:
+      - CRM Â· Integrations
+      operationId: getStatus
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseGoogleCalendarStatusResponse"
+  /staff/{id}/google/auth-url:
+    get:
+      tags:
+      - CRM Â· Integrations
+      operationId: getAuthUrl
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseGoogleAuthUrlResponse"
+  /staff/{id}/future-appointments-count:
+    get:
+      tags:
+      - CRM Â· Staff
+      operationId: getFutureAppointmentsCount
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMapStringInteger"
+  /staff/invite/info/{token}:
+    get:
+      tags:
+      - CRM Â· Staff
+      operationId: getInviteInfo
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseInviteInfoDto"
+  /settings/roles:
+    get:
+      tags:
+      - CRM Â· Settings
+      operationId: getAllRolePermissions
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListRolePermissionsDto"
+  /settings/permissions:
+    get:
+      tags:
+      - CRM Â· Settings
+      operationId: getAllPermissions
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListPermissionDto"
+  /services/{id}/price:
+    get:
+      tags:
+      - CRM Â· Services
+      operationId: getServicePrice
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: artistId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseServicePriceDto"
+  /requests/{id}:
+    get:
+      tags:
+      - CRM Â· Requests
+      operationId: getRequest
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRequestDto"
+    delete:
+      tags:
+      - CRM Â· Requests
+      operationId: deleteRequest
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /public/google/callback:
+    get:
+      tags:
+      - CRM Â· Integrations
+      operationId: handleCallback
+      parameters:
+      - name: code
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /public/consumer/requests/my:
+    get:
+      tags:
+      - Consumer Â· Booking
+      operationId: getMyRequests
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListConsumerBookingListItemDto"
+  /public/catalog/tattoos:
+    get:
+      tags:
+      - Consumer Â· Catalog
+      operationId: getFeed
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      - name: tag
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: author
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: staffId
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListTattooDto"
+  /public/catalog/tattoos/{id}:
+    get:
+      tags:
+      - Consumer Â· Catalog
+      operationId: getById
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseTattooDto"
+  /public/catalog/tattoos/{id}/similar:
+    get:
+      tags:
+      - Consumer Â· Catalog
+      operationId: getSimilar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 12
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListTattooDto"
+  /public/catalog/tattoos/tags:
+    get:
+      tags:
+      - Consumer Â· Catalog
+      operationId: getAvailableTags
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseSetString"
+  /public/catalog/tattoos/styles:
+    get:
+      tags:
+      - Consumer Â· Catalog
+      operationId: getStyles
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListTattooStyleDto"
+  /public/catalog/tattoos/search:
+    get:
+      tags:
+      - Consumer Â· Catalog
+      operationId: search
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListTattooDto"
+  /public/catalog/tattoos/by-ids:
+    get:
+      tags:
+      - Consumer Â· Catalog
+      operationId: getByIds
+      parameters:
+      - name: ids
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListTattooDto"
+  /public/artists:
+    get:
+      tags:
+      - Consumer Â· Artists
+      operationId: getAll_1
+      parameters:
+      - name: city
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: style
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListPublicArtistDto"
+  /public/artists/{id}:
+    get:
+      tags:
+      - Consumer Â· Artists
+      operationId: getById_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePublicArtistDto"
+  /payments/appointment/{appointmentId}:
+    get:
+      tags:
+      - CRM Â· Payments
+      operationId: getAppointmentPayments
+      parameters:
+      - name: appointmentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListPaymentDto"
+  /payments/appointment/{appointmentId}/summary:
+    get:
+      tags:
+      - CRM Â· Payments
+      operationId: getPaymentSummary
+      parameters:
+      - name: appointmentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAppointmentPaymentSummaryDto"
+  /leaves/{id}:
+    get:
+      tags:
+      - CRM Â· Leave
+      operationId: getLeaveById
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseLeaveRequestDto"
+    delete:
+      tags:
+      - CRM Â· Leave
+      operationId: deleteLeave
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /leaves/staff/{staffId}:
+    get:
+      tags:
+      - CRM Â· Leave
+      operationId: getLeavesByStaffId
+      parameters:
+      - name: staffId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: startDate
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: endDate
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListLeaveRequestDto"
+  /leaves/staff/{staffId}/check:
+    get:
+      tags:
+      - CRM Â· Leave
+      operationId: checkStaffOnLeave
+      parameters:
+      - name: staffId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: date
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBoolean"
+  /leaves/pending-count:
+    get:
+      tags:
+      - CRM Â· Leave
+      operationId: getPendingCount
+      parameters:
+      - name: locationId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseLong"
+  /leaves/calendar:
+    get:
+      tags:
+      - CRM Â· Leave
+      operationId: getLeavesForCalendar
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListLeaveRequestDto"
+  /emails/templates:
+    get:
+      tags:
+      - CRM Â· Email
+      operationId: getTemplates
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListEmailTemplateDto"
+  /emails/stats:
+    get:
+      tags:
+      - CRM Â· Email
+      operationId: getStats
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseEmailStatsDto"
+  /emails/log:
+    get:
+      tags:
+      - CRM Â· Email
+      operationId: getLog
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      - name: type
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - CONFIRMATION
+          - REMINDER
+          - AFTERCARE
+          - CANCELLATION
+          - RESCHEDULE
+          - STAFF_NEW_APPOINTMENT
+          - STAFF_CANCELLATION
+          - STAFF_RESCHEDULE
+          - MANUAL
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListEmailLogDto"
+  /clients/{id}/projects:
+    get:
+      tags:
+      - CRM Â· Clients
+      operationId: getClientProjects
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListProjectSummaryDto"
+  /clients/{id}/projects/active:
+    get:
+      tags:
+      - CRM Â· Clients
+      operationId: getClientActiveProjects
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListProjectSummaryDto"
+  /auth/me:
+    get:
+      tags:
+      - CRM Â· Auth
+      operationId: getCurrentUser
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCurrentUserResponse"
+  /audit-log:
+    get:
+      tags:
+      - CRM Â· Audit
+      operationId: getLog_1
+      parameters:
+      - name: actorId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: entityType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 50
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListAuditLogDto"
+  /appointments/client/{clientId}:
+    get:
+      tags:
+      - CRM Â· Appointments
+      operationId: getClientHistory
+      parameters:
+      - name: clientId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: pageRequest
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/PageRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListAppointmentDto"
+  /appointments/calendar:
+    get:
+      tags:
+      - CRM Â· Appointments
+      operationId: getCalendar
+      parameters:
+      - name: request
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/CalendarQueryRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListAppointmentDto"
+  /analytics/staff:
+    get:
+      tags:
+      - CRM Â· Analytics
+      operationId: getStaffPerformance
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListStaffPerformanceDto"
+  /analytics/services:
+    get:
+      tags:
+      - CRM Â· Analytics
+      operationId: getServicePopularity
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListServicePopularityDto"
+  /analytics/pnl:
+    get:
+      tags:
+      - CRM Â· Analytics
+      operationId: getPnl
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePnlDto"
+  /analytics/clients:
+    get:
+      tags:
+      - CRM Â· Analytics
+      operationId: getClientAnalytics
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: groupBy
+        in: query
+        required: false
+        schema:
+          type: string
+          default: month
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseClientAnalyticsDto"
+  /analytics/appointments:
+    get:
+      tags:
+      - CRM Â· Analytics
+      operationId: getAppointmentAnalytics
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - name: groupBy
+        in: query
+        required: false
+        schema:
+          type: string
+          default: day
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAppointmentAnalyticsDto"
+  /staff/{id}/google/disconnect:
+    delete:
+      tags:
+      - CRM Â· Integrations
+      operationId: disconnect
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /public/consumer/users/me/generations/{generationId}:
+    delete:
+      tags:
+      - Consumer Â· Profile
+      operationId: deleteGeneration
+      parameters:
+      - name: generationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseConsumerUserDto"
+  /projects/{id}/photos/{photoId}:
+    delete:
+      tags:
+      - CRM Â· Projects
+      operationId: deletePhoto
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: photoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /finance/categories/{id}:
+    delete:
+      tags:
+      - CRM Â· Finance
+      operationId: delete_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /files:
+    delete:
+      tags:
+      - CRM Â· Files
+      operationId: deleteFile
+      parameters:
+      - name: key
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+  /appointments/{id}/photos/{photoId}:
+    delete:
+      tags:
+      - CRM Â· Appointments
+      operationId: deletePhoto_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: photoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+components:
+  schemas:
+    SetShowcaseRequest:
+      type: object
+      properties:
+        tattooIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+    ApiResponseListTattooDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TattooDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ErrorDto:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldError"
+        timestamp:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorDto"
+    FieldError:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    PaginationDto:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
+    TattooDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        staffId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        imageUrl:
+          type: string
+        thumbnailUrl:
+          type: string
+        width:
+          type: integer
+          format: int32
+        height:
+          type: integer
+          format: int32
+        blurHash:
+          type: string
+        dominantColor:
+          type: string
+        authorName:
+          type: string
+        authorUrl:
+          type: string
+        description:
+          type: string
+        altDescription:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        showcase:
+          type: boolean
+    ServiceAssignment:
+      type: object
+      properties:
+        serviceId:
+          type: string
+          format: uuid
+        customPrice:
+          type: number
+        customDuration:
+          type: integer
+          format: int32
+      required:
+      - serviceId
+    UpdateStaffServicesRequest:
+      type: object
+      properties:
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceAssignment"
+      required:
+      - services
+    ApiResponseListStaffServiceDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffServiceDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    StaffServiceDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        serviceId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        pricingType:
+          type: string
+        basePrice:
+          type: number
+        customPrice:
+          type: number
+        baseDuration:
+          type: integer
+          format: int32
+        customDuration:
+          type: integer
+          format: int32
+        color:
+          type: string
+        isActive:
+          type: boolean
+    AddStaffServiceRequest:
+      type: object
+      properties:
+        customPrice:
+          type: number
+        customDuration:
+          type: integer
+          format: int32
+    ApiResponseStaffServiceDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/StaffServiceDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ScheduleEntry:
+      type: object
+      properties:
+        dayOfWeek:
+          type: string
+          pattern: ^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$
+        isWorking:
+          type: boolean
+        startTime:
+          type: string
+          pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+        endTime:
+          type: string
+          pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+      required:
+      - dayOfWeek
+      - isWorking
+    UpdateScheduleRequest:
+      type: object
+      properties:
+        schedule:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleEntry"
+      required:
+      - schedule
+    ApiResponseVoid:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    FaqItem:
+      type: object
+      properties:
+        question:
+          type: string
+        answer:
+          type: string
+      required:
+      - answer
+      - question
+    UpsertFaqRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FaqItem"
+    ApiResponseListStaffFaqDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffFaqDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    StaffFaqDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        question:
+          type: string
+        answer:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+    UpdateRolePermissionsRequest:
+      type: object
+      properties:
+        permissions:
+          type: array
+          items:
+            type: string
+      required:
+      - permissions
+    ApiResponseRolePermissionsDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/RolePermissionsDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    RolePermissionsDto:
+      type: object
+      properties:
+        role:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+    CategoryConfigUpsertRequest:
+      type: object
+      properties:
+        label:
+          type: string
+        color:
+          type: string
+        plType:
+          type: string
+    ApiResponseCategoryConfigDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/CategoryConfigDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    CategoryConfigDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        categoryKey:
+          type: string
+        label:
+          type: string
+        color:
+          type: string
+        plType:
+          type: string
+        isActive:
+          type: boolean
+        isDefault:
+          type: boolean
+    EmailTemplateDto:
+      type: object
+      properties:
+        type:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+        fields:
+          type: array
+          items:
+            type: string
+    ApiResponseEmailTemplateDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/EmailTemplateDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    CreateTransactionRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          pattern: ^(income|expense)$
+        category:
+          type: string
+          pattern: ^(service|rent|supplies|salary|merch|other)$
+        amount:
+          type: number
+          minimum: 0.01
+        paymentMethod:
+          type: string
+          pattern: ^(cash|card|split)$
+        description:
+          type: string
+        appointmentId:
+          type: string
+          format: uuid
+        staffId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date-time
+        cashAmount:
+          type: number
+        cardAmount:
+          type: number
+        tipAmount:
+          type: number
+      required:
+      - amount
+      - category
+      - date
+      - locationId
+      - paymentMethod
+      - type
+    ApiResponseTransactionDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/TransactionDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    TransactionDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        category:
+          type: string
+        amount:
+          type: number
+        paymentMethod:
+          type: string
+        description:
+          type: string
+        appointmentId:
+          type: string
+          format: uuid
+        staffId:
+          type: string
+          format: uuid
+        staffName:
+          type: string
+        locationId:
+          type: string
+          format: uuid
+        locationName:
+          type: string
+        date:
+          type: string
+          format: date-time
+        cashAmount:
+          type: number
+        cardAmount:
+          type: number
+        tipAmount:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+    ApiResponseSubscriptionCheckoutResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/SubscriptionCheckoutResponse"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    SubscriptionCheckoutResponse:
+      type: object
+      properties:
+        invoiceId:
+          type: string
+        pageUrl:
+          type: string
+        plan:
+          type: string
+    CreateStaffRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          maxLength: 50
+          minLength: 1
+        lastName:
+          type: string
+          maxLength: 50
+          minLength: 1
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          pattern: ^(owner|admin|artist)$
+        calendarColor:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        specialization:
+          type: array
+          items:
+            type: string
+        bio:
+          type: string
+        locationIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - calendarColor
+      - email
+      - firstName
+      - lastName
+      - locationIds
+      - role
+    ApiResponseStaffDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/StaffDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    StaffDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        avatar:
+          type: string
+        role:
+          type: string
+        calendarColor:
+          type: string
+        specialization:
+          type: array
+          items:
+            type: string
+        portfolioImages:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        accountStatus:
+          type: string
+        locationIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        salaryType:
+          type: string
+        salaryRate:
+          type: number
+        bankDetails:
+          type: string
+        position:
+          type: string
+        birthday:
+          type: string
+          format: date
+        taxId:
+          type: string
+        iban:
+          type: string
+        bankCard:
+          type: string
+        availableForOnlineBooking:
+          type: boolean
+        isServiceProvider:
+          type: boolean
+        instagram:
+          type: string
+        hourlyRate:
+          type: number
+        dontDoList:
+          type: array
+          items:
+            type: string
+        bio:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    BulkUploadRequest:
+      type: object
+      properties:
+        imageUrls:
+          type: array
+          items:
+            type: string
+      required:
+      - imageUrls
+    DeactivateStaffRequest:
+      type: object
+      properties:
+        cancelFutureAppointments:
+          type: boolean
+    InviteStaffRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        role:
+          type: string
+          pattern: ^(admin|artist)$
+        calendarColor:
+          type: string
+        isServiceProvider:
+          type: boolean
+        locationIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - email
+      - locationIds
+      - role
+    ApiResponseMapStringString:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          additionalProperties:
+            type: string
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    AcceptInviteRequest:
+      type: object
+      properties:
+        token:
+          type: string
+        firstName:
+          type: string
+          maxLength: 50
+          minLength: 1
+        lastName:
+          type: string
+          maxLength: 50
+          minLength: 1
+        phone:
+          type: string
+        authUserId:
+          type: string
+      required:
+      - authUserId
+      - firstName
+      - lastName
+      - token
+    CreateServiceRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 100
+          minLength: 2
+        description:
+          type: string
+        pricingType:
+          type: string
+          pattern: ^(fixed|hourly|project)$
+        price:
+          type: number
+          minimum: 0.0
+        duration:
+          type: integer
+          format: int32
+          minimum: 15
+        color:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        costPrice:
+          type: number
+          minimum: 0.0
+      required:
+      - color
+      - duration
+      - price
+      - pricingType
+      - title
+    ApiResponseServiceDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ServiceDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ServiceDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        pricingType:
+          type: string
+        price:
+          type: number
+        duration:
+          type: integer
+          format: int32
+        color:
+          type: string
+        isActive:
+          type: boolean
+        costPrice:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+    CreateRequestRequest:
+      type: object
+      properties:
+        source:
+          type: string
+          pattern: ^(instagram|telegram|website|referral|walk_in|other)$
+        clientName:
+          type: string
+          maxLength: 100
+          minLength: 1
+        clientNickname:
+          type: string
+          maxLength: 50
+          minLength: 0
+        message:
+          type: string
+        phone:
+          type: string
+        instagram:
+          type: string
+      required:
+      - clientName
+      - source
+    ApiResponseRequestDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/RequestDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    RequestDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        source:
+          type: string
+        clientName:
+          type: string
+        clientNickname:
+          type: string
+        message:
+          type: string
+        phone:
+          type: string
+        instagram:
+          type: string
+        status:
+          type: string
+        convertedClientId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        repliedAt:
+          type: string
+          format: date-time
+        convertedAt:
+          type: string
+          format: date-time
+    ConvertRequestRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          maxLength: 50
+          minLength: 1
+        lastName:
+          type: string
+          maxLength: 50
+          minLength: 1
+        phone:
+          type: string
+          pattern: "^\\+?[0-9]{10,15}$"
+        email:
+          type: string
+        instagram:
+          type: string
+        telegram:
+          type: string
+      required:
+      - firstName
+      - lastName
+      - phone
+    ApiResponseClientDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ClientDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ClientDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        avatar:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        instagram:
+          type: string
+        telegram:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        notes:
+          type: string
+        lastVisit:
+          type: string
+          format: date-time
+        totalVisits:
+          type: integer
+          format: int32
+        cancelledVisits:
+          type: integer
+          format: int32
+        ltv:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+    AiGenerationDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        imageUrl:
+          type: string
+        prompt:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ApiResponseConsumerUserDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ConsumerUserDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ConsumerUserDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        avatarUrl:
+          type: string
+        aiTokens:
+          type: integer
+          format: int32
+        savedTattooIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        savedArtistIds:
+          type: array
+          items:
+            type: string
+        favoriteGenerationIds:
+          type: array
+          items:
+            type: string
+        aiGenerations:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiGenerationDto"
+    SaveGenerationRequest:
+      type: object
+      properties:
+        imageDataUri:
+          type: string
+        prompt:
+          type: string
+      required:
+      - imageDataUri
+      - prompt
+    PlacementDto:
+      type: object
+      properties:
+        xNorm:
+          type: number
+          format: double
+        yNorm:
+          type: number
+          format: double
+        sizeNorm:
+          type: number
+          format: double
+        angle:
+          type: number
+          format: double
+    TryOnRequest:
+      type: object
+      properties:
+        bodyImage:
+          type: string
+        sketchImage:
+          type: string
+        placement:
+          $ref: "#/components/schemas/PlacementDto"
+      required:
+      - bodyImage
+      - placement
+      - sketchImage
+    ApiResponseTryOnResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/TryOnResponse"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    TryOnResponse:
+      type: object
+      properties:
+        resultUrl:
+          type: string
+        error:
+          type: string
+    ConsumerBookingRequest:
+      type: object
+      properties:
+        artistId:
+          type: string
+          format: uuid
+        clientName:
+          type: string
+        timing:
+          type: string
+        size:
+          type: string
+        bodyZones:
+          type: array
+          items:
+            type: string
+        isCoverUp:
+          type: boolean
+        idea:
+          type: string
+        references:
+          type: array
+          items:
+            type: string
+        city:
+          type: string
+        contactMethod:
+          type: string
+        contactValue:
+          type: string
+        phone:
+          type: string
+        instagram:
+          type: string
+      required:
+      - artistId
+      - clientName
+      - contactMethod
+      - contactValue
+    ApiResponseConsumerBookingResultDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ConsumerBookingResultDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ConsumerBookingResultDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        artistName:
+          type: string
+    GenerateRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+        style:
+          type: string
+        colorMode:
+          type: string
+        background:
+          type: string
+        ratio:
+          type: string
+        bodyImage:
+          type: string
+      required:
+      - prompt
+    ApiResponseGenerateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/GenerateResponse"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    GenerateResponse:
+      type: object
+      properties:
+        images:
+          type: array
+          items:
+            type: string
+        error:
+          type: string
+    CreateProjectRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+          minLength: 2
+        description:
+          type: string
+        clientId:
+          type: string
+          format: uuid
+        artistId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        estimatedCost:
+          type: number
+          minimum: 0.0
+        totalSessions:
+          type: integer
+          format: int32
+          minimum: 1
+        sketchImage:
+          type: string
+      required:
+      - artistId
+      - clientId
+      - estimatedCost
+      - title
+      - totalSessions
+    ApiResponseProjectDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ProjectDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ClientSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        avatar:
+          type: string
+        hasMedicalConditions:
+          type: boolean
+    PhotoDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        stage:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+    ProjectDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        client:
+          $ref: "#/components/schemas/ClientSummaryDto"
+        artist:
+          $ref: "#/components/schemas/StaffSummaryDto"
+        status:
+          type: string
+        estimatedCost:
+          type: number
+        totalPaid:
+          type: number
+        totalSessions:
+          type: integer
+          format: int32
+        completedSessions:
+          type: integer
+          format: int32
+        sketchImage:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhotoDto"
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionDto"
+    SessionDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+        serviceId:
+          type: string
+          format: uuid
+        serviceName:
+          type: string
+        serviceColor:
+          type: string
+        price:
+          type: number
+        finalPrice:
+          type: number
+        notes:
+          type: string
+        photosCount:
+          type: integer
+          format: int32
+    StaffSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        avatar:
+          type: string
+        calendarColor:
+          type: string
+        role:
+          type: string
+    AddProjectPhotoRequest:
+      type: object
+      properties:
+        url:
+          type: string
+        stage:
+          type: string
+    ApiResponsePhotoDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/PhotoDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ProcessRefundRequest:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          minimum: 0.01
+        reason:
+          type: string
+        paymentMethod:
+          type: string
+      required:
+      - amount
+      - paymentMethod
+      - reason
+      - transactionId
+    ApiResponsePaymentDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/PaymentDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    PaymentDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        paymentType:
+          type: string
+        paymentTypeLabel:
+          type: string
+        amount:
+          type: number
+        paymentMethod:
+          type: string
+        paymentMethodLabel:
+          type: string
+        cashAmount:
+          type: number
+        cardAmount:
+          type: number
+        tipAmount:
+          type: number
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        receiptNumber:
+          type: string
+        isRefunded:
+          type: boolean
+        refundedAmount:
+          type: number
+        refundableAmount:
+          type: number
+        originalTransactionId:
+          type: string
+          format: uuid
+        refundReason:
+          type: string
+        processedById:
+          type: string
+          format: uuid
+        processedByName:
+          type: string
+        clientName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ProcessPaymentRequest:
+      type: object
+      properties:
+        appointmentId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          minimum: 0.01
+        paymentMethod:
+          type: string
+        paymentType:
+          type: string
+        cashAmount:
+          type: number
+        cardAmount:
+          type: number
+        tipAmount:
+          type: number
+        description:
+          type: string
+      required:
+      - amount
+      - appointmentId
+      - paymentMethod
+    MonobankWebhookPayload:
+      type: object
+      properties:
+        amountDecimal:
+          type: number
+        invoiceId:
+          type: string
+        status:
+          type: string
+        amount:
+          type: integer
+          format: int64
+        ccy:
+          type: integer
+          format: int32
+        finalAmount:
+          type: integer
+          format: int64
+        createdDate:
+          type: string
+        modifiedDate:
+          type: string
+        reference:
+          type: string
+        paymentInfo:
+          $ref: "#/components/schemas/PaymentInfo"
+    PaymentInfo:
+      type: object
+      properties:
+        feeDecimal:
+          type: number
+        maskedPan:
+          type: string
+        approvalCode:
+          type: string
+        rrn:
+          type: string
+        paymentSystem:
+          type: string
+        country:
+          type: string
+        fee:
+          type: integer
+          format: int64
+    CreateOnlineInvoiceRequest:
+      type: object
+      properties:
+        appointmentId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          minimum: 1.0
+        paymentType:
+          type: string
+          pattern: ^(service_payment|deposit)$
+      required:
+      - amount
+      - appointmentId
+    ApiResponseOnlineInvoiceDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/OnlineInvoiceDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    OnlineInvoiceDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        appointmentId:
+          type: string
+          format: uuid
+        monobankInvoiceId:
+          type: string
+        amount:
+          type: number
+        pageUrl:
+          type: string
+        status:
+          type: string
+        paymentType:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    OnboardingRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          maxLength: 50
+          minLength: 2
+        lastName:
+          type: string
+          maxLength: 50
+          minLength: 2
+        companyName:
+          type: string
+          maxLength: 100
+          minLength: 2
+        teamSize:
+          type: string
+        instagram:
+          type: string
+      required:
+      - companyName
+      - firstName
+      - lastName
+    ApiResponseOnboardingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/OnboardingResponse"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    OnboardingResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        tenantName:
+          type: string
+        role:
+          type: string
+        success:
+          type: boolean
+    CreateLocationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          minLength: 2
+        address:
+          type: string
+          maxLength: 255
+          minLength: 0
+        phone:
+          type: string
+          maxLength: 500
+          minLength: 0
+        googleMapsLink:
+          type: string
+        color:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        photoUrl:
+          type: string
+        navigationInstructions:
+          type: string
+        telegramContact:
+          type: string
+      required:
+      - address
+      - color
+      - name
+    ApiResponseLocationDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/LocationDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    LocationDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        googleMapsLink:
+          type: string
+        color:
+          type: string
+        isActive:
+          type: boolean
+        photoUrl:
+          type: string
+        navigationInstructions:
+          type: string
+        telegramContact:
+          type: string
+        instagram:
+          type: string
+        staffCount:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+    AssignStaffRequest:
+      type: object
+      properties:
+        staffIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - staffIds
+    CreateLeaveRequest:
+      type: object
+      properties:
+        staffId:
+          type: string
+          format: uuid
+        leaveType:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        reason:
+          type: string
+        notes:
+          type: string
+      required:
+      - endDate
+      - leaveType
+      - staffId
+      - startDate
+    ApiResponseLeaveRequestDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/LeaveRequestDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    LeaveRequestDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        staffId:
+          type: string
+          format: uuid
+        staffName:
+          type: string
+        staffAvatar:
+          type: string
+        leaveType:
+          type: string
+        status:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        daysCount:
+          type: integer
+          format: int32
+        reason:
+          type: string
+        notes:
+          type: string
+        approvedById:
+          type: string
+          format: uuid
+        approvedByName:
+          type: string
+        approvedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    PresignedUploadRequest:
+      type: object
+      properties:
+        folder:
+          type: string
+          pattern: "^[a-z_]+$"
+        filename:
+          type: string
+        contentType:
+          type: string
+      required:
+      - contentType
+      - filename
+      - folder
+    ApiResponsePresignedUploadResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/PresignedUploadResult"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    PresignedUploadResult:
+      type: object
+      properties:
+        key:
+          type: string
+        uploadUrl:
+          type: string
+        method:
+          type: string
+        headers:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        fileUrl:
+          type: string
+    SendEmailRequest:
+      type: object
+      properties:
+        clientIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        subject:
+          type: string
+        body:
+          type: string
+      required:
+      - body
+      - clientIds
+      - subject
+    ApiResponseSendEmailResultDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/SendEmailResultDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    SendEmailResultDto:
+      type: object
+      properties:
+        sent:
+          type: integer
+          format: int32
+        skipped:
+          type: integer
+          format: int32
+    CreateClientRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          maxLength: 50
+          minLength: 1
+        lastName:
+          type: string
+          maxLength: 50
+          minLength: 1
+        phone:
+          type: string
+          pattern: "^\\+?[0-9]{10,15}$"
+        email:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        instagram:
+          type: string
+        telegram:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        medicalConditions:
+          type: array
+          items:
+            type: string
+        source:
+          type: string
+          pattern: ^(instagram|telegram|website|referral|walk_in|other)$
+        notes:
+          type: string
+      required:
+      - firstName
+      - lastName
+      - phone
+    ApiResponseCatalogSeedResultDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/CatalogSeedResultDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    CatalogSeedResultDto:
+      type: object
+      properties:
+        saved:
+          type: integer
+          format: int32
+        total:
+          type: integer
+          format: int64
+    ApiResponseCatalogRetagResultDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/CatalogRetagResultDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    CatalogRetagResultDto:
+      type: object
+      properties:
+        retagged:
+          type: integer
+          format: int32
+    CreateAppointmentRequest:
+      type: object
+      properties:
+        clientId:
+          type: string
+          format: uuid
+        artistId:
+          type: string
+          format: uuid
+        serviceId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        price:
+          type: number
+          minimum: 0.0
+        prepayment:
+          type: number
+          minimum: 0.0
+        discount:
+          type: number
+          minimum: 0.0
+        notes:
+          type: string
+        sketchImage:
+          type: string
+      required:
+      - artistId
+      - clientId
+      - endTime
+      - locationId
+      - price
+      - serviceId
+      - startTime
+    ApiResponseAppointmentDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/AppointmentDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    AppointmentDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        client:
+          $ref: "#/components/schemas/ClientSummaryDto"
+        artist:
+          $ref: "#/components/schemas/StaffSummaryDto"
+        service:
+          $ref: "#/components/schemas/ServiceSummaryDto"
+        location:
+          $ref: "#/components/schemas/LocationSummaryDto"
+        projectId:
+          type: string
+          format: uuid
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+        price:
+          type: number
+        finalPrice:
+          type: number
+        sketchImage:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    LocationSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+    ServiceSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        color:
+          type: string
+    AddAppointmentPhotoRequest:
+      type: object
+      properties:
+        url:
+          type: string
+        stage:
+          type: string
+      required:
+      - stage
+      - url
+    UpdateTattooRequest:
+      type: object
+      properties:
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+    ApiResponseTattooDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/TattooDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    UpdateStaffRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          maxLength: 50
+          minLength: 1
+        lastName:
+          type: string
+          maxLength: 50
+          minLength: 1
+        email:
+          type: string
+        phone:
+          type: string
+        avatar:
+          type: string
+        calendarColor:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        specialization:
+          type: array
+          items:
+            type: string
+        portfolioImages:
+          type: array
+          items:
+            type: string
+        bio:
+          type: string
+        locationIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        status:
+          type: string
+          pattern: ^(working|on_vacation|sick_leave|fired)$
+        salaryType:
+          type: string
+          pattern: ^(none|fixed|percent)$
+        salaryRate:
+          type: number
+          minimum: 0.0
+        bankDetails:
+          type: string
+        position:
+          type: string
+        birthday:
+          type: string
+          format: date
+        taxId:
+          type: string
+        iban:
+          type: string
+        bankCard:
+          type: string
+        availableForOnlineBooking:
+          type: boolean
+        isServiceProvider:
+          type: boolean
+        instagram:
+          type: string
+        hourlyRate:
+          type: number
+        dontDoList:
+          type: array
+          items:
+            type: string
+    UpdateUserSettingsRequest:
+      type: object
+      properties:
+        language:
+          type: string
+        startPage:
+          type: string
+    ApiResponseUserSettingsDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/UserSettingsDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    UserSettingsDto:
+      type: object
+      properties:
+        language:
+          type: string
+        startPage:
+          type: string
+    UpdateCompanySettingsRequest:
+      type: object
+      properties:
+        smsReminders:
+          type: boolean
+        telegramReminders:
+          type: boolean
+        emailReminders:
+          type: boolean
+        reminderHoursBefore:
+          type: integer
+          format: int32
+          maximum: 168
+          minimum: 1
+        workingHoursStart:
+          type: string
+          pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+        workingHoursEnd:
+          type: string
+          pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+        allowOnlineBooking:
+          type: boolean
+        minAdvanceHours:
+          type: integer
+          format: int32
+          minimum: 1
+        maxAdvanceDays:
+          type: integer
+          format: int32
+          maximum: 365
+          minimum: 1
+    ApiResponseCompanySettingsDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/CompanySettingsDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    CompanySettingsDto:
+      type: object
+      properties:
+        smsReminders:
+          type: boolean
+        telegramReminders:
+          type: boolean
+        emailReminders:
+          type: boolean
+        reminderHoursBefore:
+          type: integer
+          format: int32
+        workingHoursStart:
+          type: string
+        workingHoursEnd:
+          type: string
+        allowOnlineBooking:
+          type: boolean
+        minAdvanceHours:
+          type: integer
+          format: int32
+        maxAdvanceDays:
+          type: integer
+          format: int32
+        updatedAt:
+          type: string
+          format: date-time
+        accountType:
+          type: string
+    UpdateServiceRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 100
+          minLength: 2
+        description:
+          type: string
+        pricingType:
+          type: string
+          pattern: ^(fixed|hourly|project)$
+        price:
+          type: number
+          minimum: 0.0
+        duration:
+          type: integer
+          format: int32
+          minimum: 15
+        color:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        isActive:
+          type: boolean
+        costPrice:
+          type: number
+          minimum: 0.0
+    UpdateRequestStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          pattern: ^(new|replied|converted|spam)$
+      required:
+      - status
+    UpdateConsumerProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        avatarUrl:
+          type: string
+    UpdateProjectRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+          minLength: 2
+        description:
+          type: string
+        artistId:
+          type: string
+          format: uuid
+        estimatedCost:
+          type: number
+          minimum: 0.0
+        totalSessions:
+          type: integer
+          format: int32
+          minimum: 1
+        status:
+          type: string
+          pattern: ^(in_progress|on_hold|completed|cancelled)$
+        sketchImage:
+          type: string
+    UpdateLocationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          minLength: 2
+        address:
+          type: string
+          maxLength: 255
+          minLength: 0
+        phone:
+          type: string
+          maxLength: 500
+          minLength: 0
+        googleMapsLink:
+          type: string
+        color:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        isActive:
+          type: boolean
+        photoUrl:
+          type: string
+        navigationInstructions:
+          type: string
+        telegramContact:
+          type: string
+        instagram:
+          type: string
+    UpdateLeaveStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+        notes:
+          type: string
+      required:
+      - status
+    EmailSettingsDto:
+      type: object
+      properties:
+        emailReminders:
+          type: boolean
+        emailConfirmations:
+          type: boolean
+        emailAftercare:
+          type: boolean
+        emailCancellation:
+          type: boolean
+        emailReschedule:
+          type: boolean
+        emailStaffNewAppointment:
+          type: boolean
+        emailStaffCancellation:
+          type: boolean
+        emailStaffReschedule:
+          type: boolean
+        reminderHoursBefore:
+          type: integer
+          format: int32
+    ApiResponseEmailSettingsDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/EmailSettingsDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    UpdateClientRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          maxLength: 50
+          minLength: 1
+        lastName:
+          type: string
+          maxLength: 50
+          minLength: 1
+        phone:
+          type: string
+          pattern: "^\\+?[0-9]{10,15}$"
+        email:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        instagram:
+          type: string
+        telegram:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        medicalConditions:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+        status:
+          type: string
+          pattern: ^(active|inactive|blacklisted)$
+    UpdateAppointmentRequest:
+      type: object
+      properties:
+        artistId:
+          type: string
+          format: uuid
+        serviceId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        clearProjectId:
+          type: boolean
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        price:
+          type: number
+          minimum: 0.0
+        prepayment:
+          type: number
+          minimum: 0.0
+        discount:
+          type: number
+          minimum: 0.0
+        notes:
+          type: string
+        sketchImage:
+          type: string
+        status:
+          type: string
+          pattern: ^(new|confirmed|in_progress|done|cancelled)$
+        cancellationReason:
+          type: string
+    PageRequest:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        sortBy:
+          type: string
+        sortDir:
+          type: string
+    ApiResponseListTransactionDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseFinanceStatsDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/FinanceStatsDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ArtistRevenueDto:
+      type: object
+      properties:
+        artistId:
+          type: string
+        artistName:
+          type: string
+        revenue:
+          type: number
+        appointmentsCount:
+          type: integer
+          format: int32
+        calendarColor:
+          type: string
+    FinanceStatsDto:
+      type: object
+      properties:
+        totalIncome:
+          type: number
+        totalExpenses:
+          type: number
+        netProfit:
+          type: number
+        byCategory:
+          type: object
+          additionalProperties:
+            type: number
+        byPaymentMethod:
+          type: object
+          additionalProperties:
+            type: number
+        byArtist:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArtistRevenueDto"
+        byDate:
+          type: object
+          additionalProperties:
+            type: number
+    ApiResponseSubscriptionDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/SubscriptionDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    SubscriptionDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        plan:
+          type: string
+        status:
+          type: string
+        active:
+          type: boolean
+        daysRemaining:
+          type: integer
+          format: int64
+        trialEndsAt:
+          type: string
+          format: date-time
+        currentPeriodEnd:
+          type: string
+          format: date-time
+        monthlyPrice:
+          type: number
+    ApiResponseListStaffDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseStaffDetailDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/StaffDetailDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ScheduleDto:
+      type: object
+      properties:
+        dayOfWeek:
+          type: string
+        isWorking:
+          type: boolean
+        startTime:
+          type: string
+        endTime:
+          type: string
+    StaffDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        avatar:
+          type: string
+        role:
+          type: string
+        calendarColor:
+          type: string
+        specialization:
+          type: array
+          items:
+            type: string
+        portfolioImages:
+          type: array
+          items:
+            type: string
+        bio:
+          type: string
+        status:
+          type: string
+        accountStatus:
+          type: string
+        locations:
+          type: array
+          items:
+            $ref: "#/components/schemas/LocationDto"
+        schedule:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleDto"
+        stats:
+          $ref: "#/components/schemas/StaffStatsDto"
+        salaryType:
+          type: string
+        salaryRate:
+          type: number
+        bankDetails:
+          type: string
+        isServiceProvider:
+          type: boolean
+        instagram:
+          type: string
+        hourlyRate:
+          type: number
+        dontDoList:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    StaffStatsDto:
+      type: object
+      properties:
+        appointmentsThisMonth:
+          type: integer
+          format: int32
+        upcomingAppointments:
+          type: integer
+          format: int32
+    ApiResponseGoogleCalendarStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/GoogleCalendarStatusResponse"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    GoogleCalendarStatusResponse:
+      type: object
+      properties:
+        connected:
+          type: boolean
+        email:
+          type: string
+        configured:
+          type: boolean
+    ApiResponseGoogleAuthUrlResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/GoogleAuthUrlResponse"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    GoogleAuthUrlResponse:
+      type: object
+      properties:
+        url:
+          type: string
+    ApiResponseMapStringInteger:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int32
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseInviteInfoDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/InviteInfoDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    InviteInfoDto:
+      type: object
+      properties:
+        email:
+          type: string
+        role:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        expired:
+          type: boolean
+        accepted:
+          type: boolean
+    ApiResponseListRolePermissionsDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/RolePermissionsDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseListPermissionDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    PermissionDto:
+      type: object
+      properties:
+        value:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+    ApiResponseListServiceDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseServiceDetailDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ServiceDetailDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ArtistPricingOverrideDto:
+      type: object
+      properties:
+        artistId:
+          type: string
+          format: uuid
+        artistName:
+          type: string
+        price:
+          type: number
+        duration:
+          type: integer
+          format: int32
+    ServiceDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        pricingType:
+          type: string
+        price:
+          type: number
+        duration:
+          type: integer
+          format: int32
+        color:
+          type: string
+        isActive:
+          type: boolean
+        costPrice:
+          type: number
+        artistPricing:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArtistPricingOverrideDto"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ApiResponseServicePriceDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ServicePriceDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ServicePriceDto:
+      type: object
+      properties:
+        serviceId:
+          type: string
+          format: uuid
+        artistId:
+          type: string
+          format: uuid
+        price:
+          type: number
+        duration:
+          type: integer
+          format: int32
+        isOverride:
+          type: boolean
+    ApiResponseListRequestDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequestDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseListConsumerBookingListItemDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsumerBookingListItemDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ConsumerBookingListItemDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        artistName:
+          type: string
+        status:
+          type: string
+        idea:
+          type: string
+        city:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ApiResponseSetString:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseListTattooStyleDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TattooStyleDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    TattooStyleDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        slug:
+          type: string
+        name:
+          type: string
+        imageUrl:
+          type: string
+        imageUrls:
+          type: array
+          items:
+            type: string
+    ApiResponseListPublicArtistDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicArtistDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    FaqEntry:
+      type: object
+      properties:
+        question:
+          type: string
+        answer:
+          type: string
+    PublicArtistDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        avatar:
+          type: string
+        bio:
+          type: string
+        experience:
+          type: integer
+          format: int32
+        hourlyRate:
+          type: number
+        studioName:
+          type: string
+        studioAddress:
+          type: string
+        studioPhoto:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        styles:
+          type: array
+          items:
+            type: string
+        dontDoList:
+          type: array
+          items:
+            type: string
+        instagramUrl:
+          type: string
+        isOpen:
+          type: boolean
+        savesCount:
+          type: integer
+          format: int32
+        portfolio:
+          type: array
+          items:
+            type: string
+        schedule:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleEntry"
+        faq:
+          type: array
+          items:
+            $ref: "#/components/schemas/FaqEntry"
+        reviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewEntry"
+    ReviewEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        rating:
+          type: integer
+          format: int32
+        text:
+          type: string
+        date:
+          type: string
+    ApiResponsePublicArtistDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/PublicArtistDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseListProjectDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseListPaymentDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseAppointmentPaymentSummaryDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/AppointmentPaymentSummaryDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    AppointmentPaymentSummaryDto:
+      type: object
+      properties:
+        appointmentId:
+          type: string
+          format: uuid
+        servicePrice:
+          type: number
+        discount:
+          type: number
+        finalPrice:
+          type: number
+        totalPaid:
+          type: number
+        depositPaid:
+          type: number
+        servicePaid:
+          type: number
+        totalRefunded:
+          type: number
+        totalTips:
+          type: number
+        remainingBalance:
+          type: number
+        isFullyPaid:
+          type: boolean
+        hasDeposit:
+          type: boolean
+        hasRefunds:
+          type: boolean
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentDto"
+        paymentStatus:
+          type: string
+    ApiResponseListLocationDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/LocationDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseLocationDetailDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/LocationDetailDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    LocationDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        googleMapsLink:
+          type: string
+        color:
+          type: string
+        isActive:
+          type: boolean
+        photoUrl:
+          type: string
+        navigationInstructions:
+          type: string
+        telegramContact:
+          type: string
+        staff:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffSummaryDto"
+        stats:
+          $ref: "#/components/schemas/LocationStatsDto"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    LocationStatsDto:
+      type: object
+      properties:
+        appointmentsThisMonth:
+          type: integer
+          format: int32
+        revenueThisMonth:
+          type: number
+    ApiResponseListLeaveRequestDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaveRequestDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseBoolean:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: boolean
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseLong:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: integer
+          format: int64
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseListCategoryConfigDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryConfigDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseListEmailTemplateDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailTemplateDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseEmailStatsDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/EmailStatsDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    EmailStatsDto:
+      type: object
+      properties:
+        totalToday:
+          type: integer
+          format: int64
+        totalWeek:
+          type: integer
+          format: int64
+        totalMonth:
+          type: integer
+          format: int64
+        confirmationsMonth:
+          type: integer
+          format: int64
+        remindersMonth:
+          type: integer
+          format: int64
+        aftercareMonth:
+          type: integer
+          format: int64
+        manualMonth:
+          type: integer
+          format: int64
+    ApiResponseListEmailLogDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailLogDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    EmailLogDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        recipientEmail:
+          type: string
+        recipientName:
+          type: string
+        subject:
+          type: string
+        type:
+          type: string
+          enum:
+          - CONFIRMATION
+          - REMINDER
+          - AFTERCARE
+          - CANCELLATION
+          - RESCHEDULE
+          - STAFF_NEW_APPOINTMENT
+          - STAFF_CANCELLATION
+          - STAFF_RESCHEDULE
+          - MANUAL
+        status:
+          type: string
+          enum:
+          - SENT
+          - FAILED
+        errorMessage:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+    ApiResponseListClientDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseClientDetailDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ClientDetailDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ClientDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        avatar:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        instagram:
+          type: string
+        telegram:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        medicalConditions:
+          type: array
+          items:
+            type: string
+        source:
+          type: string
+        status:
+          type: string
+        notes:
+          type: string
+        lastVisit:
+          type: string
+          format: date-time
+        totalVisits:
+          type: integer
+          format: int32
+        cancelledVisits:
+          type: integer
+          format: int32
+        ltv:
+          type: number
+        activeProjects:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectSummaryDto"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ProjectSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+    ApiResponseListProjectSummaryDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectSummaryDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseCurrentUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/CurrentUserResponse"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    CurrentUserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        avatar:
+          type: string
+        role:
+          type: string
+        tenantId:
+          type: string
+          format: uuid
+        tenantName:
+          type: string
+        locationIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        permissions:
+          type: array
+          items:
+            type: string
+    ApiResponseListAuditLogDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    AuditLogDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        actorId:
+          type: string
+          format: uuid
+        actorName:
+          type: string
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+        entityLabel:
+          type: string
+        details:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ApiResponseListAppointmentDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AppointmentDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ApiResponseAppointmentDetailDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/AppointmentDetailDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    AppointmentDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        client:
+          $ref: "#/components/schemas/ClientSummaryDto"
+        artist:
+          $ref: "#/components/schemas/StaffSummaryDto"
+        service:
+          $ref: "#/components/schemas/ServiceSummaryDto"
+        location:
+          $ref: "#/components/schemas/LocationSummaryDto"
+        projectId:
+          type: string
+          format: uuid
+        projectTitle:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+        price:
+          type: number
+        prepayment:
+          type: number
+        discount:
+          type: number
+        finalPrice:
+          type: number
+        notes:
+          type: string
+        sketchImage:
+          type: string
+        cancellationReason:
+          type: string
+        cancelledAt:
+          type: string
+          format: date-time
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhotoDto"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CalendarQueryRequest:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        artistIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        locationId:
+          type: string
+          format: uuid
+      required:
+      - from
+      - to
+    ApiResponseListStaffPerformanceDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffPerformanceDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    StaffPerformanceDto:
+      type: object
+      properties:
+        staffId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        avatar:
+          type: string
+        calendarColor:
+          type: string
+        totalAppointments:
+          type: integer
+          format: int32
+        completedAppointments:
+          type: integer
+          format: int32
+        cancelledAppointments:
+          type: integer
+          format: int32
+        revenue:
+          type: number
+        avgCheck:
+          type: number
+        salaryType:
+          type: string
+        salaryRate:
+          type: number
+        calculatedSalary:
+          type: number
+        scheduledHours:
+          type: number
+          format: double
+        bookedHours:
+          type: number
+          format: double
+        utilizationRate:
+          type: number
+          format: double
+    ApiResponseListServicePopularityDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServicePopularityDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ServicePopularityDto:
+      type: object
+      properties:
+        serviceId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        totalAppointments:
+          type: integer
+          format: int32
+        completedAppointments:
+          type: integer
+          format: int32
+        cancelledAppointments:
+          type: integer
+          format: int32
+        revenue:
+          type: number
+        avgCheck:
+          type: number
+        completionRate:
+          type: number
+        costPrice:
+          type: number
+    ApiResponsePnlDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/PnlDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    CategoryLine:
+      type: object
+      properties:
+        categoryKey:
+          type: string
+        label:
+          type: string
+        color:
+          type: string
+        amount:
+          type: number
+    PnlDto:
+      type: object
+      properties:
+        revenue:
+          type: number
+        costOfSales:
+          type: number
+        grossProfit:
+          type: number
+        grossMargin:
+          type: number
+          format: double
+        staffCommissions:
+          type: number
+        otherExpenses:
+          type: number
+        netProfit:
+          type: number
+        netMargin:
+          type: number
+          format: double
+        expenseBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryLine"
+        staffBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffLine"
+    StaffLine:
+      type: object
+      properties:
+        name:
+          type: string
+        revenue:
+          type: number
+        commission:
+          type: number
+        salaryType:
+          type: string
+        salaryRate:
+          type: number
+    ApiResponseClientAnalyticsDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ClientAnalyticsDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    ClientAnalyticsDto:
+      type: object
+      properties:
+        totalUniqueClients:
+          type: integer
+          format: int32
+        newClients:
+          type: integer
+          format: int32
+        returningClients:
+          type: integer
+          format: int32
+        repeatRate:
+          type: number
+          format: double
+        series:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataPoint"
+    DataPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        newClients:
+          type: integer
+          format: int32
+        returningClients:
+          type: integer
+          format: int32
+        total:
+          type: integer
+          format: int32
+    ApiResponseAppointmentAnalyticsDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/AppointmentAnalyticsDto"
+        pagination:
+          $ref: "#/components/schemas/PaginationDto"
+        error:
+          $ref: "#/components/schemas/ErrorResponse"
+    AppointmentAnalyticsDto:
+      type: object
+      properties:
+        series:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataPoint"
+        totalAppointments:
+          type: integer
+          format: int32
+        completedAppointments:
+          type: integer
+          format: int32
+        cancelledAppointments:
+          type: integer
+          format: int32
+        newAppointments:
+          type: integer
+          format: int32
+        totalRevenue:
+          type: number
+        avgCheck:
+          type: number
+        newClients:
+          type: integer
+          format: int32
+  securitySchemes:
+    CrmBearer:
+      type: http
+      description: Supabase JWT for CRM staff (OWNER/ADMIN/ARTIST).
+      scheme: bearer
+      bearerFormat: JWT
+    ConsumerBearer:
+      type: http
+      description: Supabase JWT for B2C consumer app users.
+      scheme: bearer
+      bearerFormat: JWT
