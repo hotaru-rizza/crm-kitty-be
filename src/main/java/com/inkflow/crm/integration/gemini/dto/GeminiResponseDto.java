@@ -1,4 +1,4 @@
-package com.inkflow.crm.module.catalog.dto;
+package com.inkflow.crm.integration.gemini.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

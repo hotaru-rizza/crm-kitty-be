@@ -2,6 +2,7 @@ package com.inkflow.crm.config;
 
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.module.consumer.entity.ConsumerUser;
+import com.inkflow.crm.module.consumer.repository.ConsumerUserRepository;
 import com.inkflow.crm.security.JwtAuthenticationFilter;
 import com.inkflow.crm.module.consumer.security.ConsumerAuthFilter;
 import com.inkflow.crm.security.DemoTenantFilter;
@@ -177,7 +178,10 @@ public class TestSecurityConfig {
 
     @Component
     @Profile("test")
+    @RequiredArgsConstructor
     static class TestConsumerAuthFilter extends OncePerRequestFilter {
+
+        private final ConsumerUserRepository consumerUserRepository;
 
         @Override
         protected void doFilterInternal(HttpServletRequest request,
@@ -187,7 +191,9 @@ public class TestSecurityConfig {
 
             if (StringUtils.hasText(consumerIdHeader)) {
                 UUID consumerId = UUID.fromString(consumerIdHeader);
-                ConsumerUser consumer = new ConsumerUser(consumerId, "consumer@test.com", null);
+                ConsumerUser consumer = consumerUserRepository.findById(consumerId)
+                        .orElseGet(() -> consumerUserRepository.save(
+                                new ConsumerUser(consumerId, "consumer@test.com", null)));
 
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                         consumer,

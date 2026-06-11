@@ -184,7 +184,7 @@ public class GoogleCalendarSyncService {
         });
     }
 
-    private Calendar getCalendarService(Staff artist) throws Exception {
+    Calendar getCalendarService(Staff artist) throws Exception {
         String accessToken = refreshTokenIfNeeded(artist);
 
         Credential credential = new Credential(BearerToken.authorizationHeaderAccessMethod())

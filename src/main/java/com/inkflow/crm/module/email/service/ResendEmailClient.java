@@ -1,10 +1,12 @@
 package com.inkflow.crm.module.email.service;
 
+import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.config.ResendConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -40,13 +42,13 @@ public class ResendEmailClient {
             );
             if (response.getStatusCode().is2xxSuccessful()) {
                 log.info("Email sent to {} — subject: {}", to, subject);
-            } else {
-                log.error("Resend API error: {} — {}", response.getStatusCode(), response.getBody());
-                throw new RuntimeException("Resend API returned " + response.getStatusCode());
+                return;
             }
-        } catch (Exception e) {
+            log.error("Resend API error: {} — {}", response.getStatusCode(), response.getBody());
+            throw new BusinessRuleException("Resend API returned " + response.getStatusCode());
+        } catch (RestClientException e) {
             log.error("Failed to send email to {}: {}", to, e.getMessage());
-            throw e;
+            throw new BusinessRuleException("Failed to send email: " + e.getMessage());
         }
     }
 }

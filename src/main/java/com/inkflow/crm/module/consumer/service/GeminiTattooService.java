@@ -1,13 +1,15 @@
 package com.inkflow.crm.module.consumer.service;
 
 import com.inkflow.crm.config.GeminiProperties;
+import com.inkflow.crm.integration.gemini.GeminiImageClient;
+import com.inkflow.crm.integration.gemini.dto.GeminiGenerateContentRequest;
+import com.inkflow.crm.integration.gemini.dto.GeminiGenerateContentRequest.GeminiPart;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -33,12 +35,12 @@ public class GeminiTattooService {
         log.info("Try-on Gemini request: position={}", positionDescription);
 
         String prompt = buildTryOnPrompt(positionDescription);
-        List<Map<String, Object>> parts = new ArrayList<>();
-        parts.add(geminiImageClient.textPart(prompt));
-        parts.add(geminiImageClient.jpegInlinePart(bodyBase64));
-        parts.add(geminiImageClient.jpegInlinePart(sketchBase64));
+        List<GeminiPart> parts = new ArrayList<>();
+        parts.add(GeminiPart.text(prompt));
+        parts.add(GeminiPart.jpegInline(bodyBase64));
+        parts.add(GeminiPart.jpegInline(sketchBase64));
 
-        Map<String, Object> request = geminiImageClient.imageRequestWithParts(
+        GeminiGenerateContentRequest request = geminiImageClient.imageRequestWithParts(
                 parts,
                 geminiProperties.getTryOnTemperature()
         );
@@ -52,7 +54,7 @@ public class GeminiTattooService {
                 + "User request: " + prompt
                 + "\n\nIMPORTANT: Output ONLY the tattoo design sketch, no text, no watermarks.";
 
-        Map<String, Object> request = geminiImageClient.imageRequest(
+        GeminiGenerateContentRequest request = geminiImageClient.imageRequest(
                 fullPrompt,
                 geminiProperties.getImageTemperature()
         );

@@ -1,5 +1,4 @@
--- Drop removed feature tables (Tier 1 + Tier 2 cleanup)
--- Run once against Supabase Postgres
+-- Deprecated: use Flyway migration src/main/resources/db/migration/V2__drop_removed_modules.sql
 
 BEGIN;
 

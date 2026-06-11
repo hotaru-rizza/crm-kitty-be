@@ -14,7 +14,7 @@
 |----------|-------|-------|
 | Critical | 0 | P0 closed |
 | High | 0 | P1 closed |
-| Medium | 1 | Gemini Vision |
+| Medium | 0 | P2 closed |
 | Low | 2 | i18n properties unused, cost tracking |
 
 **Tests today:** 20 tests — `contextLoads` + unit tests + integration tests (AppointmentService tenant isolation, RequestController auth/validation, public endpoint security)
@@ -83,14 +83,14 @@ All P1 items closed. See Done section at bottom.
 
 - [x] **P2-1. Three API response formats** — unified `ApiResponse<T>` (see `docs/API_FORMAT.md`)
 
-- [~] **P2-2. Map/JsonNode instead of DTOs** — Gemini image + text clients unified; VisionService on `GeminiTextClient`
+- [x] **P2-2. Map/JsonNode instead of DTOs** — Gemini clients in `integration/gemini/` (`GeminiTextClient`, `GeminiImageClient`, `GeminiVisionClient`); typed `GeminiGenerateContentRequest` / `GeminiResponseDto`; catalog `VisionService` delegates to `GeminiVisionClient`.
 
-- [~] **P2-3. Inconsistent error handling**  
-  `IllegalArgumentException` → 400 via `GlobalExceptionHandler`. Remaining: `RuntimeException` in email settings path replaced with `ResourceNotFoundException`.
+- [x] **P2-3. Inconsistent error handling**  
+  `IllegalArgumentException` → 400 via `GlobalExceptionHandler`. `ResendEmailClient` → `BusinessRuleException` (no raw `RuntimeException`). Email settings use `ResourceNotFoundException`.
 
 - [x] **P2-4. Inconsistent module layout**  
   Good: `module/{name}/controller|service|dto|mapper` (appointment, client, staff, email, analytics, audit, finance, google).  
-  Remaining split entity ownership: `domain/entity` vs `module/catalog/entity` vs `module/consumer/entity`.
+  Entity ownership documented in `docs/ENTITY_OWNERSHIP.md`.
 
 - [x] **P2-5. Duplicate parallel flows**  
   Intentional separation by design:  
@@ -121,7 +121,7 @@ All P1 items closed. See Done section at bottom.
   `@RequirePermission(Permission.*)` on all controllers.  
   Native SQL in `TattooRepository` → `:status` param with `TattooStatus.READY.name()`.
 
-- [~] **P3-2. Gemini config drift** — `GeminiProperties` covers image + text endpoints; VisionService migrated
+- [x] **P3-2. Gemini config drift** — `GeminiProperties` documented; all keys in `application.yml`; clients use typed request DTOs.
 
 - [x] **P3-3. Timezone not centralized**  
   `InkflowProperties` + `application.yml`; all runtime code migrated. Entity default on `Tenant` remains as schema default.
@@ -175,9 +175,9 @@ All P1 items closed. See Done section at bottom.
 |-------|-------|--------|
 | **P0** | Security hotfixes | Done |
 | **P1** | RBAC + layer extraction | Done |
-| **P2** | API/error consistency | ~95% — entity ownership split open |
+| **P2** | API/error consistency | Done |
 | **P3** | Tests, i18n, magic strings | ~95% |
-| **P4** | i18n, Gemini Vision, cost tracking | Next |
+| **P4** | i18n, cost tracking | Next |
 
 ---
 
@@ -214,3 +214,4 @@ Script: `drop_removed_modules.sql`
 - 2026-06-11: **Layout wave** — audit/finance/google → `controller|service` subpackages; TattooRepository status param; RequestServiceTest
 - 2026-06-11: **Integration tests** — TestSecurityConfig (test profile), AppointmentService/RequestController/PublicEndpoint security tests (20 total)
 - 2026-06-11: **Flyway baseline** — `V1__baseline.sql` from Supabase public schema; script reads `.env`
+- 2026-06-11: **P4 quick wins** — `V2__drop_removed_modules.sql`; Gemini integration layer; entity ownership doc; Resend error handling

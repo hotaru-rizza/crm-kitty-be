@@ -5,6 +5,7 @@ import com.inkflow.crm.domain.entity.CompanySettings;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.Tenant;
+import com.inkflow.crm.domain.enums.AccountStatus;
 import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.CompanySettingsRepository;
@@ -80,6 +81,7 @@ public class OnboardingService {
                 .lastName(request.getLastName())
                 .role(UserRole.OWNER)
                 .status(StaffStatus.WORKING)
+                .accountStatus(AccountStatus.ACTIVE)
                 .calendarColor("#6366f1")
                 .build();
         owner = staffRepository.save(owner);

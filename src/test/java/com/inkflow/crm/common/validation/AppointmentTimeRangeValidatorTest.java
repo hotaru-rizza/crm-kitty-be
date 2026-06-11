@@ -14,7 +14,7 @@ class AppointmentTimeRangeValidatorTest {
     private final AppointmentTimeRangeValidator validator = new AppointmentTimeRangeValidator();
 
     @Test
-    void acceptsEndTimeAfterStartTimeOnCreate() {
+    void shouldAcceptEndTimeAfterStartTimeOnCreate() {
         Instant start = Instant.parse("2026-06-15T10:00:00Z");
         Instant end = Instant.parse("2026-06-15T11:00:00Z");
 
@@ -27,7 +27,7 @@ class AppointmentTimeRangeValidatorTest {
     }
 
     @Test
-    void rejectsEndTimeBeforeStartTimeOnCreate() {
+    void shouldRejectEndTimeBeforeStartTimeOnCreate() {
         Instant start = Instant.parse("2026-06-15T11:00:00Z");
         Instant end = Instant.parse("2026-06-15T10:00:00Z");
 
@@ -40,7 +40,29 @@ class AppointmentTimeRangeValidatorTest {
     }
 
     @Test
-    void skipsPartialUpdateWhenOnlyOneTimeProvided() {
+    void shouldRejectEqualStartAndEndTimeOnCreate() {
+        Instant sameInstant = Instant.parse("2026-06-15T10:00:00Z");
+
+        CreateAppointmentRequest request = CreateAppointmentRequest.builder()
+                .startTime(sameInstant)
+                .endTime(sameInstant)
+                .build();
+
+        assertFalse(validator.isValid(request, null));
+    }
+
+    @Test
+    void shouldSkipValidationWhenCreateRequestHasMissingTime() {
+        assertTrue(validator.isValid(
+                CreateAppointmentRequest.builder().startTime(Instant.parse("2026-06-15T10:00:00Z")).build(),
+                null));
+        assertTrue(validator.isValid(
+                CreateAppointmentRequest.builder().endTime(Instant.parse("2026-06-15T11:00:00Z")).build(),
+                null));
+    }
+
+    @Test
+    void shouldSkipPartialUpdateWhenOnlyStartTimeProvided() {
         UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
                 .startTime(Instant.parse("2026-06-15T10:00:00Z"))
                 .build();
@@ -49,12 +71,41 @@ class AppointmentTimeRangeValidatorTest {
     }
 
     @Test
-    void validatesBothTimesOnUpdate() {
+    void shouldSkipPartialUpdateWhenOnlyEndTimeProvided() {
+        UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
+                .endTime(Instant.parse("2026-06-15T11:00:00Z"))
+                .build();
+
+        assertTrue(validator.isValid(request, null));
+    }
+
+    @Test
+    void shouldRejectInvalidRangeWhenBothTimesProvidedOnUpdate() {
         UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
                 .startTime(Instant.parse("2026-06-15T12:00:00Z"))
                 .endTime(Instant.parse("2026-06-15T11:00:00Z"))
                 .build();
 
         assertFalse(validator.isValid(request, null));
+    }
+
+    @Test
+    void shouldAcceptValidRangeWhenBothTimesProvidedOnUpdate() {
+        UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
+                .startTime(Instant.parse("2026-06-15T10:00:00Z"))
+                .endTime(Instant.parse("2026-06-15T11:00:00Z"))
+                .build();
+
+        assertTrue(validator.isValid(request, null));
+    }
+
+    @Test
+    void shouldAcceptNullValue() {
+        assertTrue(validator.isValid(null, null));
+    }
+
+    @Test
+    void shouldAcceptUnsupportedPayloadType() {
+        assertTrue(validator.isValid("not-an-appointment-request", null));
     }
 }

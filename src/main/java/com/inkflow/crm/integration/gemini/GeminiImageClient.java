@@ -1,8 +1,12 @@
-package com.inkflow.crm.module.consumer.service;
+package com.inkflow.crm.integration.gemini;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.config.GeminiProperties;
-import com.inkflow.crm.module.catalog.dto.GeminiResponseDto;
+import com.inkflow.crm.integration.gemini.dto.GeminiGenerateContentRequest;
+import com.inkflow.crm.integration.gemini.dto.GeminiGenerateContentRequest.GeminiContent;
+import com.inkflow.crm.integration.gemini.dto.GeminiGenerateContentRequest.GeminiGenerationConfig;
+import com.inkflow.crm.integration.gemini.dto.GeminiGenerateContentRequest.GeminiPart;
+import com.inkflow.crm.integration.gemini.dto.GeminiResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -10,18 +14,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class GeminiImageClient {
 
+    private static final List<String> IMAGE_MODALITIES = List.of("IMAGE", "TEXT");
+
     private final GeminiProperties geminiProperties;
     private final RestClient restClient = RestClient.create();
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public String generateImage(Map<String, Object> requestBody) throws Exception {
+    public String generateImage(GeminiGenerateContentRequest requestBody) throws Exception {
         String requestJson = mapper.writeValueAsString(requestBody);
 
         String responseJson = restClient.post()
@@ -34,32 +39,18 @@ public class GeminiImageClient {
         return extractImageDataUri(responseJson);
     }
 
-    public Map<String, Object> imageRequest(String prompt, double temperature) {
-        return Map.of(
-                "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                "generationConfig", Map.of(
-                        "response_modalities", List.of("IMAGE", "TEXT"),
-                        "temperature", temperature
-                )
+    public GeminiGenerateContentRequest imageRequest(String prompt, double temperature) {
+        return new GeminiGenerateContentRequest(
+                List.of(new GeminiContent(List.of(GeminiPart.text(prompt)))),
+                new GeminiGenerationConfig(IMAGE_MODALITIES, temperature)
         );
     }
 
-    public Map<String, Object> imageRequestWithParts(List<Map<String, Object>> parts, double temperature) {
-        return Map.of(
-                "contents", List.of(Map.of("parts", parts)),
-                "generationConfig", Map.of(
-                        "response_modalities", List.of("IMAGE", "TEXT"),
-                        "temperature", temperature
-                )
+    public GeminiGenerateContentRequest imageRequestWithParts(List<GeminiPart> parts, double temperature) {
+        return new GeminiGenerateContentRequest(
+                List.of(new GeminiContent(parts)),
+                new GeminiGenerationConfig(IMAGE_MODALITIES, temperature)
         );
-    }
-
-    public Map<String, Object> textPart(String text) {
-        return Map.of("text", text);
-    }
-
-    public Map<String, Object> jpegInlinePart(String base64Data) {
-        return Map.of("inline_data", Map.of("mime_type", "image/jpeg", "data", base64Data));
     }
 
     private String extractImageDataUri(String responseJson) throws Exception {

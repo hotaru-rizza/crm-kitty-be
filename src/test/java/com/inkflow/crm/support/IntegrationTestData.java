@@ -75,7 +75,7 @@ public final class IntegrationTestData {
                 .tenantId(tenant.getId())
                 .firstName("Client")
                 .lastName("One")
-                .phone("+38099" + suffix.toString().replace("-", "").substring(0, 7))
+                .phone("+38099" + suffix.toString().replace("-", "").substring(0, 7).replaceAll("[^0-9]", "0123456"))
                 .status(ClientStatus.ACTIVE)
                 .totalVisits(0)
                 .cancelledVisits(0)
@@ -94,5 +94,19 @@ public final class IntegrationTestData {
                 .build());
 
         return new TenantBundle(tenant, owner, client, service, location);
+    }
+
+    public static Staff seedArtist(StaffRepository staffRepository, Tenant tenant) {
+        UUID suffix = UUID.randomUUID();
+        return staffRepository.save(Staff.builder()
+                .tenantId(tenant.getId())
+                .firstName("Artist")
+                .lastName("Member")
+                .email("artist-" + suffix + "@test.com")
+                .role(UserRole.ARTIST)
+                .calendarColor("#22c55e")
+                .status(StaffStatus.WORKING)
+                .accountStatus(AccountStatus.ACTIVE)
+                .build());
     }
 }

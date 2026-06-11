@@ -2,24 +2,29 @@ package com.inkflow.crm.integration.gemini;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.config.GeminiProperties;
-import com.inkflow.crm.module.catalog.dto.GeminiResponseDto;
+import com.inkflow.crm.integration.gemini.dto.GeminiGenerateContentRequest;
+import com.inkflow.crm.integration.gemini.dto.GeminiGenerateContentRequest.GeminiContent;
+import com.inkflow.crm.integration.gemini.dto.GeminiGenerateContentRequest.GeminiGenerationConfig;
+import com.inkflow.crm.integration.gemini.dto.GeminiGenerateContentRequest.GeminiPart;
+import com.inkflow.crm.integration.gemini.dto.GeminiResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class GeminiTextClient {
 
+    private static final List<String> TEXT_MODALITIES = List.of("TEXT");
+
     private final GeminiProperties geminiProperties;
     private final RestClient restClient = RestClient.create();
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public String generateText(Map<String, Object> requestBody) throws Exception {
+    public String generateText(GeminiGenerateContentRequest requestBody) throws Exception {
         String requestJson = mapper.writeValueAsString(requestBody);
 
         String responseJson = restClient.post()
@@ -32,27 +37,20 @@ public class GeminiTextClient {
         return extractText(responseJson);
     }
 
-    public Map<String, Object> textRequest(String prompt) {
-        return Map.of(
-                "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                "generationConfig", Map.of(
-                        "response_modalities", List.of("TEXT"),
-                        "temperature", geminiProperties.getTemperature()
-                )
+    public GeminiGenerateContentRequest textRequest(String prompt) {
+        return new GeminiGenerateContentRequest(
+                List.of(new GeminiContent(List.of(GeminiPart.text(prompt)))),
+                new GeminiGenerationConfig(TEXT_MODALITIES, geminiProperties.getTemperature())
         );
     }
 
-    public Map<String, Object> textRequestWithImage(String prompt, String imageBase64) {
-        Map<String, Object> textPart = Map.of("text", prompt);
-        Map<String, Object> imagePart = Map.of(
-                "inline_data", Map.of("mime_type", "image/jpeg", "data", imageBase64)
-        );
-        return Map.of(
-                "contents", List.of(Map.of("parts", List.of(textPart, imagePart))),
-                "generationConfig", Map.of(
-                        "response_modalities", List.of("TEXT"),
-                        "temperature", geminiProperties.getTemperature()
-                )
+    public GeminiGenerateContentRequest textRequestWithImage(String prompt, String imageBase64) {
+        return new GeminiGenerateContentRequest(
+                List.of(new GeminiContent(List.of(
+                        GeminiPart.text(prompt),
+                        GeminiPart.jpegInline(imageBase64)
+                ))),
+                new GeminiGenerationConfig(TEXT_MODALITIES, geminiProperties.getTemperature())
         );
     }
 

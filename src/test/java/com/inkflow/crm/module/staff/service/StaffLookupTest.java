@@ -3,7 +3,6 @@ package com.inkflow.crm.module.staff.service;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.repository.StaffRepository;
-import com.inkflow.crm.security.SecurityUtils;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +18,9 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,12 +38,10 @@ class StaffLookupTest {
     }
 
     @Test
-    void requireStaff_returnsTenantScopedStaff() {
+    void shouldReturnTenantScopedStaffWhenFoundById() {
         UUID tenantId = UUID.randomUUID();
         UUID staffId = UUID.randomUUID();
-        Staff staff = new Staff();
-        staff.setId(staffId);
-        staff.setTenantId(tenantId);
+        Staff staff = staffWithTenant(staffId, tenantId);
 
         authenticate(tenantId);
         when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
@@ -50,10 +50,29 @@ class StaffLookupTest {
         Staff result = staffLookup.requireStaff(staffId);
 
         assertEquals(staffId, result.getId());
+        verify(staffRepository, never()).findByAuthUserIdAndDeletedAtIsNull(anyString());
     }
 
     @Test
-    void requireStaff_rejectsStaffFromAnotherTenant() {
+    void shouldResolveStaffByAuthUserIdWhenTenantLookupMisses() {
+        UUID tenantId = UUID.randomUUID();
+        UUID staffId = UUID.randomUUID();
+        Staff staff = staffWithTenant(staffId, tenantId);
+
+        authenticate(tenantId);
+        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+                .thenReturn(Optional.empty());
+        when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(staffId.toString()))
+                .thenReturn(Optional.of(staff));
+
+        Staff result = staffLookup.requireStaff(staffId);
+
+        assertEquals(staffId, result.getId());
+        verify(staffRepository).findByAuthUserIdAndDeletedAtIsNull(staffId.toString());
+    }
+
+    @Test
+    void shouldRejectStaffFromAnotherTenantWhenResolvingByAuthUserId() {
         UUID tenantId = UUID.randomUUID();
         UUID otherTenantId = UUID.randomUUID();
         UUID staffId = UUID.randomUUID();
@@ -63,6 +82,20 @@ class StaffLookupTest {
                 .thenReturn(Optional.empty());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(staffId.toString()))
                 .thenReturn(Optional.of(staffWithTenant(staffId, otherTenantId)));
+
+        assertThrows(ResourceNotFoundException.class, () -> staffLookup.requireStaff(staffId));
+    }
+
+    @Test
+    void shouldThrowWhenStaffDoesNotExist() {
+        UUID tenantId = UUID.randomUUID();
+        UUID staffId = UUID.randomUUID();
+
+        authenticate(tenantId);
+        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+                .thenReturn(Optional.empty());
+        when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(staffId.toString()))
+                .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> staffLookup.requireStaff(staffId));
     }
@@ -83,4 +116,5 @@ class StaffLookupTest {
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
         );
     }
+
 }
