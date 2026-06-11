@@ -13,6 +13,7 @@ import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.CalendarScopes;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventDateTime;
+import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.config.GoogleCalendarProperties;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Staff;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -73,8 +75,8 @@ public class GoogleCalendarSyncService {
                     code, properties.getRedirectUri()
             ).execute();
 
-            Staff staff = staffRepository.findById(java.util.UUID.fromString(staffId))
-                    .orElseThrow(() -> new RuntimeException("Staff not found: " + staffId));
+            Staff staff = staffRepository.findById(UUID.fromString(staffId))
+                    .orElseThrow(() -> ResourceNotFoundException.staff(staffId));
 
             staff.setGoogleAccessToken(tokenResponse.getAccessToken());
             staff.setGoogleRefreshToken(tokenResponse.getRefreshToken());
@@ -95,9 +97,9 @@ public class GoogleCalendarSyncService {
     }
 
     @Transactional
-    public void disconnect(java.util.UUID staffId) {
+    public void disconnect(UUID staffId) {
         Staff staff = staffRepository.findById(staffId)
-                .orElseThrow(() -> new RuntimeException("Staff not found: " + staffId));
+                .orElseThrow(() -> ResourceNotFoundException.staff(staffId.toString()));
         staff.setGoogleAccessToken(null);
         staff.setGoogleRefreshToken(null);
         staff.setGoogleCalendarId(null);
@@ -165,7 +167,7 @@ public class GoogleCalendarSyncService {
     }
 
     @Transactional
-    protected void saveEventId(java.util.UUID appointmentId, String googleEventId) {
+    protected void saveEventId(UUID appointmentId, String googleEventId) {
         appointmentRepository.findById(appointmentId).ifPresent(a -> {
             a.setGoogleEventId(googleEventId);
             appointmentRepository.save(a);

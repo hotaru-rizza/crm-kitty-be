@@ -9,6 +9,7 @@ import com.inkflow.crm.module.request.service.RequestService;
 import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/requests")
 @RequiredArgsConstructor
@@ -48,6 +50,8 @@ public class RequestController {
     @PostMapping
     public ResponseEntity<ApiResponse<RequestDto>> createRequest(@Valid @RequestBody CreateRequestRequest request) {
         RequestDto created = requestService.createRequest(request);
+        log.info("Request created via API: requestId={}", created.getId());
+
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(created));
     }
 
@@ -57,6 +61,8 @@ public class RequestController {
             @PathVariable UUID id,
             @Valid @RequestBody UpdateRequestStatusRequest request) {
         RequestDto updated = requestService.updateRequestStatus(id, request);
+        log.info("Request status updated via API: requestId={} status={}", id, request.getStatus());
+
         return ResponseEntity.ok(ApiResponse.success(updated));
     }
 
@@ -66,6 +72,8 @@ public class RequestController {
             @PathVariable UUID id,
             @Valid @RequestBody ConvertRequestRequest request) {
         ClientDto client = requestService.convertToClient(id, request);
+        log.info("Request converted to client via API: requestId={} clientId={}", id, client.getId());
+
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(client));
     }
 
@@ -73,6 +81,8 @@ public class RequestController {
     @RequirePermission("requests.change_status")
     public ResponseEntity<ApiResponse<Void>> deleteRequest(@PathVariable UUID id) {
         requestService.deleteRequest(id);
+        log.info("Request deleted via API: requestId={}", id);
+
         return ResponseEntity.ok(ApiResponse.empty());
     }
 }

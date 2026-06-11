@@ -56,14 +56,14 @@ public class LeaveRequest extends BaseEntity {
 
     public boolean isActive() {
         LocalDate today = LocalDate.now();
-        return status == LeaveStatus.APPROVED && 
-               !today.isBefore(startDate) && 
+        return status == LeaveStatus.APPROVED &&
+               !today.isBefore(startDate) &&
                !today.isAfter(endDate);
     }
 
     public boolean coversDate(LocalDate date) {
         return status == LeaveStatus.APPROVED &&
-               !date.isBefore(startDate) && 
+               !date.isBefore(startDate) &&
                !date.isAfter(endDate);
     }
 }

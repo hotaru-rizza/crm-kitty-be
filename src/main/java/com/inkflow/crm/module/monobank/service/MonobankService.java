@@ -8,6 +8,7 @@ import com.inkflow.crm.domain.enums.*;
 import com.inkflow.crm.domain.repository.*;
 import com.inkflow.crm.module.monobank.config.MonobankConfig;
 import com.inkflow.crm.module.monobank.dto.*;
+import com.inkflow.crm.module.subscription.service.SubscriptionService;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,13 +35,9 @@ public class MonobankService {
     private final TransactionRepository transactionRepository;
     private final StaffRepository staffRepository;
     private final ObjectMapper objectMapper;
-    private final com.inkflow.crm.module.subscription.service.SubscriptionService subscriptionService;
+    private final SubscriptionService subscriptionService;
 
     private static final int CCY_UAH = 980;
-
-    // ---------------------------------------------------------------
-    // Create invoice
-    // ---------------------------------------------------------------
 
     @Transactional
     public OnlineInvoiceDto createInvoice(CreateOnlineInvoiceRequest request) {
@@ -54,14 +51,12 @@ public class MonobankService {
             throw new BusinessRuleException("Cannot create invoice for cancelled appointment");
         }
 
-        // Cancel any existing pending invoice for the same appointment
         invoiceRepository.findByAppointmentIdAndStatus(request.getAppointmentId(), "pending")
                 .ifPresent(old -> {
                     old.setStatus("cancelled");
                     invoiceRepository.save(old);
                 });
 
-        // Convert UAH → kopecks (Monobank uses integer kopecks)
         long amountKopecks = request.getAmount().multiply(BigDecimal.valueOf(100)).longValue();
 
         String clientName = appointment.getClient() != null
@@ -114,10 +109,6 @@ public class MonobankService {
         return toDto(invoice);
     }
 
-    // ---------------------------------------------------------------
-    // Webhook handler — called by Monobank after payment
-    // ---------------------------------------------------------------
-
     @Transactional
     public void handleWebhook(MonobankWebhookPayload payload) {
         log.info("Monobank webhook received: invoiceId={} status={}", payload.getInvoiceId(), payload.getStatus());
@@ -143,10 +134,6 @@ public class MonobankService {
 
         invoiceRepository.save(invoice);
     }
-
-    // ---------------------------------------------------------------
-    // Internal helpers
-    // ---------------------------------------------------------------
 
     private void recordSuccessfulPayment(MonobankInvoice invoice, MonobankWebhookPayload payload) {
         Appointment appointment = appointmentRepository
@@ -195,7 +182,6 @@ public class MonobankService {
     @SuppressWarnings("unchecked")
     private Map<String, Object> callMonobankApi(String method, String path, Object body) {
         if (config.getToken() == null || config.getToken().startsWith("REPLACE_")) {
-            // Sandbox mode — return a fake response so dev environment works without real credentials
             log.warn("Monobank token not configured — returning sandbox invoice");
             String fakeId = "sandbox_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
             return Map.of(

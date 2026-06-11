@@ -76,12 +76,6 @@ public class Appointment extends BaseEntity {
     @Column(name = "sketch_image")
     private String sketchImage;
 
-    @Column(name = "waiver_signed", nullable = false)
-    private Boolean waiverSigned = false;
-
-    @Column(name = "consent_token", unique = true)
-    private String consentToken;
-
     @Column(name = "google_event_id")
     private String googleEventId;
 
@@ -98,9 +92,6 @@ public class Appointment extends BaseEntity {
     @OneToMany(mappedBy = "appointment")
     @Builder.Default
     private List<Transaction> transactions = new ArrayList<>();
-
-    @OneToOne(mappedBy = "appointment")
-    private SignedWaiver signedWaiver;
 
     public void calculateFinalPrice() {
         this.finalPrice = this.price.subtract(this.discount);

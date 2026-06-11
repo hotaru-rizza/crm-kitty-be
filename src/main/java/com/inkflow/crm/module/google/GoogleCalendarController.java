@@ -4,7 +4,9 @@ import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.config.GoogleCalendarProperties;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.repository.StaffRepository;
-import lombok.Data;
+import com.inkflow.crm.module.google.dto.GoogleAuthUrlResponse;
+import com.inkflow.crm.module.google.dto.GoogleCalendarStatusResponse;
+import com.inkflow.crm.security.RequirePermission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -22,12 +24,14 @@ public class GoogleCalendarController {
     private final StaffRepository staffRepository;
 
     @GetMapping("/staff/{id}/google/auth-url")
-    public ResponseEntity<ApiResponse<AuthUrlResponse>> getAuthUrl(@PathVariable UUID id) {
+    @RequirePermission({"settings.access", "staff.edit"})
+    public ResponseEntity<ApiResponse<GoogleAuthUrlResponse>> getAuthUrl(@PathVariable UUID id) {
         if (!properties.isConfigured()) {
             return ResponseEntity.badRequest().build();
         }
         String url = syncService.buildAuthorizationUrl(id.toString());
-        return ResponseEntity.ok(ApiResponse.success(new AuthUrlResponse(url)));
+
+        return ResponseEntity.ok(ApiResponse.success(new GoogleAuthUrlResponse(url)));
     }
 
     @GetMapping("/public/google/callback")
@@ -36,6 +40,8 @@ public class GoogleCalendarController {
             @RequestParam(required = false) String state) {
         try {
             syncService.handleCallback(code, state);
+            log.info("Google Calendar connected via API: state={}", state);
+
             return ResponseEntity.status(302)
                     .header("Location", properties.getFrontendRedirect() + "?google=connected")
                     .build();
@@ -48,7 +54,8 @@ public class GoogleCalendarController {
     }
 
     @GetMapping("/staff/{id}/google/status")
-    public ResponseEntity<ApiResponse<GoogleStatusResponse>> getStatus(@PathVariable UUID id) {
+    @RequirePermission({"settings.access", "staff.view", "staff.edit"})
+    public ResponseEntity<ApiResponse<GoogleCalendarStatusResponse>> getStatus(@PathVariable UUID id) {
         Staff staff = staffRepository.findById(id).orElse(null);
         if (staff == null) {
             return ResponseEntity.notFound().build();
@@ -56,24 +63,16 @@ public class GoogleCalendarController {
         boolean connected = staff.isGoogleCalendarConnected();
         String email = connected ? staff.getGoogleCalendarEmail() : null;
         boolean configured = properties.isConfigured();
-        return ResponseEntity.ok(ApiResponse.success(new GoogleStatusResponse(connected, email, configured)));
+
+        return ResponseEntity.ok(ApiResponse.success(new GoogleCalendarStatusResponse(connected, email, configured)));
     }
 
     @DeleteMapping("/staff/{id}/google/disconnect")
+    @RequirePermission({"settings.access", "staff.edit"})
     public ResponseEntity<ApiResponse<Void>> disconnect(@PathVariable UUID id) {
         syncService.disconnect(id);
+        log.info("Google Calendar disconnected via API: staffId={}", id);
+
         return ResponseEntity.ok(ApiResponse.empty());
-    }
-
-    @Data
-    public static class AuthUrlResponse {
-        private final String url;
-    }
-
-    @Data
-    public static class GoogleStatusResponse {
-        private final boolean connected;
-        private final String email;
-        private final boolean configured;
     }
 }

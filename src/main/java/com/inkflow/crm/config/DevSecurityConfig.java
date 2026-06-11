@@ -36,10 +36,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * DEV MODE: Bypasses JWT auth and uses hardcoded user.
- * Active only with 'dev' profile.
- */
+
 @Slf4j
 @Configuration
 @EnableWebSecurity
@@ -47,15 +44,13 @@ import java.util.UUID;
 @Profile("dev")
 public class DevSecurityConfig {
 
-    // ═══════════════════════════════════════════════════════════════════
-    // HARDCODED DEV USER - reads tenant_id from DB on first request
-    // ═══════════════════════════════════════════════════════════════════
+
     public static final UUID DEV_USER_ID = UUID.fromString("aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
 
     @Bean
     public SecurityFilterChain devSecurityFilterChain(HttpSecurity http, DevAuthFilter devAuthFilter) throws Exception {
         log.warn("⚠️  DEV MODE ACTIVE - Security disabled, user: {}", DEV_USER_ID);
-        
+
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -69,9 +64,9 @@ public class DevSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.addAllowedOriginPattern("*");  // Allow ALL origins
-        config.addAllowedMethod("*");          // Allow ALL methods
-        config.addAllowedHeader("*");          // Allow ALL headers
+        config.addAllowedOriginPattern("*");
+        config.addAllowedMethod("*");
+        config.addAllowedHeader("*");
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -91,7 +86,7 @@ public class DevSecurityConfig {
         @Autowired
         private com.inkflow.crm.security.JwtTokenProvider jwtTokenProvider;
 
-        // Lazy-loaded on first request
+
         private volatile UUID tenantId;
         private volatile String email;
         private volatile UserRole role;
@@ -147,7 +142,7 @@ public class DevSecurityConfig {
                                         HttpServletResponse response,
                                         FilterChain filterChain) throws ServletException, IOException {
 
-            // If a real JWT is provided — use it (enables demo/other tenants in dev mode)
+
             String bearerToken = request.getHeader("Authorization");
             if (org.springframework.util.StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
                 String jwt = bearerToken.substring(7);
@@ -178,7 +173,7 @@ public class DevSecurityConfig {
                 }
             }
 
-            // No JWT or invalid — use hardcoded dev user
+
             loadUserIfNeeded();
 
             UserPrincipal devUser = UserPrincipal.builder()

@@ -22,16 +22,16 @@ public class PublicArtistDto {
     private List<String> specialization;
     private String instagram;
     private String calendarColor;
-    
-    // Portfolio - gallery photos
+
+
     private List<String> portfolioImages;
-    
-    // Services this artist provides
+
+
     private List<PublicServiceDto> services;
-    
-    // Schedule summary
+
+
     private List<ScheduleDayDto> schedule;
-    
+
     @Data
     @Builder
     @NoArgsConstructor

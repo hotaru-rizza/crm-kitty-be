@@ -47,7 +47,7 @@ public class AuditLogService {
         }
     }
 
-    /** Convenience: infer context from SecurityUtils */
+
     @Async
     public void logCurrent(String action, String entityType, String entityId, String entityLabel) {
         try {

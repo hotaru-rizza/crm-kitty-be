@@ -33,7 +33,6 @@ public class AppointmentDetailDto {
     private BigDecimal finalPrice;
     private String notes;
     private String sketchImage;
-    private Boolean waiverSigned;
     private String cancellationReason;
     private Instant cancelledAt;
     private List<PhotoDto> photos;

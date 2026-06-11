@@ -1,8 +1,10 @@
 package com.inkflow.crm.module.consumer.controller;
 
-import com.inkflow.crm.module.consumer.dto.PlacementDto;
+import com.inkflow.crm.common.dto.ApiResponse;
+import com.inkflow.crm.common.dto.ApiResponses;
 import com.inkflow.crm.module.consumer.dto.TryOnRequest;
 import com.inkflow.crm.module.consumer.dto.TryOnResponse;
+import com.inkflow.crm.module.consumer.dto.PlacementDto;
 import com.inkflow.crm.module.consumer.service.GeminiTattooService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,25 +20,24 @@ public class TryOnController {
     private final GeminiTattooService geminiService;
 
     @PostMapping
-    public ResponseEntity<TryOnResponse> tryOn(@RequestBody TryOnRequest request) {
+    public ResponseEntity<ApiResponse<TryOnResponse>> tryOn(@RequestBody TryOnRequest request) {
         try {
-            PlacementDto p = request.placement();
-            log.info("Try-on request: placement xNorm={} yNorm={} sizeNorm={} angle={}",
-                    p.xNorm(), p.yNorm(), p.sizeNorm(), p.angle());
+            PlacementDto placement = request.placement();
 
             String resultDataUri = geminiService.generateTattooTryOn(
                     request.bodyImage(),
                     request.sketchImage(),
-                    p.xNorm(), p.yNorm(), p.sizeNorm(), p.angle()
+                    placement.xNorm(), placement.yNorm(), placement.sizeNorm(), placement.angle()
             );
 
-            log.info("Try-on succeeded");
-            return ResponseEntity.ok(TryOnResponse.success(resultDataUri));
+            log.info("Tattoo try-on generated via API: xNorm={} yNorm={} sizeNorm={} angle={}",
+                    placement.xNorm(), placement.yNorm(), placement.sizeNorm(), placement.angle());
+
+            return ApiResponses.ok(TryOnResponse.success(resultDataUri));
 
         } catch (Exception e) {
-            log.error("Try-on generation failed", e);
-            return ResponseEntity.internalServerError()
-                    .body(TryOnResponse.failure(e.getMessage()));
+            log.error("Tattoo try-on generation failed via API", e);
+            return ApiResponses.ok(TryOnResponse.failure(e.getMessage()));
         }
     }
 }

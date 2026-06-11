@@ -2,15 +2,17 @@ package com.inkflow.crm.module.finance;
 
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.module.finance.dto.CategoryConfigDto;
+import com.inkflow.crm.module.finance.dto.CategoryConfigUpsertRequest;
 import com.inkflow.crm.security.RequirePermission;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/finance/categories")
 @RequiredArgsConstructor
@@ -28,32 +30,28 @@ public class CategoryConfigController {
     @RequirePermission("finance.create")
     public ResponseEntity<ApiResponse<CategoryConfigDto>> upsert(
             @PathVariable String key,
-            @RequestBody UpsertRequest req
-    ) {
-        return ResponseEntity.ok(ApiResponse.success(
-                service.upsert(key, req.getLabel(), req.getColor(), req.getPlType())
-        ));
+            @RequestBody CategoryConfigUpsertRequest req) {
+        CategoryConfigDto config = service.upsert(key, req.getLabel(), req.getColor(), req.getPlType());
+        log.info("Category config upserted via API: key={}", key);
+
+        return ResponseEntity.ok(ApiResponse.success(config));
     }
 
     @PostMapping
     @RequirePermission("finance.create")
-    public ResponseEntity<ApiResponse<CategoryConfigDto>> create(@RequestBody UpsertRequest req) {
-        return ResponseEntity.ok(ApiResponse.success(
-                service.create(req.getLabel(), req.getColor(), req.getPlType())
-        ));
+    public ResponseEntity<ApiResponse<CategoryConfigDto>> create(@RequestBody CategoryConfigUpsertRequest req) {
+        CategoryConfigDto config = service.create(req.getLabel(), req.getColor(), req.getPlType());
+        log.info("Category config created via API: label={}", req.getLabel());
+
+        return ResponseEntity.ok(ApiResponse.success(config));
     }
 
     @DeleteMapping("/{id}")
     @RequirePermission("finance.create")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         service.delete(id);
-        return ResponseEntity.ok(ApiResponse.empty());
-    }
+        log.info("Category config deleted via API: id={}", id);
 
-    @Data
-    public static class UpsertRequest {
-        private String label;
-        private String color;
-        private String plType;
+        return ResponseEntity.ok(ApiResponse.empty());
     }
 }

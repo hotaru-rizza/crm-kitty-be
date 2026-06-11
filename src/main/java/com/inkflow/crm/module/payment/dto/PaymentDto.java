@@ -26,20 +26,20 @@ public class PaymentDto {
     private String description;
     private Instant date;
     private String receiptNumber;
-    
-    // Refund info
+
+
     private Boolean isRefunded;
     private BigDecimal refundedAmount;
     private BigDecimal refundableAmount;
     private UUID originalTransactionId;
     private String refundReason;
-    
-    // Staff info
+
+
     private UUID processedById;
     private String processedByName;
-    
-    // Client info (for the appointment)
+
+
     private String clientName;
-    
+
     private Instant createdAt;
 }

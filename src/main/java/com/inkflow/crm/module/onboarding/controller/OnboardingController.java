@@ -30,14 +30,16 @@ public class OnboardingController {
     public ResponseEntity<ApiResponse<OnboardingResponse>> completeOnboarding(
             @Valid @RequestBody OnboardingRequest request,
             HttpServletRequest httpRequest) {
-        
+
         String token = extractToken(httpRequest);
         DecodedJWT jwt = JWT.decode(token);
-        
+
         UUID supabaseUserId = UUID.fromString(jwt.getSubject());
         String email = jwt.getClaim("email").asString();
-        
+
         OnboardingResponse response = onboardingService.completeOnboarding(supabaseUserId, email, request);
+        log.info("Onboarding completed via API: tenantId={} userId={}", response.getTenantId(), response.getUserId());
+
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

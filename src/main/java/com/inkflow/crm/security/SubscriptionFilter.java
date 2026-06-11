@@ -17,12 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Blocks write operations (POST/PUT/PATCH/DELETE) when the tenant's subscription
- * has expired. Returns HTTP 402 with a JSON body explaining why.
- *
- * Exceptions: /subscription/**, /payments/**, /onboarding, /public/**, /actuator/**
- */
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -46,13 +41,13 @@ public class SubscriptionFilter extends OncePerRequestFilter {
         String method = request.getMethod();
         String uri    = request.getRequestURI();
 
-        // Only check write operations
+
         if (!WRITE_METHODS.contains(method)) {
             chain.doFilter(request, response);
             return;
         }
 
-        // Skip exempted endpoints
+
         for (String prefix : ALLOWED_PREFIXES) {
             if (uri.startsWith(prefix)) {
                 chain.doFilter(request, response);
@@ -60,14 +55,14 @@ public class SubscriptionFilter extends OncePerRequestFilter {
             }
         }
 
-        // Skip if not authenticated (JWT filter will handle it)
+
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
             chain.doFilter(request, response);
             return;
         }
 
-        // Check subscription
+
         try {
             UUID tenantId = SecurityUtils.getCurrentTenantId();
             if (tenantId != null && !subscriptionService.isSubscriptionActive(tenantId)) {
@@ -83,7 +78,7 @@ public class SubscriptionFilter extends OncePerRequestFilter {
                 return;
             }
         } catch (Exception e) {
-            // If we can't determine subscription status, let the request through
+
             log.warn("Could not check subscription status: {}", e.getMessage());
         }
 

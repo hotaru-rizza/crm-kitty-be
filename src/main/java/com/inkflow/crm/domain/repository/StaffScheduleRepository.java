@@ -17,7 +17,7 @@ public interface StaffScheduleRepository extends JpaRepository<StaffSchedule, UU
     List<StaffSchedule> findByStaffId(UUID staffId);
     Optional<StaffSchedule> findByStaffIdAndDayOfWeek(UUID staffId, DayOfWeek dayOfWeek);
     List<StaffSchedule> findByStaffIdIn(List<UUID> staffIds);
-    
+
     @Modifying(flushAutomatically = true)
     @Query("DELETE FROM StaffSchedule s WHERE s.staff.id = :staffId")
     void deleteByStaffId(@Param("staffId") UUID staffId);

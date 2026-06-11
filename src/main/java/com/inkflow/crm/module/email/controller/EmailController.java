@@ -1,193 +1,110 @@
 package com.inkflow.crm.module.email.controller;
 
-import com.inkflow.crm.domain.entity.Client;
-import com.inkflow.crm.domain.entity.CompanySettings;
+import com.inkflow.crm.common.dto.ApiResponse;
+import com.inkflow.crm.common.dto.ApiResponses;
 import com.inkflow.crm.domain.enums.EmailType;
-import com.inkflow.crm.domain.repository.ClientRepository;
-import com.inkflow.crm.domain.repository.CompanySettingsRepository;
 import com.inkflow.crm.module.email.dto.EmailLogDto;
 import com.inkflow.crm.module.email.dto.EmailSettingsDto;
 import com.inkflow.crm.module.email.dto.EmailStatsDto;
 import com.inkflow.crm.module.email.dto.EmailTemplateDto;
 import com.inkflow.crm.module.email.dto.SendEmailRequest;
+import com.inkflow.crm.module.email.dto.SendEmailResultDto;
+import com.inkflow.crm.module.email.service.EmailManagementService;
 import com.inkflow.crm.module.email.service.EmailService;
-import com.inkflow.crm.module.email.service.EmailTemplates;
+import com.inkflow.crm.security.RequirePermission;
 import com.inkflow.crm.security.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/emails")
 @RequiredArgsConstructor
 public class EmailController {
 
     private final EmailService emailService;
-    private final ClientRepository clientRepository;
-    private final CompanySettingsRepository companySettingsRepository;
+    private final EmailManagementService emailManagementService;
 
     @GetMapping("/log")
-    public ResponseEntity<Page<EmailLogDto>> getLog(
+    @RequirePermission("emails.view")
+    public ResponseEntity<ApiResponse<List<EmailLogDto>>> getLog(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) EmailType type,
             @RequestParam(required = false) Instant from,
-            @RequestParam(required = false) Instant to
-    ) {
+            @RequestParam(required = false) Instant to) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        return ResponseEntity.ok(emailService.getLog(tenantId, type, from, to, PageRequest.of(page, size)));
+        return ApiResponses.page(emailService.getLog(tenantId, type, from, to, PageRequest.of(page, size)));
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<EmailStatsDto> getStats() {
+    @RequirePermission("emails.view")
+    public ResponseEntity<ApiResponse<EmailStatsDto>> getStats() {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        return ResponseEntity.ok(emailService.getStats(tenantId));
+        return ApiResponses.ok(emailService.getStats(tenantId));
     }
 
     @PostMapping("/send")
-    public ResponseEntity<Map<String, Object>> send(@Valid @RequestBody SendEmailRequest request) {
+    @RequirePermission("emails.send")
+    public ResponseEntity<ApiResponse<SendEmailResultDto>> send(@Valid @RequestBody SendEmailRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<Client> clients = clientRepository.findAllById(request.getClientIds());
+        SendEmailResultDto result = emailManagementService.sendBulk(tenantId, request);
+        log.info("Bulk email sent via API: tenantId={} sent={} skipped={}", tenantId, result.sent(), result.skipped());
 
-        int sent = 0;
-        int skipped = 0;
-
-        for (Client client : clients) {
-            if (!client.getTenantId().equals(tenantId)) continue;
-            if (client.getEmail() == null || client.getEmail().isBlank()) {
-                skipped++;
-                continue;
-            }
-            emailService.sendManual(tenantId, client.getEmail(), client.getFullName(), request.getSubject(), request.getBody());
-            sent++;
-        }
-
-        return ResponseEntity.ok(Map.of("sent", sent, "skipped", skipped));
+        return ApiResponses.ok(result);
     }
 
     @GetMapping("/templates")
-    public ResponseEntity<List<EmailTemplateDto>> getTemplates() {
+    @RequirePermission("emails.manage")
+    public ResponseEntity<ApiResponse<List<EmailTemplateDto>>> getTemplates() {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        CompanySettings settings = companySettingsRepository.findByTenantId(tenantId).orElse(null);
-        Map<String, Map<String, String>> custom = settings != null ? settings.getEmailTemplates() : null;
-
-        List<EmailTemplateDto> result = new ArrayList<>();
-        for (String type : List.of("CONFIRMATION", "REMINDER", "AFTERCARE")) {
-            Map<String, String> defaults = EmailTemplates.getDefaults(type);
-            List<String> defaultFields = EmailTemplates.getDefaultFields(type);
-            Map<String, String> saved = custom != null ? custom.get(type) : null;
-
-            List<String> fields = defaultFields;
-            if (saved != null && saved.containsKey("fields")) {
-                String raw = saved.get("fields");
-                fields = (raw == null || raw.isBlank()) ? List.of() : List.of(raw.split(","));
-            }
-
-            result.add(EmailTemplateDto.builder()
-                    .type(type)
-                    .subject(saved != null && saved.containsKey("subject") ? saved.get("subject") : defaults.get("subject"))
-                    .body(saved != null && saved.containsKey("body") ? saved.get("body") : defaults.get("body"))
-                    .fields(fields)
-                    .build());
-        }
-        return ResponseEntity.ok(result);
+        return ApiResponses.ok(emailManagementService.getTemplates(tenantId));
     }
 
     @PutMapping("/templates/{type}")
-    public ResponseEntity<EmailTemplateDto> updateTemplate(
+    @RequirePermission("emails.manage")
+    public ResponseEntity<ApiResponse<EmailTemplateDto>> updateTemplate(
             @PathVariable String type,
-            @RequestBody EmailTemplateDto dto
-    ) {
+            @RequestBody EmailTemplateDto dto) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        CompanySettings settings = companySettingsRepository.findByTenantId(tenantId)
-                .orElseThrow(() -> new RuntimeException("Settings not found"));
+        EmailTemplateDto updated = emailManagementService.updateTemplate(tenantId, type, dto);
+        log.info("Email template updated via API: tenantId={} type={}", tenantId, type);
 
-        Map<String, Map<String, String>> templates = settings.getEmailTemplates();
-        if (templates == null) templates = new HashMap<>();
-
-        Map<String, String> entry = new HashMap<>();
-        entry.put("subject", dto.getSubject());
-        entry.put("body", dto.getBody());
-        entry.put("fields", dto.getFields() != null ? String.join(",", dto.getFields()) : "");
-        templates.put(type.toUpperCase(), entry);
-        settings.setEmailTemplates(templates);
-        companySettingsRepository.save(settings);
-
-        return ResponseEntity.ok(EmailTemplateDto.builder()
-                .type(type.toUpperCase())
-                .subject(dto.getSubject())
-                .body(dto.getBody())
-                .fields(dto.getFields())
-                .build());
+        return ApiResponses.ok(updated);
     }
 
     @DeleteMapping("/templates/{type}")
-    public ResponseEntity<Void> resetTemplate(@PathVariable String type) {
+    @RequirePermission("emails.manage")
+    public ResponseEntity<ApiResponse<Void>> resetTemplate(@PathVariable String type) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        CompanySettings settings = companySettingsRepository.findByTenantId(tenantId)
-                .orElseThrow(() -> new RuntimeException("Settings not found"));
+        emailManagementService.resetTemplate(tenantId, type);
+        log.info("Email template reset via API: tenantId={} type={}", tenantId, type);
 
-        Map<String, Map<String, String>> templates = settings.getEmailTemplates();
-        if (templates != null) {
-            templates.remove(type.toUpperCase());
-            settings.setEmailTemplates(templates);
-            companySettingsRepository.save(settings);
-        }
-        return ResponseEntity.noContent().build();
+        return ApiResponses.empty();
     }
 
     @GetMapping("/settings")
-    public ResponseEntity<EmailSettingsDto> getEmailSettings() {
+    @RequirePermission("emails.manage")
+    public ResponseEntity<ApiResponse<EmailSettingsDto>> getEmailSettings() {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        CompanySettings settings = companySettingsRepository.findByTenantId(tenantId).orElse(null);
-        if (settings == null) {
-            return ResponseEntity.ok(EmailSettingsDto.builder()
-                    .emailReminders(true)
-                    .emailConfirmations(true)
-                    .emailAftercare(false)
-                    .reminderHoursBefore(24)
-                    .build());
-        }
-        return buildSettingsDto(settings);
+        return ApiResponses.ok(emailManagementService.getEmailSettings(tenantId));
     }
 
     @PatchMapping("/settings")
-    public ResponseEntity<EmailSettingsDto> updateEmailSettings(@RequestBody EmailSettingsDto dto) {
+    @RequirePermission("emails.manage")
+    public ResponseEntity<ApiResponse<EmailSettingsDto>> updateEmailSettings(@RequestBody EmailSettingsDto dto) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        CompanySettings settings = companySettingsRepository.findByTenantId(tenantId)
-                .orElseThrow(() -> new RuntimeException("Settings not found"));
+        EmailSettingsDto updated = emailManagementService.updateEmailSettings(tenantId, dto);
+        log.info("Email settings updated via API: tenantId={}", tenantId);
 
-        settings.setEmailReminders(dto.isEmailReminders());
-        settings.setEmailConfirmations(dto.isEmailConfirmations());
-        settings.setEmailAftercare(dto.isEmailAftercare());
-        settings.setEmailCancellation(dto.isEmailCancellation());
-        settings.setEmailReschedule(dto.isEmailReschedule());
-        settings.setEmailStaffNewAppointment(dto.isEmailStaffNewAppointment());
-        settings.setEmailStaffCancellation(dto.isEmailStaffCancellation());
-        settings.setEmailStaffReschedule(dto.isEmailStaffReschedule());
-        if (dto.getReminderHoursBefore() > 0) settings.setReminderHoursBefore(dto.getReminderHoursBefore());
-
-        settings = companySettingsRepository.save(settings);
-        return buildSettingsDto(settings);
-    }
-
-    private ResponseEntity<EmailSettingsDto> buildSettingsDto(CompanySettings s) {
-        return ResponseEntity.ok(EmailSettingsDto.builder()
-                .emailReminders(s.getEmailReminders())
-                .emailConfirmations(s.getEmailConfirmations())
-                .emailAftercare(s.getEmailAftercare())
-                .emailCancellation(Boolean.TRUE.equals(s.getEmailCancellation()))
-                .emailReschedule(Boolean.TRUE.equals(s.getEmailReschedule()))
-                .emailStaffNewAppointment(Boolean.TRUE.equals(s.getEmailStaffNewAppointment()))
-                .emailStaffCancellation(Boolean.TRUE.equals(s.getEmailStaffCancellation()))
-                .emailStaffReschedule(Boolean.TRUE.equals(s.getEmailStaffReschedule()))
-                .reminderHoursBefore(s.getReminderHoursBefore())
-                .build());
+        return ApiResponses.ok(updated);
     }
 }

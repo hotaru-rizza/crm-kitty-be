@@ -5,9 +5,11 @@ import com.inkflow.crm.module.subscription.dto.SubscriptionCheckoutResponse;
 import com.inkflow.crm.module.subscription.dto.SubscriptionDto;
 import com.inkflow.crm.module.subscription.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/subscription")
 @RequiredArgsConstructor
@@ -22,6 +24,9 @@ public class SubscriptionController {
 
     @PostMapping("/checkout")
     public ResponseEntity<ApiResponse<SubscriptionCheckoutResponse>> checkout() {
-        return ResponseEntity.ok(ApiResponse.success(subscriptionService.createCheckout()));
+        SubscriptionCheckoutResponse checkout = subscriptionService.createCheckout();
+        log.info("Subscription checkout created via API: pageUrl={}", checkout.getPageUrl());
+
+        return ResponseEntity.ok(ApiResponse.success(checkout));
     }
 }

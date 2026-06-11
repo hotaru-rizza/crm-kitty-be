@@ -16,10 +16,10 @@ public class PublicServiceDto {
     private UUID id;
     private String title;
     private String description;
-    private String pricingType; // fixed, hourly, from
+    private String pricingType;
     private BigDecimal price;
-    private BigDecimal priceFrom; // for "from" pricing
+    private BigDecimal priceFrom;
     private BigDecimal priceTo;
-    private Integer duration; // minutes
+    private Integer duration;
     private String color;
 }

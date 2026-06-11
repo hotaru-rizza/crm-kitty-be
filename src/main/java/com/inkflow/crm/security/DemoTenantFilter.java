@@ -17,10 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Blocks all write operations for the demo tenant.
- * GET requests pass through — the user can browse everything but cannot modify data.
- */
+
 @Slf4j
 @Component
 @RequiredArgsConstructor

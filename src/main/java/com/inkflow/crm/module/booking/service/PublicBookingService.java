@@ -49,7 +49,7 @@ public class PublicBookingService {
         CompanySettings settings = companySettingsRepository.findByTenantId(tenant.getId())
                 .orElse(null);
 
-        // Count artists and services
+
         long artistsCount = staffRepository.countByTenantIdAndStatusAndDeletedAtIsNull(
                 tenant.getId(), StaffStatus.WORKING);
         long servicesCount = serviceRepository.countByTenantIdAndIsActiveTrueAndDeletedAtIsNull(
@@ -59,10 +59,10 @@ public class PublicBookingService {
                 .id(tenant.getId())
                 .name(tenant.getName())
                 .subdomain(tenant.getSubdomain())
-                .description(null) // TODO: Add to Tenant entity
-                .logoUrl(null)     // TODO: Add to Tenant entity
-                .coverUrl(null)    // TODO: Add to Tenant entity
-                .phone(null)       // TODO: Get from settings or location
+                .description(null)
+                .logoUrl(null)
+                .coverUrl(null)
+                .phone(null)
                 .email(null)
                 .instagram(null)
                 .address(null)
@@ -85,7 +85,7 @@ public class PublicBookingService {
                 tenant.getId(), StaffStatus.WORKING);
 
         return artists.stream()
-                .filter(artist -> artist.getRole() != UserRole.ADMIN) // Only show artists, not admins
+                .filter(artist -> artist.getRole() != UserRole.ADMIN)
                 .map(this::mapToPublicArtistDto)
                 .collect(Collectors.toList());
     }
@@ -104,7 +104,7 @@ public class PublicBookingService {
     public List<PublicServiceDto> getServicesBySubdomain(String subdomain) {
         Tenant tenant = getTenantBySubdomain(subdomain);
 
-        List<com.inkflow.crm.domain.entity.Service> services = 
+        List<com.inkflow.crm.domain.entity.Service> services =
                 serviceRepository.findByTenantIdAndIsActiveTrueAndDeletedAtIsNull(tenant.getId());
 
         return services.stream()
@@ -119,9 +119,8 @@ public class PublicBookingService {
         Staff artist = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(artistId, tenant.getId())
                 .orElseThrow(() -> ResourceNotFoundException.staff(artistId.toString()));
 
-        // Get all active services for this tenant
-        // In future, can filter by artist-specific services
-        List<com.inkflow.crm.domain.entity.Service> services = 
+
+        List<com.inkflow.crm.domain.entity.Service> services =
                 serviceRepository.findByTenantIdAndIsActiveTrueAndDeletedAtIsNull(tenant.getId());
 
         return services.stream()
@@ -137,14 +136,14 @@ public class PublicBookingService {
         Staff artist = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(artistId, tenant.getId())
                 .orElseThrow(() -> ResourceNotFoundException.staff(artistId.toString()));
 
-        com.inkflow.crm.domain.entity.Service service = 
+        com.inkflow.crm.domain.entity.Service service =
                 serviceRepository.findByIdAndTenantIdAndDeletedAtIsNull(serviceId, tenant.getId())
                 .orElseThrow(() -> ResourceNotFoundException.service(serviceId.toString()));
 
         CompanySettings settings = companySettingsRepository.findByTenantId(tenant.getId())
                 .orElse(null);
 
-        // Validate date range
+
         LocalDate today = LocalDate.now(UKRAINE_ZONE);
         int minAdvanceHours = settings != null ? settings.getMinAdvanceHours() : 24;
         int maxAdvanceDays = settings != null ? settings.getMaxAdvanceDays() : 60;
@@ -155,24 +154,24 @@ public class PublicBookingService {
         if (fromDate.isBefore(minDate)) fromDate = minDate;
         if (toDate.isAfter(maxDate)) toDate = maxDate;
 
-        // Get artist schedule
+
         Set<StaffSchedule> schedules = artist.getSchedules();
         Map<com.inkflow.crm.domain.enums.DayOfWeek, StaffSchedule> scheduleMap = schedules.stream()
                 .collect(Collectors.toMap(StaffSchedule::getDayOfWeek, s -> s));
 
-        // Get existing appointments for artist in date range
+
         Instant fromInstant = fromDate.atStartOfDay(UKRAINE_ZONE).toInstant();
         Instant toInstant = toDate.plusDays(1).atStartOfDay(UKRAINE_ZONE).toInstant();
-        
+
         List<Appointment> existingAppointments = appointmentRepository
                 .findByArtistIdAndStartTimeBetweenAndStatusNotAndDeletedAtIsNull(
                         artistId, fromInstant, toInstant, AppointmentStatus.CANCELLED);
 
-        // Get approved leaves for the date range
+
         List<LeaveRequest> approvedLeaves = leaveRequestRepository.findOverlappingLeaves(
                 tenant.getId(), artistId, fromDate, toDate);
 
-        // Build slots for each day
+
         List<TimeSlotDto> result = new ArrayList<>();
         int serviceDuration = service.getDuration();
         LocalTime defaultStart = settings != null ? settings.getWorkingHoursStart() : LocalTime.of(10, 0);
@@ -183,7 +182,7 @@ public class PublicBookingService {
             com.inkflow.crm.domain.enums.DayOfWeek dow = com.inkflow.crm.domain.enums.DayOfWeek.fromJavaDayOfWeek(javaDow);
             StaffSchedule daySchedule = scheduleMap.get(dow);
 
-            // Check if artist is on approved leave this day
+
             final LocalDate checkDate = date;
             boolean isOnLeave = approvedLeaves.stream()
                     .anyMatch(leave -> leave.coversDate(checkDate));
@@ -202,32 +201,32 @@ public class PublicBookingService {
                 LocalTime start = daySchedule.getStartTime() != null ? daySchedule.getStartTime() : defaultStart;
                 LocalTime end = daySchedule.getEndTime() != null ? daySchedule.getEndTime() : defaultEnd;
 
-                // Generate slots
+
                 LocalTime slotStart = start;
                 final LocalDate currentDate = date;
-                
+
                 while (slotStart.plusMinutes(serviceDuration).compareTo(end) <= 0) {
                     LocalTime slotEnd = slotStart.plusMinutes(serviceDuration);
 
-                    // Check if slot is available (no overlapping appointments)
+
                     final LocalTime checkStart = slotStart;
                     final LocalTime checkEnd = slotEnd;
-                    
+
                     boolean isBooked = existingAppointments.stream()
                             .anyMatch(apt -> {
                                 LocalDateTime aptStart = apt.getStartTime().atZone(UKRAINE_ZONE).toLocalDateTime();
                                 LocalDateTime aptEnd = apt.getEndTime().atZone(UKRAINE_ZONE).toLocalDateTime();
-                                
+
                                 if (!aptStart.toLocalDate().equals(currentDate)) return false;
-                                
+
                                 LocalTime aptStartTime = aptStart.toLocalTime();
                                 LocalTime aptEndTime = aptEnd.toLocalTime();
-                                
-                                // Check overlap
+
+
                                 return checkStart.isBefore(aptEndTime) && checkEnd.isAfter(aptStartTime);
                             });
 
-                    // Check if slot is in the past
+
                     boolean isInPast = false;
                     if (currentDate.equals(today)) {
                         LocalTime now = LocalTime.now(UKRAINE_ZONE);
@@ -242,7 +241,7 @@ public class PublicBookingService {
                             .isAvailable(!isBooked && !isInPast)
                             .build());
 
-                    slotStart = slotStart.plusMinutes(30); // 30-minute intervals
+                    slotStart = slotStart.plusMinutes(30);
                 }
             }
 
@@ -256,20 +255,20 @@ public class PublicBookingService {
     public UUID createBooking(String subdomain, CreateBookingRequest request) {
         Tenant tenant = getTenantBySubdomain(subdomain);
 
-        // Validate artist
+
         Staff artist = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getArtistId(), tenant.getId())
                 .orElseThrow(() -> ResourceNotFoundException.staff(request.getArtistId().toString()));
 
-        // Validate service
-        com.inkflow.crm.domain.entity.Service service = 
+
+        com.inkflow.crm.domain.entity.Service service =
                 serviceRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getServiceId(), tenant.getId())
                 .orElseThrow(() -> ResourceNotFoundException.service(request.getServiceId().toString()));
 
-        // Get location (use first active location)
+
         Location location = locationRepository.findFirstByTenantIdAndIsActiveTrueAndDeletedAtIsNull(tenant.getId())
                 .orElseThrow(() -> new BusinessRuleException("No active location found"));
 
-        // Check if slot is still available
+
         LocalDateTime startDateTime = LocalDateTime.of(request.getDate(), request.getStartTime());
         LocalDateTime endDateTime = startDateTime.plusMinutes(service.getDuration());
 
@@ -283,7 +282,7 @@ public class PublicBookingService {
             throw new BusinessRuleException("This time slot is no longer available. Please choose another time.");
         }
 
-        // Create a Request (not Appointment) - to be confirmed by salon
+
         Request bookingRequest = Request.builder()
                 .tenantId(tenant.getId())
                 .source(RequestSource.WEBSITE)
@@ -298,13 +297,13 @@ public class PublicBookingService {
 
         bookingRequest = requestRepository.save(bookingRequest);
 
-        log.info("New booking request created: {} for salon {} from {}", 
+        log.info("New booking request created: {} for salon {} from {}",
                 bookingRequest.getId(), tenant.getName(), request.getClientName());
 
         return bookingRequest.getId();
     }
 
-    private String buildBookingMessage(CreateBookingRequest request, Staff artist, 
+    private String buildBookingMessage(CreateBookingRequest request, Staff artist,
                                        com.inkflow.crm.domain.entity.Service service,
                                        LocalDateTime dateTime) {
         StringBuilder sb = new StringBuilder();
@@ -313,11 +312,11 @@ public class PublicBookingService {
         sb.append("Послуга: ").append(service.getTitle()).append("\n");
         sb.append("Дата: ").append(dateTime.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))).append("\n");
         sb.append("Час: ").append(dateTime.format(DateTimeFormatter.ofPattern("HH:mm"))).append("\n");
-        
+
         if (request.getMessage() != null && !request.getMessage().isEmpty()) {
             sb.append("\nПобажання: ").append(request.getMessage());
         }
-        
+
         return sb.toString();
     }
 
@@ -330,7 +329,7 @@ public class PublicBookingService {
 
     private PublicArtistDto mapToPublicArtistDto(Staff artist) {
         List<PublicArtistDto.ScheduleDayDto> schedule = new ArrayList<>();
-        
+
         if (artist.getSchedules() != null) {
             for (StaffSchedule s : artist.getSchedules()) {
                 schedule.add(PublicArtistDto.ScheduleDayDto.builder()
@@ -353,8 +352,8 @@ public class PublicBookingService {
                 .specialization(new ArrayList<>(artist.getSpecialization()))
                 .instagram(artist.getInstagram())
                 .calendarColor(artist.getCalendarColor())
-                .portfolioImages(new ArrayList<>()) // TODO: Get from gallery
-                .services(new ArrayList<>()) // Will be fetched separately
+                .portfolioImages(new ArrayList<>())
+                .services(new ArrayList<>())
                 .schedule(schedule)
                 .build();
     }
@@ -366,7 +365,7 @@ public class PublicBookingService {
                 .description(service.getDescription())
                 .pricingType(service.getPricingType().getValue())
                 .price(service.getPrice())
-                .priceFrom(service.getPrice()) // TODO: Add price range support
+                .priceFrom(service.getPrice())
                 .priceTo(null)
                 .duration(service.getDuration())
                 .color(service.getColor())
@@ -375,14 +374,14 @@ public class PublicBookingService {
 
     private PublicServiceDto mapToPublicServiceDtoForArtist(
             com.inkflow.crm.domain.entity.Service service, Staff artist) {
-        // Check for artist-specific pricing
+
         BigDecimal price = service.getPrice();
-        
+
         if (service.getArtistPricings() != null) {
             Optional<ArtistServicePricing> artistPricing = service.getArtistPricings().stream()
                     .filter(p -> p.getStaff().getId().equals(artist.getId()))
                     .findFirst();
-            
+
             if (artistPricing.isPresent()) {
                 price = artistPricing.get().getPrice();
             }

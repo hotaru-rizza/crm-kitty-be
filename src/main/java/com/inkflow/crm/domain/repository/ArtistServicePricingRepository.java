@@ -13,7 +13,7 @@ import java.util.UUID;
 public interface ArtistServicePricingRepository extends JpaRepository<ArtistServicePricing, UUID> {
     List<ArtistServicePricing> findByStaffId(UUID staffId);
     Optional<ArtistServicePricing> findByStaffIdAndServiceId(UUID staffId, UUID serviceId);
-    
+
     @Modifying
     void deleteByStaffId(UUID staffId);
 }

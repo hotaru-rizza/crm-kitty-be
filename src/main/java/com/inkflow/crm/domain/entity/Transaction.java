@@ -77,7 +77,7 @@ public class Transaction extends BaseEntity {
     @Column(name = "tip_amount", precision = 10, scale = 2)
     private BigDecimal tipAmount;
 
-    // Refund tracking
+
     @Column(name = "original_transaction_id")
     private UUID originalTransactionId;
 
@@ -92,7 +92,7 @@ public class Transaction extends BaseEntity {
     @Builder.Default
     private Boolean isRefunded = false;
 
-    // Receipt number for tracking
+
     @Column(name = "receipt_number", unique = true)
     private String receiptNumber;
 

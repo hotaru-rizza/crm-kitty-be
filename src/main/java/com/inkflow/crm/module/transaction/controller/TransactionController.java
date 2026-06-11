@@ -8,6 +8,7 @@ import com.inkflow.crm.module.transaction.service.TransactionService;
 import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/transactions")
 @RequiredArgsConstructor
@@ -46,11 +48,6 @@ public class TransactionController {
         return ResponseEntity.ok(ApiResponse.success(transaction));
     }
 
-    /**
-     * Get finance stats. Supports either:
-     * - period: "month", "week", "year" (calculates from/to automatically)
-     * - from/to: explicit date range
-     */
     @GetMapping("/stats")
     @RequirePermission("finance.view")
     public ResponseEntity<ApiResponse<FinanceStatsDto>> getFinanceStats(
@@ -94,12 +91,16 @@ public class TransactionController {
     @RequirePermission("finance.create")
     public ResponseEntity<ApiResponse<TransactionDto>> createTransaction(@Valid @RequestBody CreateTransactionRequest request) {
         TransactionDto transaction = transactionService.createTransaction(request);
+        log.info("Transaction created via API: transactionId={} type={}", transaction.getId(), transaction.getType());
+
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(transaction));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteTransaction(@PathVariable UUID id) {
         transactionService.deleteTransaction(id);
+        log.info("Transaction deleted via API: transactionId={}", id);
+
         return ResponseEntity.ok(ApiResponse.empty());
     }
 }

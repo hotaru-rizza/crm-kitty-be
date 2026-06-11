@@ -27,7 +27,6 @@ public class AppointmentDto {
     private String status;
     private BigDecimal price;
     private BigDecimal finalPrice;
-    private Boolean waiverSigned;
     private String sketchImage;
     private Instant createdAt;
 

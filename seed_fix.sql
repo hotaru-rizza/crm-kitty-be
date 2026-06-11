@@ -63,7 +63,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Fix: appointments that reference projects (now projects exist)
 INSERT INTO appointments (id, tenant_id, client_id, artist_id, service_id, location_id, project_id,
                           start_time, end_time, status, price, prepayment, discount, final_price,
-                          notes, waiver_signed, created_at, updated_at)
+                          notes, created_at, updated_at)
 VALUES
     ('aa000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001',
      'e0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000002',
@@ -72,7 +72,7 @@ VALUES
      NOW() - INTERVAL '90 days' + INTERVAL '11 hours',
      NOW() - INTERVAL '90 days' + INTERVAL '13 hours',
      'DONE', 2500.00, 500.00, 0.00, 2500.00,
-     'Фінлайн папороть. Все пройшло чудово.', true, NOW() - INTERVAL '95 days', NOW()),
+     'Фінлайн папороть. Все пройшло чудово.', NOW() - INTERVAL '95 days', NOW()),
 
     ('aa000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001',
      'e0000000-0000-0000-0000-000000000003', 'c0000000-0000-0000-0000-000000000001',
@@ -81,7 +81,7 @@ VALUES
      NOW() - INTERVAL '60 days' + INTERVAL '10 hours',
      NOW() - INTERVAL '60 days' + INTERVAL '14 hours',
      'DONE', 4500.00, 1000.00, 500.00, 4000.00,
-     'Сеанс 2 рукаву. Кольорова заливка.', true, NOW() - INTERVAL '65 days', NOW()),
+     'Сеанс 2 рукаву. Кольорова заливка.', NOW() - INTERVAL '65 days', NOW()),
 
     ('aa000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001',
      'e0000000-0000-0000-0000-000000000009', 'c0000000-0000-0000-0000-000000000002',
@@ -90,7 +90,7 @@ VALUES
      NOW() - INTERVAL '45 days' + INTERVAL '12 hours',
      NOW() - INTERVAL '45 days' + INTERVAL '16 hours',
      'DONE', 4500.00, 1000.00, 0.00, 4500.00,
-     'Акварельний орел — фон.', true, NOW() - INTERVAL '50 days', NOW()),
+     'Акварельний орел — фон.', NOW() - INTERVAL '50 days', NOW()),
 
     ('aa000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000001',
      'e0000000-0000-0000-0000-000000000008', 'c0000000-0000-0000-0000-000000000004',
@@ -99,7 +99,7 @@ VALUES
      NOW() - INTERVAL '30 days' + INTERVAL '14 hours',
      NOW() - INTERVAL '30 days' + INTERVAL '16 hours',
      'DONE', 2500.00, 500.00, 0.00, 2500.00,
-     'Dot-work зірки. Клієнт дуже задоволений.', true, NOW() - INTERVAL '32 days', NOW()),
+     'Dot-work зірки. Клієнт дуже задоволений.', NOW() - INTERVAL '32 days', NOW()),
 
     ('aa000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000001',
      'e0000000-0000-0000-0000-000000000011', 'c0000000-0000-0000-0000-000000000003',
@@ -108,7 +108,7 @@ VALUES
      NOW() - INTERVAL '20 days' + INTERVAL '11 hours',
      NOW() - INTERVAL '20 days' + INTERVAL '13 hours',
      'DONE', 2500.00, 0.00, 0.00, 2500.00,
-     'Портрет кота в реалізмі.', false, NOW() - INTERVAL '22 days', NOW()),
+     'Портрет кота в реалізмі.', NOW() - INTERVAL '22 days', NOW()),
 
     ('aa000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000001',
      'e0000000-0000-0000-0000-000000000007', 'c0000000-0000-0000-0000-000000000002',
@@ -117,7 +117,7 @@ VALUES
      NOW() - INTERVAL '15 days' + INTERVAL '13 hours',
      NOW() - INTERVAL '15 days' + INTERVAL '15 hours',
      'CANCELLED', 2500.00, 500.00, 0.00, 2500.00,
-     NULL, false, NOW() - INTERVAL '20 days', NOW()),
+     NULL, NOW() - INTERVAL '20 days', NOW()),
 
     ('aa000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000001',
      'e0000000-0000-0000-0000-000000000002', 'c0000000-0000-0000-0000-000000000003',
@@ -126,7 +126,7 @@ VALUES
      NOW() + INTERVAL '1 day' + INTERVAL '11 hours',
      NOW() + INTERVAL '1 day' + INTERVAL '15 hours',
      'CONFIRMED', 4500.00, 1000.00, 0.00, 4500.00,
-     'Портрет. Принесе референс у день сеансу.', false, NOW() - INTERVAL '10 days', NOW()),
+     'Портрет. Принесе референс у день сеансу.', NOW() - INTERVAL '10 days', NOW()),
 
     ('aa000000-0000-0000-0000-000000000008', 'a0000000-0000-0000-0000-000000000001',
      'e0000000-0000-0000-0000-000000000004', 'c0000000-0000-0000-0000-000000000001',
@@ -135,7 +135,7 @@ VALUES
      NOW() + INTERVAL '2 days' + INTERVAL '14 hours',
      NOW() + INTERVAL '2 days' + INTERVAL '16 hours',
      'CONFIRMED', 2500.00, 500.00, 0.00, 2500.00,
-     'Перше тату.', false, NOW() - INTERVAL '5 days', NOW()),
+     'Перше тату.', NOW() - INTERVAL '5 days', NOW()),
 
     ('aa000000-0000-0000-0000-000000000009', 'a0000000-0000-0000-0000-000000000001',
      'e0000000-0000-0000-0000-000000000003', 'c0000000-0000-0000-0000-000000000001',
@@ -144,7 +144,7 @@ VALUES
      NOW() + INTERVAL '3 days' + INTERVAL '10 hours',
      NOW() + INTERVAL '3 days' + INTERVAL '14 hours',
      'CONFIRMED', 4500.00, 1000.00, 500.00, 4000.00,
-     'Сеанс 3 рукаву.', false, NOW() - INTERVAL '7 days', NOW()),
+     'Сеанс 3 рукаву.', NOW() - INTERVAL '7 days', NOW()),
 
     ('aa000000-0000-0000-0000-000000000010', 'a0000000-0000-0000-0000-000000000001',
      'e0000000-0000-0000-0000-000000000005', 'c0000000-0000-0000-0000-000000000002',
@@ -153,7 +153,7 @@ VALUES
      NOW() + INTERVAL '5 days' + INTERVAL '15 hours',
      NOW() + INTERVAL '5 days' + INTERVAL '17 hours',
      'NEW', 2500.00, 500.00, 0.00, 2500.00,
-     'Перше тату, невеликий квіт на зап''ясті.', false, NOW() - INTERVAL '2 days', NOW()),
+     'Перше тату, невеликий квіт на зап''ясті.', NOW() - INTERVAL '2 days', NOW()),
 
     ('aa000000-0000-0000-0000-000000000011', 'a0000000-0000-0000-0000-000000000001',
      'e0000000-0000-0000-0000-000000000006', 'c0000000-0000-0000-0000-000000000004',
@@ -162,7 +162,7 @@ VALUES
      NOW() + INTERVAL '6 days' + INTERVAL '12 hours',
      NOW() + INTERVAL '6 days' + INTERVAL '16 hours',
      'NEW', 4500.00, 0.00, 0.00, 4500.00,
-     NULL, false, NOW() - INTERVAL '1 day', NOW()),
+     NULL, NOW() - INTERVAL '1 day', NOW()),
 
     ('aa000000-0000-0000-0000-000000000012', 'a0000000-0000-0000-0000-000000000001',
      'e0000000-0000-0000-0000-000000000012', 'c0000000-0000-0000-0000-000000000003',
@@ -171,7 +171,7 @@ VALUES
      NOW() + INTERVAL '8 days' + INTERVAL '11 hours',
      NOW() + INTERVAL '8 days' + INTERVAL '15 hours',
      'NEW', 4500.00, 1000.00, 0.00, 4500.00,
-     'Портрет. Стиль реалізм. Ескіз погоджено.', false, NOW(), NOW())
+     'Портрет. Стиль реалізм. Ескіз погоджено.', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Fix: transactions (category, type, date, location_id, is_refunded required)

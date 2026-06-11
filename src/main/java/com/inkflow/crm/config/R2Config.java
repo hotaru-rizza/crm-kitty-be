@@ -31,7 +31,7 @@ public class R2Config {
                                 r2Properties.getSecretAccessKey()
                         )
                 ))
-                .region(Region.US_EAST_1) // required by SDK, R2 ignores it
+                .region(Region.US_EAST_1)
                 .build();
     }
 

@@ -25,17 +25,17 @@ public class ProcessPaymentRequest {
     private BigDecimal amount;
 
     @NotBlank(message = "Payment method is required")
-    private String paymentMethod; // cash, card, split
+    private String paymentMethod;
 
-    private String paymentType; // deposit, service_payment - defaults to service_payment
+    private String paymentType;
 
-    // For split payments
+
     private BigDecimal cashAmount;
     private BigDecimal cardAmount;
 
-    // Optional tip
+
     private BigDecimal tipAmount;
 
-    // Optional description/note
+
     private String description;
 }

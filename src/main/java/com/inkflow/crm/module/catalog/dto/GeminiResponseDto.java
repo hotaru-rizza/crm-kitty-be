@@ -15,10 +15,32 @@ public record GeminiResponseDto(List<Candidate> candidates, Error error) {
     public record Content(List<Part> parts) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Part(String text, @JsonProperty("inline_data") InlineData inlineData) {}
+    public record Part(
+            String text,
+            @JsonProperty("inline_data") InlineData inlineDataSnake,
+            @JsonProperty("inlineData") InlineData inlineDataCamel
+    ) {
+        public InlineData resolvedInlineData() {
+            return inlineDataSnake != null ? inlineDataSnake : inlineDataCamel;
+        }
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record InlineData(@JsonProperty("mime_type") String mimeType, String data) {}
+    public record InlineData(
+            @JsonProperty("mime_type") String mimeTypeSnake,
+            @JsonProperty("mimeType") String mimeTypeCamel,
+            String data
+    ) {
+        public String resolvedMimeType() {
+            if (mimeTypeSnake != null && !mimeTypeSnake.isBlank()) {
+                return mimeTypeSnake;
+            }
+            if (mimeTypeCamel != null && !mimeTypeCamel.isBlank()) {
+                return mimeTypeCamel;
+            }
+            return "image/png";
+        }
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Error(String message) {}

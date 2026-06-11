@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 public class UpdateLeaveStatusRequest {
 
     @NotNull(message = "Status is required")
-    private String status; // APPROVED or REJECTED
+    private String status;
 
     private String notes;
 }

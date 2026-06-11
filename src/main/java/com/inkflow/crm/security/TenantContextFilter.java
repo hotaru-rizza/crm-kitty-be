@@ -49,11 +49,11 @@ public class TenantContextFilter extends OncePerRequestFilter {
                 try {
                     UUID locationId = UUID.fromString(locationHeader);
                     UserPrincipal user = SecurityUtils.getCurrentUser();
-                    
+
                     if (user != null && !user.hasAccessToLocation(locationId)) {
                         throw AccessDeniedException.locationAccessDenied();
                     }
-                    
+
                     TenantContext.setCurrentLocation(locationId);
                 } catch (IllegalArgumentException e) {
                     log.warn("Invalid location ID in header: {}", locationHeader);

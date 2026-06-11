@@ -23,7 +23,7 @@ public class BusinessRuleException extends ApiException {
     }
 
     public static BusinessRuleException invalidStatusTransition(String from, String to) {
-        return new BusinessRuleException(ErrorCode.INVALID_STATUS_TRANSITION, 
+        return new BusinessRuleException(ErrorCode.INVALID_STATUS_TRANSITION,
                 String.format("Cannot transition from '%s' to '%s'", from, to));
     }
 }

@@ -24,17 +24,17 @@ public class PublicSalonDto {
     private String instagram;
     private String address;
     private String city;
-    
-    // Working hours
+
+
     private String workingHoursStart;
     private String workingHoursEnd;
-    
-    // Settings
+
+
     private Boolean allowOnlineBooking;
     private Integer minAdvanceHours;
     private Integer maxAdvanceDays;
-    
-    // Statistics (optional)
+
+
     private Integer artistsCount;
     private Integer servicesCount;
 }

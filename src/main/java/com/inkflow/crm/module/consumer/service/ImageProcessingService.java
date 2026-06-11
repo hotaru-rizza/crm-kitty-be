@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.consumer.service;
 
+import com.inkflow.crm.module.consumer.dto.ProcessedImagesDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -22,15 +23,7 @@ public class ImageProcessingService {
         System.setProperty("java.awt.headless", "true");
     }
 
-    public record ProcessedImages(
-            String compositeDataUri,
-            String maskDataUri,
-            String originalBodyDataUri,
-            int width,
-            int height
-    ) {}
-
-    public ProcessedImages prepareImages(
+    public ProcessedImagesDto prepareImages(
             String bodyImageSrc,
             String sketchImageSrc,
             double xNorm, double yNorm,
@@ -53,7 +46,7 @@ public class ImageProcessingService {
         BufferedImage composite = compositeMultiply(body, sketchClean, tattooX, tattooY, tattooSize, angleDeg);
         BufferedImage mask = generateMask(w, h, tattooX, tattooY, tattooSize, angleDeg);
 
-        return new ProcessedImages(
+        return new ProcessedImagesDto(
                 toJpegDataUri(composite),
                 toPngDataUri(mask),
                 toJpegDataUri(body),

@@ -5,8 +5,10 @@ import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.module.location.dto.*;
 import com.inkflow.crm.module.location.service.LocationService;
+import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/locations")
 @RequiredArgsConstructor
@@ -22,38 +25,56 @@ public class LocationController {
     private final LocationService locationService;
 
     @GetMapping
+    @RequirePermission({"locations.view", "settings.access"})
     public ResponseEntity<ApiResponse<List<LocationDto>>> getAllLocations(@ModelAttribute PageRequest pageRequest) {
         PageResult<LocationDto> result = locationService.getAllLocations(pageRequest);
         return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
     @GetMapping("/{id}")
+    @RequirePermission({"locations.view", "settings.access"})
     public ResponseEntity<ApiResponse<LocationDetailDto>> getLocation(@PathVariable UUID id) {
         LocationDetailDto location = locationService.getLocationById(id);
         return ResponseEntity.ok(ApiResponse.success(location));
     }
 
     @PostMapping
+    @RequirePermission("locations.edit")
     public ResponseEntity<ApiResponse<LocationDto>> createLocation(@Valid @RequestBody CreateLocationRequest request) {
         LocationDto location = locationService.createLocation(request);
+        log.info("Location created via API: locationId={}", location.getId());
+
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(location));
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<ApiResponse<LocationDto>> updateLocation(@PathVariable UUID id, @Valid @RequestBody UpdateLocationRequest request) {
+    @RequirePermission("locations.edit")
+    public ResponseEntity<ApiResponse<LocationDto>> updateLocation(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateLocationRequest request) {
         LocationDto location = locationService.updateLocation(id, request);
+        log.info("Location updated via API: locationId={}", id);
+
         return ResponseEntity.ok(ApiResponse.success(location));
     }
 
     @DeleteMapping("/{id}")
+    @RequirePermission("locations.edit")
     public ResponseEntity<ApiResponse<Void>> deleteLocation(@PathVariable UUID id) {
         locationService.deleteLocation(id);
+        log.info("Location deleted via API: locationId={}", id);
+
         return ResponseEntity.ok(ApiResponse.empty());
     }
 
     @PostMapping("/{id}/staff")
-    public ResponseEntity<ApiResponse<Void>> assignStaff(@PathVariable UUID id, @Valid @RequestBody AssignStaffRequest request) {
+    @RequirePermission("locations.edit")
+    public ResponseEntity<ApiResponse<Void>> assignStaff(
+            @PathVariable UUID id,
+            @Valid @RequestBody AssignStaffRequest request) {
         locationService.assignStaff(id, request);
+        log.info("Location staff assigned via API: locationId={} count={}", id, request.getStaffIds().size());
+
         return ResponseEntity.ok(ApiResponse.empty());
     }
 }

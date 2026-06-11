@@ -35,7 +35,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     Optional<Appointment> findByIdAndDeletedAtIsNull(UUID id);
 
-    Optional<Appointment> findByConsentTokenAndDeletedAtIsNull(String consentToken);
 
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     @Query("SELECT a FROM Appointment a WHERE a.tenantId = :tenantId AND a.startTime >= :from AND a.startTime < :to AND a.deletedAt IS NULL ORDER BY a.startTime")
@@ -65,13 +64,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
     Page<Appointment> findAll(Specification<Appointment> spec, Pageable pageable);
 
     List<Appointment> findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(UUID artistId, List<AppointmentStatus> statuses, Instant after);
-    
+
     long countByTenantIdAndLocationIdAndStartTimeBetweenAndDeletedAtIsNull(UUID tenantId, UUID locationId, Instant from, Instant to);
 
     @Query("SELECT a FROM Appointment a WHERE a.artist.id = :artistId AND a.startTime >= :from AND a.startTime < :to AND a.status != :excludeStatus AND a.deletedAt IS NULL")
     List<Appointment> findByArtistIdAndStartTimeBetweenAndStatusNotAndDeletedAtIsNull(
-            @Param("artistId") UUID artistId, 
-            @Param("from") Instant from, 
+            @Param("artistId") UUID artistId,
+            @Param("from") Instant from,
             @Param("to") Instant to,
             @Param("excludeStatus") AppointmentStatus excludeStatus);
 

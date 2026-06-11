@@ -64,9 +64,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * Chain 2: CRM panel + all other public routes.
-     */
+
     @Bean
     @Order(2)
     public SecurityFilterChain crmFilterChain(HttpSecurity http) throws Exception {

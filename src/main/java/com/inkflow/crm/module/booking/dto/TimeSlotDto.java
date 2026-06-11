@@ -17,9 +17,9 @@ public class TimeSlotDto {
     private LocalDate date;
     private String dayOfWeek;
     private String dayName;
-    private Boolean isAvailable; // Artist works this day
+    private Boolean isAvailable;
     private List<Slot> slots;
-    
+
     @Data
     @Builder
     @NoArgsConstructor
@@ -27,8 +27,8 @@ public class TimeSlotDto {
     public static class Slot {
         private LocalTime startTime;
         private LocalTime endTime;
-        private String startTimeFormatted; // "10:00"
-        private String endTimeFormatted;   // "12:00"
-        private Boolean isAvailable;       // Not booked
+        private String startTimeFormatted;
+        private String endTimeFormatted;
+        private Boolean isAvailable;
     }
 }

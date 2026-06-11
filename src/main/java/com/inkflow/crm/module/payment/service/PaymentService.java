@@ -29,8 +29,7 @@ public class PaymentService {
     private final TransactionRepository transactionRepository;
     private final AppointmentRepository appointmentRepository;
     private final StaffRepository staffRepository;
-    
-    // Counter for receipt numbers (in production, use database sequence)
+
     private static final AtomicLong receiptCounter = new AtomicLong(System.currentTimeMillis() % 100000);
 
     @Transactional
@@ -38,38 +37,29 @@ public class PaymentService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UUID currentUserId = SecurityUtils.getCurrentUserId();
 
-        // Validate and get appointment
         Appointment appointment = appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(
                 request.getAppointmentId(), tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.appointment(request.getAppointmentId().toString()));
 
-        // Validate appointment status
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
             throw new BusinessRuleException("Cannot process payment for cancelled appointment");
         }
 
-        // Get current staff (who is processing payment)
         Staff processedBy = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(currentUserId, tenantId)
                 .orElse(null);
 
-        // Determine payment type
-        PaymentType paymentType = request.getPaymentType() != null 
+        PaymentType paymentType = request.getPaymentType() != null
                 ? PaymentType.fromValue(request.getPaymentType())
                 : PaymentType.SERVICE_PAYMENT;
 
-        // Validate payment amount
         AppointmentPaymentSummaryDto summary = getPaymentSummary(appointment);
         validatePaymentAmount(request.getAmount(), summary, paymentType);
 
-        // Determine payment method
         PaymentMethod paymentMethod = PaymentMethod.fromValue(request.getPaymentMethod());
-
-        // Validate split payment amounts
         if (paymentMethod == PaymentMethod.SPLIT) {
             validateSplitPayment(request);
         }
 
-        // Create transaction
         Transaction transaction = Transaction.builder()
                 .tenantId(tenantId)
                 .type(TransactionType.INCOME)
@@ -92,15 +82,13 @@ public class PaymentService {
                 .build();
 
         transaction = transactionRepository.save(transaction);
-        log.info("Payment processed: {} for appointment {} by {}", 
-                transaction.getId(), appointment.getId(), currentUserId);
+        log.info("Payment processed: tenantId={} transactionId={} appointmentId={}",
+                tenantId, transaction.getId(), appointment.getId());
 
-        // Handle tip as separate transaction if provided
         if (request.getTipAmount() != null && request.getTipAmount().compareTo(BigDecimal.ZERO) > 0) {
             createTipTransaction(appointment, request.getTipAmount(), paymentMethod, processedBy, tenantId);
         }
 
-        // Update appointment prepayment if it's a deposit
         if (paymentType == PaymentType.DEPOSIT) {
             appointment.setPrepayment(appointment.getPrepayment().add(request.getAmount()));
             appointmentRepository.save(appointment);
@@ -114,12 +102,10 @@ public class PaymentService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UUID currentUserId = SecurityUtils.getCurrentUserId();
 
-        // Get original transaction
         Transaction originalTransaction = transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(
                 request.getTransactionId(), tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.transaction(request.getTransactionId().toString()));
 
-        // Validate refund
         if (!originalTransaction.canBeRefunded()) {
             throw new BusinessRuleException("This transaction cannot be refunded");
         }
@@ -130,11 +116,9 @@ public class PaymentService {
                             request.getAmount(), originalTransaction.getRefundableAmount()));
         }
 
-        // Get current staff
         Staff processedBy = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(currentUserId, tenantId)
                 .orElse(null);
 
-        // Create refund transaction
         Transaction refundTransaction = Transaction.builder()
                 .tenantId(tenantId)
                 .type(TransactionType.EXPENSE)
@@ -157,14 +141,12 @@ public class PaymentService {
 
         refundTransaction = transactionRepository.save(refundTransaction);
 
-        // Update original transaction
         originalTransaction.addRefundedAmount(request.getAmount());
         transactionRepository.save(originalTransaction);
 
-        log.info("Refund processed: {} for original transaction {} by {}", 
-                refundTransaction.getId(), originalTransaction.getId(), currentUserId);
+        log.info("Refund processed: tenantId={} refundId={} originalTransactionId={}",
+                tenantId, refundTransaction.getId(), originalTransaction.getId());
 
-        // Update appointment prepayment if original was a deposit
         if (originalTransaction.getPaymentType() == PaymentType.DEPOSIT) {
             Appointment appointment = originalTransaction.getAppointment();
             if (appointment != null) {
@@ -191,7 +173,6 @@ public class PaymentService {
     public List<PaymentDto> getAppointmentPayments(UUID appointmentId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
-        // Verify appointment exists and belongs to tenant
         appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.appointment(appointmentId.toString()));
 
@@ -199,7 +180,7 @@ public class PaymentService {
 
         return transactions.stream()
                 .map(this::mapToPaymentDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private AppointmentPaymentSummaryDto getPaymentSummary(Appointment appointment) {
@@ -214,7 +195,7 @@ public class PaymentService {
 
         for (Transaction tx : transactions) {
             if (tx.getPaymentType() == null) continue;
-            
+
             switch (tx.getPaymentType()) {
                 case DEPOSIT:
                     depositPaid = depositPaid.add(tx.getAmount());
@@ -234,10 +215,10 @@ public class PaymentService {
             }
         }
 
-        BigDecimal finalPrice = appointment.getFinalPrice() != null 
-                ? appointment.getFinalPrice() 
+        BigDecimal finalPrice = appointment.getFinalPrice() != null
+                ? appointment.getFinalPrice()
                 : appointment.getPrice().subtract(appointment.getDiscount());
-        
+
         BigDecimal remainingBalance = finalPrice.subtract(totalPaid);
         if (remainingBalance.compareTo(BigDecimal.ZERO) < 0) {
             remainingBalance = BigDecimal.ZERO;
@@ -270,12 +251,10 @@ public class PaymentService {
             throw new BusinessRuleException("Payment amount must be greater than 0");
         }
 
-        // For service payments, warn if overpaying (but allow it for tips etc)
         if (paymentType == PaymentType.SERVICE_PAYMENT || paymentType == PaymentType.DEPOSIT) {
             BigDecimal remaining = summary.getRemainingBalance();
             if (amount.compareTo(remaining) > 0) {
                 log.warn("Payment amount {} exceeds remaining balance {}", amount, remaining);
-                // Allow overpayment but log it - could be intentional
             }
         }
     }
@@ -293,7 +272,7 @@ public class PaymentService {
         }
     }
 
-    private void createTipTransaction(Appointment appointment, BigDecimal tipAmount, 
+    private void createTipTransaction(Appointment appointment, BigDecimal tipAmount,
             PaymentMethod paymentMethod, Staff processedBy, UUID tenantId) {
         Transaction tipTransaction = Transaction.builder()
                 .tenantId(tenantId)
@@ -318,11 +297,11 @@ public class PaymentService {
         log.info("Tip recorded: {} for appointment {}", tipAmount, appointment.getId());
     }
 
-    private String buildPaymentDescription(ProcessPaymentRequest request, 
+    private String buildPaymentDescription(ProcessPaymentRequest request,
             Appointment appointment, PaymentType paymentType) {
         String typeLabel = paymentType == PaymentType.DEPOSIT ? "Передоплата" : "Оплата послуги";
         String serviceName = appointment.getService() != null ? appointment.getService().getTitle() : "Послуга";
-        
+
         if (request.getDescription() != null && !request.getDescription().isEmpty()) {
             return String.format("%s: %s - %s", typeLabel, serviceName, request.getDescription());
         }
@@ -330,7 +309,6 @@ public class PaymentService {
     }
 
     private String generateReceiptNumber(UUID tenantId) {
-        // Format: YYYYMMDD-XXXXX (date + sequential number)
         String datePrefix = LocalDateTime.now(ZoneId.of("Europe/Kiev"))
                 .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         long sequenceNum = receiptCounter.incrementAndGet() % 100000;
@@ -359,7 +337,7 @@ public class PaymentService {
                 .processedById(transaction.getProcessedBy() != null ? transaction.getProcessedBy().getId() : null)
                 .processedByName(transaction.getProcessedBy() != null ? transaction.getProcessedBy().getFullName() : null)
                 .clientName(transaction.getAppointment() != null && transaction.getAppointment().getClient() != null
-                        ? transaction.getAppointment().getClient().getFirstName() + " " + 
+                        ? transaction.getAppointment().getClient().getFirstName() + " " +
                           transaction.getAppointment().getClient().getLastName()
                         : null)
                 .createdAt(transaction.getCreatedAt())

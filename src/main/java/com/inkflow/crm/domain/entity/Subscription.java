@@ -28,34 +28,30 @@ public class Subscription {
     @Column(name = "tenant_id", nullable = false, unique = true)
     private UUID tenantId;
 
-    /**
-     * TRIAL, STANDARD
-     */
+
     @Column(name = "plan", nullable = false)
     @Builder.Default
     private String plan = "TRIAL";
 
-    /**
-     * ACTIVE, EXPIRED, CANCELLED
-     */
+
     @Column(name = "status", nullable = false)
     @Builder.Default
     private String status = "ACTIVE";
 
-    /** When the free trial ends (14 days from onboarding) */
+
     @Column(name = "trial_ends_at")
     private Instant trialEndsAt;
 
-    /** End of the current paid billing period */
+
     @Column(name = "current_period_end")
     private Instant currentPeriodEnd;
 
-    /** Monthly price of the active paid plan (UAH) */
+
     @Column(name = "monthly_price", precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal monthlyPrice = BigDecimal.valueOf(399);
 
-    /** Monobank invoice ID of the last subscription payment */
+
     @Column(name = "last_invoice_id")
     private String lastInvoiceId;
 
@@ -67,14 +63,13 @@ public class Subscription {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    // ── Business helpers ──────────────────────────────────────────────────────
 
     public boolean isActive() {
         if ("CANCELLED".equals(status)) return false;
         if ("TRIAL".equals(plan)) {
             return trialEndsAt != null && Instant.now().isBefore(trialEndsAt);
         }
-        // Paid plan
+
         return currentPeriodEnd != null && Instant.now().isBefore(currentPeriodEnd);
     }
 

@@ -65,7 +65,7 @@ public class JwtTokenProvider {
         String supabaseUserId = jwt.getSubject();
         String email = jwt.getClaim("email").asString();
 
-        // tenant_id and user_role are stored in app_metadata → appear as top-level JWT claims
+
         String tenantIdStr = jwt.getClaim("tenant_id").asString();
         UUID tenantId = tenantIdStr != null ? UUID.fromString(tenantIdStr) : null;
 
@@ -86,7 +86,7 @@ public class JwtTokenProvider {
                     .toList();
         }
 
-        // Fallback: if JWT lacks user_role/tenant_id, resolve from DB
+
         UUID staffId = null;
         if (role == null || tenantId == null) {
             var staffOpt = staffRepository.findByAuthUserIdAndDeletedAtIsNull(supabaseUserId);

@@ -4,6 +4,7 @@ import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.module.location.dto.CreateLocationRequest;
 import com.inkflow.crm.module.location.dto.LocationDetailDto;
 import com.inkflow.crm.module.location.dto.LocationDto;
+import com.inkflow.crm.module.location.dto.UpdateLocationRequest;
 import com.inkflow.crm.module.staff.dto.StaffSummaryDto;
 import org.mapstruct.*;
 
@@ -14,8 +15,6 @@ import java.util.stream.Collectors;
 public interface LocationMapper {
 
     LocationDto toDto(Location location);
-
-    List<LocationDto> toDtoList(List<Location> locations);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "tenantId", ignore = true)
@@ -37,7 +36,7 @@ public interface LocationMapper {
     @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "staff", ignore = true)
-    void updateEntity(com.inkflow.crm.module.location.dto.UpdateLocationRequest request, @MappingTarget Location location);
+    void updateEntity(UpdateLocationRequest request, @MappingTarget Location location);
 
     default LocationDetailDto toDetailDto(Location location, LocationDetailDto.LocationStatsDto stats) {
         List<StaffSummaryDto> staffList = location.getStaff().stream()
@@ -67,6 +66,23 @@ public interface LocationMapper {
                 .stats(stats)
                 .createdAt(location.getCreatedAt())
                 .updatedAt(location.getUpdatedAt())
+                .build();
+    }
+
+    default LocationDto toDtoWithStaffCount(Location location) {
+        return LocationDto.builder()
+                .id(location.getId())
+                .name(location.getName())
+                .address(location.getAddress())
+                .phone(location.getPhone())
+                .googleMapsLink(location.getGoogleMapsLink())
+                .color(location.getColor())
+                .isActive(location.getIsActive())
+                .photoUrl(location.getPhotoUrl())
+                .navigationInstructions(location.getNavigationInstructions())
+                .telegramContact(location.getTelegramContact())
+                .staffCount((int) location.getStaff().stream().filter(s -> s.getDeletedAt() == null).count())
+                .createdAt(location.getCreatedAt())
                 .build();
     }
 }

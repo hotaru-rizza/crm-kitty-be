@@ -57,7 +57,6 @@ public class ProjectDto {
         private String serviceColor;
         private BigDecimal price;
         private BigDecimal finalPrice;
-        private Boolean waiverSigned;
         private String notes;
         private Integer photosCount;
     }

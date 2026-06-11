@@ -36,7 +36,7 @@ public class OnboardingService {
     public OnboardingResponse completeOnboarding(UUID supabaseUserId, String email, OnboardingRequest request) {
         log.info("Starting onboarding for user: {}", email);
 
-        // 1. Create Tenant
+
         String accountType = "solo".equalsIgnoreCase(request.getTeamSize()) ? "SOLO" : "STUDIO";
         Tenant tenant = Tenant.builder()
                 .name(request.getCompanyName())
@@ -50,7 +50,7 @@ public class OnboardingService {
         tenant = tenantRepository.save(tenant);
         log.info("Created tenant: {}", tenant.getId());
 
-        // 2. Create Owner Staff
+
         Staff owner = Staff.builder()
                 .authUserId(supabaseUserId.toString())
                 .tenantId(tenant.getId())
@@ -64,7 +64,7 @@ public class OnboardingService {
         owner = staffRepository.save(owner);
         log.info("Created owner staff: {}", owner.getId());
 
-        // 3. Create default Location
+
         Location defaultLocation = Location.builder()
                 .tenantId(tenant.getId())
                 .name("Основна студія")
@@ -75,7 +75,7 @@ public class OnboardingService {
                 .build();
         locationRepository.save(defaultLocation);
 
-        // 4. Create default CompanySettings
+
         CompanySettings settings = CompanySettings.builder()
                 .tenant(tenant)
                 .smsReminders(false)
@@ -90,7 +90,7 @@ public class OnboardingService {
                 .build();
         companySettingsRepository.save(settings);
 
-        // 5. Create 14-day free trial subscription
+
         subscriptionService.createTrialForTenant(tenant.getId());
 
         return OnboardingResponse.builder()

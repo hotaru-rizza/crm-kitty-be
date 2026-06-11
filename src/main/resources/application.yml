@@ -81,7 +81,12 @@ gemini:
   api:
     key: ${GEMINI_API_KEY:}
     model: gemini-2.5-flash
+    image-model: gemini-2.5-flash-image
     temperature: 0.3
+    image-temperature: 0.8
+    try-on-temperature: 0.4
+    api-base: https://generativelanguage.googleapis.com/v1beta/models
+    max-image-side: 1024
 
 huggingface:
   api:

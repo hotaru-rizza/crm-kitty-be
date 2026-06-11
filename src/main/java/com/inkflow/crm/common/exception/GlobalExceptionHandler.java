@@ -20,12 +20,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiResponse<Void>> handleApiException(ApiException ex) {
         log.error("API Exception: {} - {}", ex.getErrorCode(), ex.getMessage());
-        
+
         ErrorResponse errorResponse = ErrorResponse.of(
                 ex.getErrorCode().getCode(),
                 ex.getMessage()
         );
-        
+
         return ResponseEntity
                 .status(ex.getErrorCode().getHttpStatus())
                 .body(ApiResponse.error(errorResponse));
@@ -48,10 +48,21 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(errorResponse));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
+        ErrorResponse errorResponse = ErrorResponse.of(
+                ErrorCode.VALIDATION_ERROR.getCode(),
+                ex.getMessage()
+        );
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(errorResponse));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Unexpected error", ex);
-        
+
         ErrorResponse errorResponse = ErrorResponse.of(
                 ErrorCode.INTERNAL_ERROR.getCode(),
                 "An unexpected error occurred"

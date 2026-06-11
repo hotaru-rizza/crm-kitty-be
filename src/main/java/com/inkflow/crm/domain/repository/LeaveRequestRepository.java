@@ -23,7 +23,7 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
     @Query("SELECT lr FROM LeaveRequest lr WHERE lr.tenantId = :tenantId AND lr.deletedAt IS NULL " +
            "AND lr.staff.id = :staffId AND lr.status = :status ORDER BY lr.startDate DESC")
     List<LeaveRequest> findByStaffIdAndStatus(
-            @Param("tenantId") UUID tenantId, 
+            @Param("tenantId") UUID tenantId,
             @Param("staffId") UUID staffId,
             @Param("status") LeaveStatus status);
 
