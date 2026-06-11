@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.appointment.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
@@ -25,7 +26,7 @@ public class AppointmentController {
     private final AppointmentService appointmentService;
 
     @GetMapping
-    @RequirePermission({"calendar.view_all", "calendar.view_own"})
+    @RequirePermission({Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAllAppointments(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) UUID locationId,
@@ -41,7 +42,7 @@ public class AppointmentController {
     }
 
     @GetMapping("/client/{clientId}")
-    @RequirePermission({"calendar.view_all", "calendar.view_own"})
+    @RequirePermission({Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getClientHistory(
             @PathVariable UUID clientId,
             @ModelAttribute PageRequest pageRequest) {
@@ -49,19 +50,19 @@ public class AppointmentController {
     }
 
     @GetMapping("/{id}")
-    @RequirePermission({"calendar.view_all", "calendar.view_own"})
+    @RequirePermission({Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
     public ResponseEntity<ApiResponse<AppointmentDetailDto>> getAppointment(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(appointmentService.getAppointmentById(id)));
     }
 
     @GetMapping("/calendar")
-    @RequirePermission({"calendar.view_all", "calendar.view_own"})
+    @RequirePermission({Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getCalendar(@Valid @ModelAttribute CalendarQueryRequest request) {
         return ResponseEntity.ok(ApiResponse.success(appointmentService.getCalendar(request)));
     }
 
     @PostMapping
-    @RequirePermission("calendar.create")
+    @RequirePermission(Permission.CALENDAR_CREATE)
     public ResponseEntity<ApiResponse<AppointmentDto>> createAppointment(@Valid @RequestBody CreateAppointmentRequest request) {
         AppointmentDto appointment = appointmentService.createAppointment(request);
         log.info("Appointment created via API: appointmentId={}", appointment.getId());
@@ -70,7 +71,7 @@ public class AppointmentController {
     }
 
     @PatchMapping("/{id}")
-    @RequirePermission("calendar.edit")
+    @RequirePermission(Permission.CALENDAR_EDIT)
     public ResponseEntity<ApiResponse<AppointmentDto>> updateAppointment(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateAppointmentRequest request) {
@@ -81,7 +82,7 @@ public class AppointmentController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("calendar.cancel")
+    @RequirePermission(Permission.CALENDAR_CANCEL)
     public ResponseEntity<ApiResponse<Void>> deleteAppointment(@PathVariable UUID id) {
         appointmentService.deleteAppointment(id);
         log.info("Appointment deleted via API: appointmentId={}", id);
@@ -90,7 +91,7 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/photos")
-    @RequirePermission("calendar.edit")
+    @RequirePermission(Permission.CALENDAR_EDIT)
     public ResponseEntity<ApiResponse<AppointmentDetailDto.PhotoDto>> addPhoto(
             @PathVariable UUID id,
             @Valid @RequestBody AddAppointmentPhotoRequest request) {
@@ -101,7 +102,7 @@ public class AppointmentController {
     }
 
     @DeleteMapping("/{id}/photos/{photoId}")
-    @RequirePermission("calendar.edit")
+    @RequirePermission(Permission.CALENDAR_EDIT)
     public ResponseEntity<ApiResponse<Void>> deletePhoto(
             @PathVariable UUID id,
             @PathVariable UUID photoId) {

@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.analytics.support;
 
 import com.inkflow.crm.domain.entity.Appointment;
+import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.module.analytics.dto.AppointmentAnalyticsDto;
 import com.inkflow.crm.module.analytics.dto.ClientAnalyticsDto;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +25,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AnalyticsTimeSeriesBuilder {
 
-    private static final ZoneId ANALYTICS_ZONE = ZoneId.of("Europe/Kyiv");
-
+    private final InkflowProperties inkflowProperties;
     private final AppointmentMetricsCalculator metrics;
 
     public List<AppointmentAnalyticsDto.DataPoint> buildAppointmentSeries(
@@ -106,8 +106,9 @@ public class AnalyticsTimeSeriesBuilder {
     }
 
     private Map<String, List<Appointment>> createBuckets(Instant from, Instant to, String groupBy) {
-        LocalDate startDate = from.atZone(ANALYTICS_ZONE).toLocalDate();
-        LocalDate endDate = to.atZone(ANALYTICS_ZONE).toLocalDate();
+        ZoneId zone = inkflowProperties.defaultZoneId();
+        LocalDate startDate = from.atZone(zone).toLocalDate();
+        LocalDate endDate = to.atZone(zone).toLocalDate();
         Map<String, List<Appointment>> buckets = new LinkedHashMap<>();
 
         if ("week".equals(groupBy)) {
@@ -164,7 +165,7 @@ public class AnalyticsTimeSeriesBuilder {
     }
 
     private String resolveBucketKey(Appointment appointment, String groupBy) {
-        LocalDate appointmentDate = appointment.getStartTime().atZone(ANALYTICS_ZONE).toLocalDate();
+        LocalDate appointmentDate = appointment.getStartTime().atZone(inkflowProperties.defaultZoneId()).toLocalDate();
 
         return switch (groupBy) {
             case "week" -> appointmentDate

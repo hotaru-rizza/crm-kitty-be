@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.service.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
@@ -25,7 +26,7 @@ public class ServiceController {
     private final ServiceService serviceService;
 
     @GetMapping
-    @RequirePermission({"services.view", "settings.access"})
+    @RequirePermission({Permission.SERVICES_VIEW, Permission.SETTINGS_ACCESS})
     public ResponseEntity<ApiResponse<List<ServiceDto>>> getAllServices(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) Boolean active) {
@@ -34,14 +35,14 @@ public class ServiceController {
     }
 
     @GetMapping("/{id}")
-    @RequirePermission({"services.view", "settings.access"})
+    @RequirePermission({Permission.SERVICES_VIEW, Permission.SETTINGS_ACCESS})
     public ResponseEntity<ApiResponse<ServiceDetailDto>> getService(@PathVariable UUID id) {
         ServiceDetailDto service = serviceService.getServiceById(id);
         return ResponseEntity.ok(ApiResponse.success(service));
     }
 
     @GetMapping("/{id}/price")
-    @RequirePermission({"services.view", "calendar.view_all", "calendar.view_own"})
+    @RequirePermission({Permission.SERVICES_VIEW, Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
     public ResponseEntity<ApiResponse<ServicePriceDto>> getServicePrice(
             @PathVariable UUID id,
             @RequestParam UUID artistId) {
@@ -50,7 +51,7 @@ public class ServiceController {
     }
 
     @PostMapping
-    @RequirePermission("services.edit")
+    @RequirePermission(Permission.SERVICES_EDIT)
     public ResponseEntity<ApiResponse<ServiceDto>> createService(@Valid @RequestBody CreateServiceRequest request) {
         ServiceDto service = serviceService.createService(request);
         log.info("Service created via API: serviceId={}", service.getId());
@@ -59,7 +60,7 @@ public class ServiceController {
     }
 
     @PatchMapping("/{id}")
-    @RequirePermission("services.edit")
+    @RequirePermission(Permission.SERVICES_EDIT)
     public ResponseEntity<ApiResponse<ServiceDto>> updateService(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateServiceRequest request) {
@@ -70,7 +71,7 @@ public class ServiceController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("services.edit")
+    @RequirePermission(Permission.SERVICES_EDIT)
     public ResponseEntity<ApiResponse<Void>> deleteService(@PathVariable UUID id) {
         serviceService.deleteService(id);
         log.info("Service deleted via API: serviceId={}", id);

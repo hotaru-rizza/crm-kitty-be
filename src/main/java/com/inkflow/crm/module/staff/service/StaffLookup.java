@@ -17,7 +17,10 @@ public class StaffLookup {
 
     public Staff requireStaff(UUID staffId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
+
         return staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)
+                .or(() -> staffRepository.findByAuthUserIdAndDeletedAtIsNull(staffId.toString())
+                        .filter(staff -> tenantId.equals(staff.getTenantId())))
                 .orElseThrow(() -> ResourceNotFoundException.staff(staffId.toString()));
     }
 }

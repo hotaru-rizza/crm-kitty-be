@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.request.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
@@ -28,7 +29,7 @@ public class RequestController {
     private final RequestService requestService;
 
     @GetMapping
-    @RequirePermission("requests.view")
+    @RequirePermission(Permission.REQUESTS_VIEW)
     public ResponseEntity<ApiResponse<List<RequestDto>>> getAllRequests(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String status,
@@ -41,13 +42,14 @@ public class RequestController {
     }
 
     @GetMapping("/{id}")
-    @RequirePermission("requests.view")
+    @RequirePermission(Permission.REQUESTS_VIEW)
     public ResponseEntity<ApiResponse<RequestDto>> getRequest(@PathVariable UUID id) {
         RequestDto request = requestService.getRequestById(id);
         return ResponseEntity.ok(ApiResponse.success(request));
     }
 
     @PostMapping
+    @RequirePermission(Permission.REQUESTS_CREATE)
     public ResponseEntity<ApiResponse<RequestDto>> createRequest(@Valid @RequestBody CreateRequestRequest request) {
         RequestDto created = requestService.createRequest(request);
         log.info("Request created via API: requestId={}", created.getId());
@@ -56,7 +58,7 @@ public class RequestController {
     }
 
     @PatchMapping("/{id}/status")
-    @RequirePermission("requests.change_status")
+    @RequirePermission(Permission.REQUESTS_CHANGE_STATUS)
     public ResponseEntity<ApiResponse<RequestDto>> updateRequestStatus(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateRequestStatusRequest request) {
@@ -67,7 +69,7 @@ public class RequestController {
     }
 
     @PostMapping("/{id}/convert")
-    @RequirePermission(value = {"requests.change_status", "clients.create"}, requireAll = true)
+    @RequirePermission(value = {Permission.REQUESTS_CHANGE_STATUS, Permission.CLIENTS_CREATE}, requireAll = true)
     public ResponseEntity<ApiResponse<ClientDto>> convertToClient(
             @PathVariable UUID id,
             @Valid @RequestBody ConvertRequestRequest request) {
@@ -78,7 +80,7 @@ public class RequestController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("requests.change_status")
+    @RequirePermission(Permission.REQUESTS_CHANGE_STATUS)
     public ResponseEntity<ApiResponse<Void>> deleteRequest(@PathVariable UUID id) {
         requestService.deleteRequest(id);
         log.info("Request deleted via API: requestId={}", id);

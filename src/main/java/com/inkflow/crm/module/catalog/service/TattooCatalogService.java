@@ -6,6 +6,7 @@ import com.inkflow.crm.module.catalog.dto.CatalogRetagResultDto;
 import com.inkflow.crm.module.catalog.dto.CatalogSeedResultDto;
 import com.inkflow.crm.module.catalog.dto.TattooDto;
 import com.inkflow.crm.module.catalog.dto.TattooStyleDto;
+import com.inkflow.crm.module.catalog.entity.TattooStatus;
 import com.inkflow.crm.module.catalog.mapper.TattooMapper;
 import com.inkflow.crm.module.catalog.repository.TattooRepository;
 import com.inkflow.crm.module.catalog.repository.TattooStyleRepository;
@@ -33,7 +34,7 @@ public class TattooCatalogService {
 
     @Transactional(readOnly = true)
     public Page<TattooDto> getFeed(String tag, String author, String staffId, Pageable pageable) {
-        return tattooRepository.findByTagOrAll(tag, author, staffId, pageable)
+        return tattooRepository.findByTagOrAll(tag, author, staffId, TattooStatus.READY.name(), pageable)
                 .map(tattooMapper::toDto);
     }
 

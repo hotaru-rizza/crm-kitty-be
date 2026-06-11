@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.appointment.dto;
 
+import com.inkflow.crm.common.validation.ValidAppointmentTimeRange;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ValidAppointmentTimeRange
 public class UpdateAppointmentRequest {
 
     private UUID artistId;

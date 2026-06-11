@@ -5,6 +5,7 @@ import com.inkflow.crm.domain.enums.RequestSource;
 import com.inkflow.crm.domain.enums.RequestStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,6 +24,7 @@ public interface RequestRepository extends JpaRepository<Request, UUID> {
     Page<Request> findByTenantIdAndSource(UUID tenantId, RequestSource source, Pageable pageable);
     long countByTenantIdAndStatus(UUID tenantId, RequestStatus status);
 
+    @EntityGraph(attributePaths = {"assignedStaff"})
     List<Request> findByConsumerUserIdOrderByCreatedAtDesc(UUID consumerUserId);
 
     @Query("SELECT r FROM Request r WHERE r.tenantId = :tenantId " +

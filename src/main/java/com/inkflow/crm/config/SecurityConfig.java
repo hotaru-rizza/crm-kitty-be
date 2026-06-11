@@ -27,13 +27,14 @@ import java.util.List;
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
-@Profile("!dev")
+@Profile("!dev & !test")
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ConsumerAuthFilter consumerAuthFilter;
     private final SubscriptionFilter subscriptionFilter;
     private final DemoTenantFilter demoTenantFilter;
+    private final InkflowProperties inkflowProperties;
 
     @Bean
     public FilterRegistrationBean<ConsumerAuthFilter> disableConsumerFilterAutoRegistration() {
@@ -78,7 +79,6 @@ public class SecurityConfig {
                                 "/actuator/**",
                                 "/staff/accept-invite",
                                 "/staff/invite/info/**",
-                                "/requests",
                                 "/onboarding",
                                 "/public/**",
                                 "/payments/monobank/webhook"
@@ -96,11 +96,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedOrigins(inkflowProperties.getCors().getAllowedOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization", "X-Location-Id"));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(inkflowProperties.getCors().isAllowCredentials());
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

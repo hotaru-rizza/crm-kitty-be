@@ -1,7 +1,9 @@
 package com.inkflow.crm.module.consumer.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record GenerateRequest(
-        String prompt,
+        @NotBlank String prompt,
         String style,
         String colorMode,
         String background,

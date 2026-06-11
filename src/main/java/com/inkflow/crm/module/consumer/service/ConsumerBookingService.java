@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.consumer.service;
 
+import com.inkflow.crm.common.dto.ApiResponses;
 import com.inkflow.crm.common.exception.ApiException;
 import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.domain.entity.Request;
@@ -10,7 +11,7 @@ import com.inkflow.crm.domain.repository.RequestRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.consumer.dto.ConsumerBookingListItemDto;
 import com.inkflow.crm.module.consumer.dto.ConsumerBookingResultDto;
-import com.inkflow.crm.module.consumer.dto.PublicBookingRequest;
+import com.inkflow.crm.module.consumer.dto.ConsumerBookingRequest;
 import com.inkflow.crm.module.consumer.entity.ConsumerUser;
 import com.inkflow.crm.module.notification.event.NewRequestEvent;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +32,7 @@ public class ConsumerBookingService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public ConsumerBookingResultDto submitBookingRequest(ConsumerUser consumer, PublicBookingRequest body) {
+    public ConsumerBookingResultDto submitBookingRequest(ConsumerUser consumer, ConsumerBookingRequest body) {
         Staff artist = staffRepository.findPublicArtistById(body.artistId())
                 .orElseThrow(() -> new ApiException(ErrorCode.STAFF_NOT_FOUND, "Artist not found"));
 
@@ -57,9 +58,7 @@ public class ConsumerBookingService {
 
     @Transactional(readOnly = true)
     public List<ConsumerBookingListItemDto> getMyRequests(ConsumerUser consumer) {
-        if (consumer == null) {
-            throw new ApiException(ErrorCode.UNAUTHORIZED);
-        }
+        ApiResponses.requireConsumer(consumer);
 
         return requestRepository.findByConsumerUserIdOrderByCreatedAtDesc(consumer.getId())
                 .stream()
@@ -67,7 +66,7 @@ public class ConsumerBookingService {
                 .toList();
     }
 
-    private Request buildRequest(PublicBookingRequest body, Staff artist, ConsumerUser consumer) {
+    private Request buildRequest(ConsumerBookingRequest body, Staff artist, ConsumerUser consumer) {
         Request request = Request.builder()
                 .tenantId(artist.getTenantId())
                 .source(RequestSource.APP)
@@ -111,7 +110,7 @@ public class ConsumerBookingService {
         );
     }
 
-    private String buildMessage(PublicBookingRequest body) {
+    private String buildMessage(ConsumerBookingRequest body) {
         StringBuilder sb = new StringBuilder();
 
         if (body.idea() != null && !body.idea().isBlank()) {

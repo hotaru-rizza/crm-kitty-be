@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.onboarding.service;
 
+import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.entity.CompanySettings;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
@@ -31,9 +32,29 @@ public class OnboardingService {
     private final LocationRepository locationRepository;
     private final CompanySettingsRepository companySettingsRepository;
     private final SubscriptionService subscriptionService;
+    private final InkflowProperties inkflowProperties;
 
     @Transactional
     public OnboardingResponse completeOnboarding(UUID supabaseUserId, String email, OnboardingRequest request) {
+        return staffRepository.findByAuthUserIdAndDeletedAtIsNull(supabaseUserId.toString())
+                .map(existing -> toExistingResponse(existing))
+                .orElseGet(() -> createNewTenant(supabaseUserId, email, request));
+    }
+
+    private OnboardingResponse toExistingResponse(Staff existing) {
+        log.info("Onboarding skipped — user already has staff record: {}", existing.getId());
+        return OnboardingResponse.builder()
+                .userId(existing.getId())
+                .tenantId(existing.getTenantId())
+                .tenantName(tenantRepository.findById(existing.getTenantId())
+                        .map(Tenant::getName)
+                        .orElse(null))
+                .role(existing.getRole().getValue())
+                .success(true)
+                .build();
+    }
+
+    private OnboardingResponse createNewTenant(UUID supabaseUserId, String email, OnboardingRequest request) {
         log.info("Starting onboarding for user: {}", email);
 
 
@@ -42,7 +63,7 @@ public class OnboardingService {
                 .name(request.getCompanyName())
                 .subdomain(generateSubdomain(request.getCompanyName()))
                 .currency("UAH")
-                .timezone("Europe/Kyiv")
+                .timezone(inkflowProperties.getDefaultTimezone())
                 .language("ua")
                 .accountType(accountType)
                 .isActive(true)

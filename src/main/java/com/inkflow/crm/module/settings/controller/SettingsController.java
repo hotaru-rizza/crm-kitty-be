@@ -1,9 +1,11 @@
 package com.inkflow.crm.module.settings.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.module.settings.dto.*;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.module.settings.service.SettingsService;
+import com.inkflow.crm.module.settings.service.UserSettingsService;
 import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +23,10 @@ public class SettingsController {
 
     private final SettingsService settingsService;
     private final RolePermissionService rolePermissionService;
+    private final UserSettingsService userSettingsService;
 
     @GetMapping({"", "/company"})
-    @RequirePermission("settings.access")
+    @RequirePermission(Permission.SETTINGS_ACCESS)
     public ResponseEntity<ApiResponse<CompanySettingsDto>> getCompanySettings() {
         return ResponseEntity.ok(ApiResponse.success(settingsService.getCompanySettings()));
     }
@@ -37,14 +40,28 @@ public class SettingsController {
         return ResponseEntity.ok(ApiResponse.success(settings));
     }
 
+    @GetMapping("/user")
+    public ResponseEntity<ApiResponse<UserSettingsDto>> getUserSettings() {
+        return ResponseEntity.ok(ApiResponse.success(userSettingsService.getCurrentUserSettings()));
+    }
+
+    @PatchMapping("/user")
+    public ResponseEntity<ApiResponse<UserSettingsDto>> updateUserSettings(
+            @RequestBody UpdateUserSettingsRequest request) {
+        UserSettingsDto settings = userSettingsService.updateCurrentUserSettings(request);
+        log.info("User settings updated via API");
+
+        return ResponseEntity.ok(ApiResponse.success(settings));
+    }
+
     @GetMapping("/permissions")
-    @RequirePermission("settings.roles")
+    @RequirePermission(Permission.SETTINGS_ROLES)
     public ResponseEntity<ApiResponse<List<PermissionDto>>> getAllPermissions() {
         return ResponseEntity.ok(ApiResponse.success(rolePermissionService.getAllPermissions()));
     }
 
     @GetMapping("/roles")
-    @RequirePermission("settings.roles")
+    @RequirePermission(Permission.SETTINGS_ROLES)
     public ResponseEntity<ApiResponse<List<RolePermissionsDto>>> getAllRolePermissions() {
         return ResponseEntity.ok(ApiResponse.success(rolePermissionService.getAllRolePermissions()));
     }

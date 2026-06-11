@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.staff.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
@@ -33,7 +34,7 @@ public class StaffController {
     private final StaffFaqService staffFaqService;
 
     @GetMapping
-    @RequirePermission("staff.view")
+    @RequirePermission(Permission.STAFF_VIEW)
     public ResponseEntity<ApiResponse<List<StaffDto>>> getAllStaff(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String search,
@@ -45,13 +46,13 @@ public class StaffController {
     }
 
     @GetMapping("/{id}")
-    @RequirePermission("staff.view")
+    @RequirePermission(Permission.STAFF_VIEW)
     public ResponseEntity<ApiResponse<StaffDetailDto>> getStaff(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(staffDetailService.getDetail(id)));
     }
 
     @PostMapping
-    @RequirePermission("staff.invite")
+    @RequirePermission(Permission.STAFF_INVITE)
     public ResponseEntity<ApiResponse<StaffDto>> createStaff(@Valid @RequestBody CreateStaffRequest request) {
         StaffDto staff = staffService.createStaff(request);
         log.info("Staff created via API: staffId={}", staff.getId());
@@ -60,7 +61,7 @@ public class StaffController {
     }
 
     @PatchMapping("/{id}")
-    @RequirePermission("staff.edit")
+    @RequirePermission(Permission.STAFF_EDIT)
     public ResponseEntity<ApiResponse<StaffDto>> updateStaff(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateStaffRequest request) {
@@ -79,7 +80,7 @@ public class StaffController {
     }
 
     @PutMapping("/{id}/schedule")
-    @RequirePermission("staff.edit")
+    @RequirePermission(Permission.STAFF_EDIT)
     public ResponseEntity<ApiResponse<Void>> updateSchedule(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateScheduleRequest request) {
@@ -95,7 +96,7 @@ public class StaffController {
     }
 
     @PostMapping("/invite")
-    @RequirePermission("staff.invite")
+    @RequirePermission(Permission.STAFF_INVITE)
     public ResponseEntity<ApiResponse<Map<String, String>>> inviteStaff(@Valid @RequestBody InviteStaffRequest request) {
         String token = staffInviteService.inviteStaff(request);
         log.info("Staff invite sent via API: email={}", request.getEmail());
@@ -112,13 +113,13 @@ public class StaffController {
     }
 
     @GetMapping("/{id}/services")
-    @RequirePermission("staff.view")
+    @RequirePermission(Permission.STAFF_VIEW)
     public ResponseEntity<ApiResponse<List<StaffServiceDto>>> getStaffServices(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(staffPricingService.getStaffServices(id)));
     }
 
     @PutMapping("/{id}/services")
-    @RequirePermission("staff.edit")
+    @RequirePermission(Permission.STAFF_EDIT)
     public ResponseEntity<ApiResponse<List<StaffServiceDto>>> updateStaffServices(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateStaffServicesRequest request) {
@@ -129,7 +130,7 @@ public class StaffController {
     }
 
     @PostMapping("/{id}/services/{serviceId}")
-    @RequirePermission("staff.edit")
+    @RequirePermission(Permission.STAFF_EDIT)
     public ResponseEntity<ApiResponse<StaffServiceDto>> addServiceToStaff(
             @PathVariable UUID id,
             @PathVariable UUID serviceId,
@@ -143,7 +144,7 @@ public class StaffController {
     }
 
     @PutMapping("/{id}/services/{serviceId}")
-    @RequirePermission("staff.edit")
+    @RequirePermission(Permission.STAFF_EDIT)
     public ResponseEntity<ApiResponse<StaffServiceDto>> updateStaffServicePricing(
             @PathVariable UUID id,
             @PathVariable UUID serviceId,
@@ -157,7 +158,7 @@ public class StaffController {
     }
 
     @DeleteMapping("/{id}/services/{serviceId}")
-    @RequirePermission("staff.edit")
+    @RequirePermission(Permission.STAFF_EDIT)
     public ResponseEntity<ApiResponse<Void>> removeServiceFromStaff(
             @PathVariable UUID id,
             @PathVariable UUID serviceId) {
@@ -168,13 +169,13 @@ public class StaffController {
     }
 
     @GetMapping("/{id}/future-appointments-count")
-    @RequirePermission("staff.edit")
+    @RequirePermission(Permission.STAFF_EDIT)
     public ResponseEntity<ApiResponse<Map<String, Integer>>> getFutureAppointmentsCount(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(Map.of("count", staffLifecycleService.getFutureAppointmentsCount(id))));
     }
 
     @PostMapping("/{id}/reactivate")
-    @RequirePermission("staff.edit")
+    @RequirePermission(Permission.STAFF_EDIT)
     public ResponseEntity<ApiResponse<Void>> reactivateStaff(@PathVariable UUID id) {
         staffLifecycleService.reactivateStaff(id);
         log.info("Staff reactivated via API: staffId={}", id);
@@ -183,7 +184,7 @@ public class StaffController {
     }
 
     @PostMapping("/{id}/deactivate")
-    @RequirePermission("staff.edit")
+    @RequirePermission(Permission.STAFF_EDIT)
     public ResponseEntity<ApiResponse<Void>> deactivateStaff(
             @PathVariable UUID id,
             @RequestBody(required = false) DeactivateStaffRequest request) {
@@ -194,13 +195,13 @@ public class StaffController {
     }
 
     @GetMapping("/{id}/faq")
-    @RequirePermission("staff.view")
+    @RequirePermission(Permission.STAFF_VIEW)
     public ResponseEntity<ApiResponse<List<StaffFaqDto>>> getFaq(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(staffFaqService.getFaq(id)));
     }
 
     @PutMapping("/{id}/faq")
-    @RequirePermission("staff.edit")
+    @RequirePermission(Permission.STAFF_EDIT)
     public ResponseEntity<ApiResponse<List<StaffFaqDto>>> upsertFaq(
             @PathVariable UUID id,
             @Valid @RequestBody UpsertFaqRequest request) {

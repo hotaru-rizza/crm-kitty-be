@@ -59,12 +59,15 @@ public class JwtTokenProvider {
         }
     }
 
+    public DecodedJWT verifyToken(String token) {
+        return verifyAndDecode(token);
+    }
+
     public UserPrincipal getUserPrincipal(String token) {
         DecodedJWT jwt = verifyAndDecode(token);
 
         String supabaseUserId = jwt.getSubject();
         String email = jwt.getClaim("email").asString();
-
 
         String tenantIdStr = jwt.getClaim("tenant_id").asString();
         UUID tenantId = tenantIdStr != null ? UUID.fromString(tenantIdStr) : null;
@@ -86,25 +89,27 @@ public class JwtTokenProvider {
                     .toList();
         }
 
-
         UUID staffId = null;
-        if (role == null || tenantId == null) {
-            var staffOpt = staffRepository.findByAuthUserIdAndDeletedAtIsNull(supabaseUserId);
-            if (staffOpt.isPresent()) {
-                Staff staff = staffOpt.get();
-                staffId = staff.getId();
-                if (tenantId == null) tenantId = staff.getTenantId();
-                if (role == null) role = staff.getRole();
-                if (locationIds.isEmpty() && staff.getLocations() != null) {
-                    locationIds = staff.getLocations().stream()
-                            .map(loc -> loc.getId())
-                            .toList();
-                }
-                if (email == null) email = staff.getEmail();
-                log.debug("JWT missing claims — resolved from DB: staff={}, tenant={}, role={}", staffId, tenantId, role);
-            } else {
-                log.warn("No staff record found for auth user {}", supabaseUserId);
+        var staffOpt = staffRepository.findByAuthUserIdAndDeletedAtIsNull(supabaseUserId);
+        if (staffOpt.isPresent()) {
+            Staff staff = staffOpt.get();
+            staffId = staff.getId();
+            if (tenantId == null) {
+                tenantId = staff.getTenantId();
             }
+            if (role == null) {
+                role = staff.getRole();
+            }
+            if (locationIds.isEmpty() && staff.getLocations() != null) {
+                locationIds = staff.getLocations().stream()
+                        .map(loc -> loc.getId())
+                        .toList();
+            }
+            if (email == null) {
+                email = staff.getEmail();
+            }
+        } else {
+            log.warn("No staff record found for auth user {}", supabaseUserId);
         }
 
         return UserPrincipal.builder()

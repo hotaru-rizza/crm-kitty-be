@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.location.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
@@ -25,21 +26,21 @@ public class LocationController {
     private final LocationService locationService;
 
     @GetMapping
-    @RequirePermission({"locations.view", "settings.access"})
+    @RequirePermission({Permission.LOCATIONS_VIEW, Permission.SETTINGS_ACCESS})
     public ResponseEntity<ApiResponse<List<LocationDto>>> getAllLocations(@ModelAttribute PageRequest pageRequest) {
         PageResult<LocationDto> result = locationService.getAllLocations(pageRequest);
         return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
     @GetMapping("/{id}")
-    @RequirePermission({"locations.view", "settings.access"})
+    @RequirePermission({Permission.LOCATIONS_VIEW, Permission.SETTINGS_ACCESS})
     public ResponseEntity<ApiResponse<LocationDetailDto>> getLocation(@PathVariable UUID id) {
         LocationDetailDto location = locationService.getLocationById(id);
         return ResponseEntity.ok(ApiResponse.success(location));
     }
 
     @PostMapping
-    @RequirePermission("locations.edit")
+    @RequirePermission(Permission.LOCATIONS_EDIT)
     public ResponseEntity<ApiResponse<LocationDto>> createLocation(@Valid @RequestBody CreateLocationRequest request) {
         LocationDto location = locationService.createLocation(request);
         log.info("Location created via API: locationId={}", location.getId());
@@ -48,7 +49,7 @@ public class LocationController {
     }
 
     @PatchMapping("/{id}")
-    @RequirePermission("locations.edit")
+    @RequirePermission(Permission.LOCATIONS_EDIT)
     public ResponseEntity<ApiResponse<LocationDto>> updateLocation(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateLocationRequest request) {
@@ -59,7 +60,7 @@ public class LocationController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("locations.edit")
+    @RequirePermission(Permission.LOCATIONS_EDIT)
     public ResponseEntity<ApiResponse<Void>> deleteLocation(@PathVariable UUID id) {
         locationService.deleteLocation(id);
         log.info("Location deleted via API: locationId={}", id);
@@ -68,7 +69,7 @@ public class LocationController {
     }
 
     @PostMapping("/{id}/staff")
-    @RequirePermission("locations.edit")
+    @RequirePermission(Permission.LOCATIONS_EDIT)
     public ResponseEntity<ApiResponse<Void>> assignStaff(
             @PathVariable UUID id,
             @Valid @RequestBody AssignStaffRequest request) {

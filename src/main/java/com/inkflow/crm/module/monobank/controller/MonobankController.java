@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.monobank.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.module.monobank.dto.*;
 import com.inkflow.crm.module.monobank.service.MonobankService;
@@ -19,7 +20,7 @@ public class MonobankController {
     private final MonobankService monobankService;
 
     @PostMapping("/invoice")
-    @RequirePermission("payments.process")
+    @RequirePermission(Permission.PAYMENTS_PROCESS)
     public ResponseEntity<ApiResponse<OnlineInvoiceDto>> createInvoice(
             @Valid @RequestBody CreateOnlineInvoiceRequest request) {
         OnlineInvoiceDto invoice = monobankService.createInvoice(request);

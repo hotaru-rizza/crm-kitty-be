@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.project.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
@@ -25,7 +26,7 @@ public class ProjectController {
     private final ProjectService projectService;
 
     @GetMapping
-    @RequirePermission({"projects.view_all", "projects.view_own"})
+    @RequirePermission({Permission.PROJECTS_VIEW_ALL, Permission.PROJECTS_VIEW_OWN})
     public ResponseEntity<ApiResponse<List<ProjectDto>>> getAllProjects(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String status,
@@ -40,14 +41,14 @@ public class ProjectController {
     }
 
     @GetMapping("/{id}")
-    @RequirePermission({"projects.view_all", "projects.view_own"})
+    @RequirePermission({Permission.PROJECTS_VIEW_ALL, Permission.PROJECTS_VIEW_OWN})
     public ResponseEntity<ApiResponse<ProjectDto>> getProject(@PathVariable UUID id) {
         ProjectDto project = projectService.getProjectById(id);
         return ResponseEntity.ok(ApiResponse.success(project));
     }
 
     @PostMapping
-    @RequirePermission("projects.create")
+    @RequirePermission(Permission.PROJECTS_CREATE)
     public ResponseEntity<ApiResponse<ProjectDto>> createProject(@Valid @RequestBody CreateProjectRequest request) {
         ProjectDto project = projectService.createProject(request);
         log.info("Project created via API: projectId={}", project.getId());
@@ -56,7 +57,7 @@ public class ProjectController {
     }
 
     @PatchMapping("/{id}")
-    @RequirePermission("projects.edit")
+    @RequirePermission(Permission.PROJECTS_EDIT)
     public ResponseEntity<ApiResponse<ProjectDto>> updateProject(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateProjectRequest request) {
@@ -67,7 +68,7 @@ public class ProjectController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("projects.delete")
+    @RequirePermission(Permission.PROJECTS_DELETE)
     public ResponseEntity<ApiResponse<Void>> deleteProject(@PathVariable UUID id) {
         projectService.deleteProject(id);
         log.info("Project deleted via API: projectId={}", id);
@@ -76,7 +77,7 @@ public class ProjectController {
     }
 
     @PostMapping("/{id}/photos")
-    @RequirePermission("projects.edit")
+    @RequirePermission(Permission.PROJECTS_EDIT)
     public ResponseEntity<ApiResponse<ProjectDto.PhotoDto>> addPhoto(
             @PathVariable UUID id,
             @Valid @RequestBody AddProjectPhotoRequest request) {
@@ -87,7 +88,7 @@ public class ProjectController {
     }
 
     @DeleteMapping("/{id}/photos/{photoId}")
-    @RequirePermission("projects.edit")
+    @RequirePermission(Permission.PROJECTS_EDIT)
     public ResponseEntity<ApiResponse<Void>> deletePhoto(
             @PathVariable UUID id,
             @PathVariable UUID photoId) {

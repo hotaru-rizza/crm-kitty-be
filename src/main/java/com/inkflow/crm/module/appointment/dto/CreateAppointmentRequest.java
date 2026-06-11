@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.appointment.dto;
 
+import com.inkflow.crm.common.validation.ValidAppointmentTimeRange;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
@@ -16,6 +17,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ValidAppointmentTimeRange
 public class CreateAppointmentRequest {
 
     @NotNull(message = "Client ID is required")

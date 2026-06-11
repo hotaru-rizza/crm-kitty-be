@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.storage.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.module.storage.dto.PresignedUploadRequest;
 import com.inkflow.crm.module.storage.dto.PresignedUploadResult;
@@ -15,7 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.Set;
 
 @Slf4j
 @RestController
@@ -23,16 +23,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class FileController {
 
-    private static final Set<String> ALLOWED_FOLDERS = Set.of(
-            "avatars", "gallery", "sketches", "portfolio", "locations"
-    );
-
     private static final long MAX_DIRECT_UPLOAD_BYTES = 5L * 1024 * 1024;
 
     private final FileStorageService fileStorageService;
 
     @PostMapping("/presign")
-    @RequirePermission("files.upload")
+    @RequirePermission(Permission.FILES_UPLOAD)
     public ResponseEntity<ApiResponse<PresignedUploadResult>> getPresignedUrl(
             @Valid @RequestBody PresignedUploadRequest request) {
         validateFolder(request.getFolder());
@@ -49,7 +45,7 @@ public class FileController {
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @RequirePermission("files.upload")
+    @RequirePermission(Permission.FILES_UPLOAD)
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam("folder") String folder) throws IOException {
@@ -73,7 +69,7 @@ public class FileController {
     }
 
     @DeleteMapping
-    @RequirePermission("files.upload")
+    @RequirePermission(Permission.FILES_UPLOAD)
     public ResponseEntity<ApiResponse<Void>> deleteFile(@RequestParam String key) {
         fileStorageService.deleteFile(key);
         log.info("File deleted via API: key={}", key);
@@ -82,8 +78,10 @@ public class FileController {
     }
 
     private void validateFolder(String folder) {
-        if (!ALLOWED_FOLDERS.contains(folder)) {
-            throw new IllegalArgumentException("Invalid folder: " + folder + ". Allowed: " + ALLOWED_FOLDERS);
+        if (!FileStorageService.ALLOWED_FOLDERS.contains(folder)) {
+            throw new IllegalArgumentException(
+                    "Invalid folder: " + folder + ". Allowed: " + FileStorageService.ALLOWED_FOLDERS
+            );
         }
     }
 

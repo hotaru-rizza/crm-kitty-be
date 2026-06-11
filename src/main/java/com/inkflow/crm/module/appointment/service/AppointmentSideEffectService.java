@@ -6,9 +6,9 @@ import com.inkflow.crm.domain.enums.AppointmentStatus;
 import com.inkflow.crm.domain.enums.EmailType;
 import com.inkflow.crm.domain.repository.CompanySettingsRepository;
 import com.inkflow.crm.module.appointment.dto.AppointmentUpdateContext;
-import com.inkflow.crm.module.audit.AuditLogService;
+import com.inkflow.crm.module.audit.service.AuditLogService;
 import com.inkflow.crm.module.email.service.EmailService;
-import com.inkflow.crm.module.google.GoogleCalendarSyncService;
+import com.inkflow.crm.module.google.service.GoogleCalendarSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ public class AppointmentSideEffectService {
                 appointment.getId(), appointment.getTenantId());
 
         sendCreateEmails(appointment);
-        googleCalendarSyncService.syncNewAppointment(appointment);
+        syncCalendarSafely(appointment, () -> googleCalendarSyncService.syncNewAppointment(appointment));
         auditCreated(appointment);
     }
 
@@ -46,7 +46,7 @@ public class AppointmentSideEffectService {
         log.info("Appointment side-effects after delete: appointmentId={} tenantId={}",
                 appointmentId, appointment.getTenantId());
 
-        googleCalendarSyncService.syncDeletedAppointment(appointment);
+        syncCalendarSafely(appointment, () -> googleCalendarSyncService.syncDeletedAppointment(appointment));
         auditDeleted(appointment, appointmentId);
     }
 
@@ -129,10 +129,19 @@ public class AppointmentSideEffectService {
 
     private void syncCalendarAfterUpdate(Appointment appointment) {
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
-            googleCalendarSyncService.syncDeletedAppointment(appointment);
+            syncCalendarSafely(appointment, () -> googleCalendarSyncService.syncDeletedAppointment(appointment));
             return;
         }
-        googleCalendarSyncService.syncUpdatedAppointment(appointment);
+        syncCalendarSafely(appointment, () -> googleCalendarSyncService.syncUpdatedAppointment(appointment));
+    }
+
+    private void syncCalendarSafely(Appointment appointment, Runnable syncAction) {
+        try {
+            syncAction.run();
+        } catch (Exception e) {
+            log.warn("Google Calendar sync dispatch failed for appointment {} tenant {}: {}",
+                    appointment.getId(), appointment.getTenantId(), e.getMessage());
+        }
     }
 
     private void auditCreated(Appointment appointment) {

@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.notification.event;
 
+import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.module.notification.entity.NotificationType;
 import com.inkflow.crm.module.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -8,7 +9,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
@@ -18,8 +18,7 @@ import java.util.Map;
 public class NotificationEventListener {
 
     private final NotificationService notificationService;
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm")
-            .withZone(ZoneId.of("Europe/Kyiv"));
+    private final InkflowProperties inkflowProperties;
 
     @Async
     @EventListener
@@ -44,7 +43,7 @@ public class NotificationEventListener {
     public void onAppointmentReminder(AppointmentReminderEvent event) {
         log.info("Notification: appointment reminder {} for staff {}", event.appointmentId(), event.staffId());
 
-        String time = TIME_FMT.format(event.startTime());
+        String time = timeFormatter().format(event.startTime());
         String title = "Нагадування про запис";
         String body = event.clientName() + " о " + time;
 
@@ -56,6 +55,10 @@ public class NotificationEventListener {
                 body,
                 Map.of("appointmentId", event.appointmentId().toString(), "type", "reminder")
         );
+    }
+
+    private DateTimeFormatter timeFormatter() {
+        return DateTimeFormatter.ofPattern("HH:mm").withZone(inkflowProperties.defaultZoneId());
     }
 
     private String truncate(String s, int max) {

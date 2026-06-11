@@ -7,6 +7,7 @@ import com.inkflow.crm.module.consumer.dto.SaveGenerationRequest;
 import com.inkflow.crm.module.consumer.dto.UpdateConsumerProfileRequest;
 import com.inkflow.crm.module.consumer.entity.ConsumerUser;
 import com.inkflow.crm.module.consumer.service.ConsumerUserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -31,7 +32,7 @@ public class ConsumerUserController {
     @PatchMapping("/me")
     public ResponseEntity<ApiResponse<ConsumerUserDto>> updateMe(
             @AuthenticationPrincipal ConsumerUser user,
-            @RequestBody UpdateConsumerProfileRequest body) {
+            @Valid @RequestBody UpdateConsumerProfileRequest body) {
         ConsumerUserDto updated = consumerUserService.updateProfile(user, body);
         log.info("Consumer profile updated via API: userId={}", user.getId());
 
@@ -81,7 +82,7 @@ public class ConsumerUserController {
     @PostMapping("/me/generations")
     public ResponseEntity<ApiResponse<ConsumerUserDto>> saveGeneration(
             @AuthenticationPrincipal ConsumerUser user,
-            @RequestBody SaveGenerationRequest body) {
+            @Valid @RequestBody SaveGenerationRequest body) {
         ConsumerUserDto updated = consumerUserService.saveGeneration(user, body);
         log.info("Consumer saved generation via API: userId={}", user.getId());
 

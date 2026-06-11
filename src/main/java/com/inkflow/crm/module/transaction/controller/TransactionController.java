@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.transaction.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
@@ -29,7 +30,7 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     @GetMapping
-    @RequirePermission("finance.view")
+    @RequirePermission(Permission.FINANCE_VIEW)
     public ResponseEntity<ApiResponse<List<TransactionDto>>> getAllTransactions(
             @ModelAttribute PageRequest pageRequest,
             @RequestParam(required = false) String type,
@@ -42,14 +43,14 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
-    @RequirePermission("finance.view")
+    @RequirePermission(Permission.FINANCE_VIEW)
     public ResponseEntity<ApiResponse<TransactionDto>> getTransaction(@PathVariable UUID id) {
         TransactionDto transaction = transactionService.getTransactionById(id);
         return ResponseEntity.ok(ApiResponse.success(transaction));
     }
 
     @GetMapping("/stats")
-    @RequirePermission("finance.view")
+    @RequirePermission(Permission.FINANCE_VIEW)
     public ResponseEntity<ApiResponse<FinanceStatsDto>> getFinanceStats(
             @RequestParam(required = false) String period,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
@@ -88,7 +89,7 @@ public class TransactionController {
     }
 
     @PostMapping
-    @RequirePermission("finance.create")
+    @RequirePermission(Permission.FINANCE_CREATE)
     public ResponseEntity<ApiResponse<TransactionDto>> createTransaction(@Valid @RequestBody CreateTransactionRequest request) {
         TransactionDto transaction = transactionService.createTransaction(request);
         log.info("Transaction created via API: transactionId={} type={}", transaction.getId(), transaction.getType());

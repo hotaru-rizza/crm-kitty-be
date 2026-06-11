@@ -1,5 +1,7 @@
 # InkFlow CRM — API Specification
 
+> **⚠️ Partially outdated (Jan 2026).** See [docs/API_SPECIFICATION_SUMMARY.md](docs/API_SPECIFICATION_SUMMARY.md) and [docs/BACKEND_TECH_DEBT.md](docs/BACKEND_TECH_DEBT.md) for current modules and endpoints. Removed: waivers, inventory, gift certificates, promotions, public subdomain booking.
+
 > **Версія**: 1.0  
 > **Дата**: 25 січня 2026  
 > **Backend**: Spring Boot + Hibernate + PostgreSQL  

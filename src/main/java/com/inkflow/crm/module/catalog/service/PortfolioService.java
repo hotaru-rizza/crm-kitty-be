@@ -3,12 +3,13 @@ package com.inkflow.crm.module.catalog.service;
 import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Staff;
-import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.catalog.dto.TattooDto;
 import com.inkflow.crm.module.catalog.entity.Tattoo;
 import com.inkflow.crm.module.catalog.entity.TattooStatus;
 import com.inkflow.crm.module.catalog.mapper.TattooMapper;
 import com.inkflow.crm.module.catalog.repository.TattooRepository;
+import com.inkflow.crm.module.catalog.support.PortfolioShowcaseResolver;
+import com.inkflow.crm.module.staff.service.StaffLookup;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,37 +24,36 @@ import java.util.UUID;
 public class PortfolioService {
 
     private static final int MAX_SHOWCASE = 10;
-    private static final int DEFAULT_SHOWCASE_COUNT = 5;
 
     private final TattooRepository tattooRepository;
-    private final StaffRepository staffRepository;
+    private final StaffLookup staffLookup;
     private final EmbeddingService embeddingService;
     private final PortfolioProcessor portfolioProcessor;
     private final TattooMapper tattooMapper;
+    private final PortfolioShowcaseResolver showcaseResolver;
 
     public List<TattooDto> getPortfolio(UUID staffId) {
+        requireStaff(staffId);
         return tattooMapper.toDtoList(
                 tattooRepository.findByStaffIdOrderBySortOrderAscCreatedAtDesc(staffId)
         );
     }
 
     public List<TattooDto> uploadBulk(UUID staffId, List<String> imageUrls) {
-        Staff staff = staffRepository.findById(staffId)
-                .orElseThrow(() -> ResourceNotFoundException.staff(staffId.toString()));
-
+        Staff staff = requireStaff(staffId);
         String authorName = staff.getFirstName() + " " + staff.getLastName();
         List<Tattoo> created = new ArrayList<>();
 
-        for (int i = 0; i < imageUrls.size(); i++) {
+        for (int index = 0; index < imageUrls.size(); index++) {
             Tattoo tattoo = new Tattoo();
             tattoo.setStaffId(staffId);
             tattoo.setSource(Tattoo.SOURCE_PORTFOLIO);
             tattoo.setSourceId(UUID.randomUUID().toString());
             tattoo.setStatus(TattooStatus.PROCESSING);
-            tattoo.setImageUrl(imageUrls.get(i));
-            tattoo.setThumbnailUrl(imageUrls.get(i));
+            tattoo.setImageUrl(imageUrls.get(index));
+            tattoo.setThumbnailUrl(imageUrls.get(index));
             tattoo.setAuthorName(authorName);
-            tattoo.setSortOrder(i);
+            tattoo.setSortOrder(index);
             created.add(tattooRepository.save(tattoo));
         }
 
@@ -64,9 +64,8 @@ public class PortfolioService {
         return tattooMapper.toDtoList(created);
     }
 
-    public TattooDto update(Long tattooId, String description, List<String> tags) {
-        Tattoo tattoo = tattooRepository.findById(tattooId)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.NOT_FOUND, "Tattoo not found: " + tattooId));
+    public TattooDto update(UUID staffId, Long tattooId, String description, List<String> tags) {
+        Tattoo tattoo = requireTattooForStaff(staffId, tattooId);
 
         if (description != null) {
             tattoo.setDescription(description);
@@ -78,24 +77,26 @@ public class PortfolioService {
         reEmbedIfNeeded(tattoo);
         tattoo = tattooRepository.save(tattoo);
 
-        log.info("Portfolio tattoo updated: tattooId={}", tattooId);
+        log.info("Portfolio tattoo updated: staffId={} tattooId={}", staffId, tattooId);
         return tattooMapper.toDto(tattoo);
     }
 
     public List<TattooDto> setShowcase(UUID staffId, List<Long> tattooIds) {
+        requireStaff(staffId);
+
         if (tattooIds.size() > MAX_SHOWCASE) {
             throw new IllegalArgumentException("Maximum " + MAX_SHOWCASE + " showcase photos allowed");
         }
 
         List<Tattoo> currentShowcase = tattooRepository.findByStaffIdAndShowcaseTrueOrderBySortOrderAsc(staffId);
-        currentShowcase.forEach(t -> t.setShowcase(false));
+        currentShowcase.forEach(tattoo -> tattoo.setShowcase(false));
         tattooRepository.saveAll(currentShowcase);
 
         if (!tattooIds.isEmpty()) {
             List<Tattoo> newShowcase = tattooRepository.findAllByIdIn(tattooIds);
             newShowcase.stream()
-                    .filter(t -> staffId.equals(t.getStaffId()))
-                    .forEach(t -> t.setShowcase(true));
+                    .filter(tattoo -> staffId.equals(tattoo.getStaffId()))
+                    .forEach(tattoo -> tattoo.setShowcase(true));
             tattooRepository.saveAll(newShowcase);
         }
 
@@ -104,21 +105,30 @@ public class PortfolioService {
     }
 
     public List<String> getShowcaseUrls(UUID staffId) {
-        List<Tattoo> showcase = tattooRepository.findByStaffIdAndShowcaseTrueOrderBySortOrderAsc(staffId);
-        if (!showcase.isEmpty()) {
-            return showcase.stream().map(Tattoo::getImageUrl).toList();
-        }
-
-        return tattooRepository.findByStaffIdOrderBySortOrderAscCreatedAtDesc(staffId).stream()
-                .filter(t -> t.getStatus() == TattooStatus.READY)
-                .limit(DEFAULT_SHOWCASE_COUNT)
-                .map(Tattoo::getImageUrl)
-                .toList();
+        return showcaseResolver.resolveUrls(staffId);
     }
 
-    public void delete(Long tattooId) {
-        tattooRepository.deleteById(tattooId);
-        log.info("Portfolio tattoo deleted: tattooId={}", tattooId);
+    public void delete(UUID staffId, Long tattooId) {
+        Tattoo tattoo = requireTattooForStaff(staffId, tattooId);
+        tattooRepository.delete(tattoo);
+        log.info("Portfolio tattoo deleted: staffId={} tattooId={}", staffId, tattooId);
+    }
+
+    private Staff requireStaff(UUID staffId) {
+        return staffLookup.requireStaff(staffId);
+    }
+
+    private Tattoo requireTattooForStaff(UUID staffId, Long tattooId) {
+        requireStaff(staffId);
+
+        Tattoo tattoo = tattooRepository.findById(tattooId)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.NOT_FOUND, "Tattoo not found: " + tattooId));
+
+        if (!staffId.equals(tattoo.getStaffId())) {
+            throw new ResourceNotFoundException(ErrorCode.NOT_FOUND, "Tattoo not found: " + tattooId);
+        }
+
+        return tattoo;
     }
 
     private void reEmbedIfNeeded(Tattoo tattoo) {

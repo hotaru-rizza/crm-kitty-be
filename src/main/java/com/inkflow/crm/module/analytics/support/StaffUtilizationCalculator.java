@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.analytics.support;
 
+import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.StaffSchedule;
 import com.inkflow.crm.domain.enums.DayOfWeek;
@@ -17,8 +18,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class StaffUtilizationCalculator {
 
-    private static final ZoneId ANALYTICS_ZONE = ZoneId.of("Europe/Kyiv");
-
+    private final InkflowProperties inkflowProperties;
     private final AppointmentMetricsCalculator metrics;
 
     public double calculateScheduledHours(List<StaffSchedule> schedule, Instant from, Instant to) {
@@ -27,8 +27,9 @@ public class StaffUtilizationCalculator {
         }
 
         Map<DayOfWeek, StaffSchedule> scheduleByDay = indexWorkingDays(schedule);
-        LocalDate startDate = from.atZone(ANALYTICS_ZONE).toLocalDate();
-        LocalDate endDate = to.atZone(ANALYTICS_ZONE).toLocalDate();
+        ZoneId zone = inkflowProperties.defaultZoneId();
+        LocalDate startDate = from.atZone(zone).toLocalDate();
+        LocalDate endDate = to.atZone(zone).toLocalDate();
 
         double totalHours = 0;
         LocalDate cursor = startDate;

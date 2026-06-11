@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.leave.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.module.leave.dto.CreateLeaveRequest;
@@ -30,7 +31,7 @@ public class LeaveController {
     private final LeaveService leaveService;
 
     @GetMapping
-    @RequirePermission({"leaves.view", "leaves.manage", "calendar.view_all"})
+    @RequirePermission({Permission.LEAVES_VIEW, Permission.LEAVES_MANAGE, Permission.CALENDAR_VIEW_ALL})
     public ResponseEntity<ApiResponse<List<LeaveRequestDto>>> getAllLeaves(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String leaveType,
@@ -47,7 +48,7 @@ public class LeaveController {
     }
 
     @GetMapping("/pending-count")
-    @RequirePermission({"leaves.manage", "calendar.view_all"})
+    @RequirePermission({Permission.LEAVES_MANAGE, Permission.CALENDAR_VIEW_ALL})
     public ResponseEntity<ApiResponse<Long>> getPendingCount(
             @RequestParam(required = false) UUID locationId) {
         long count = leaveService.getPendingCount(locationId);
@@ -55,7 +56,7 @@ public class LeaveController {
     }
 
     @GetMapping("/staff/{staffId}")
-    @RequirePermission({"leaves.view", "leaves.manage", "calendar.view_all", "calendar.view_own"})
+    @RequirePermission({Permission.LEAVES_VIEW, Permission.LEAVES_MANAGE, Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
     public ResponseEntity<ApiResponse<List<LeaveRequestDto>>> getLeavesByStaffId(
             @PathVariable UUID staffId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -70,14 +71,14 @@ public class LeaveController {
     }
 
     @GetMapping("/{id}")
-    @RequirePermission({"leaves.view", "leaves.manage", "calendar.view_all", "calendar.view_own"})
+    @RequirePermission({Permission.LEAVES_VIEW, Permission.LEAVES_MANAGE, Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
     public ResponseEntity<ApiResponse<LeaveRequestDto>> getLeaveById(@PathVariable UUID id) {
         LeaveRequestDto leave = leaveService.getLeaveById(id);
         return ResponseEntity.ok(ApiResponse.success(leave));
     }
 
     @PostMapping
-    @RequirePermission({"leaves.create", "leaves.manage"})
+    @RequirePermission({Permission.LEAVES_CREATE, Permission.LEAVES_MANAGE})
     public ResponseEntity<ApiResponse<LeaveRequestDto>> createLeave(
             @Valid @RequestBody CreateLeaveRequest request) {
         LeaveRequestDto leave = leaveService.createLeave(request);
@@ -87,7 +88,7 @@ public class LeaveController {
     }
 
     @PatchMapping("/{id}/status")
-    @RequirePermission("leaves.manage")
+    @RequirePermission(Permission.LEAVES_MANAGE)
     public ResponseEntity<ApiResponse<LeaveRequestDto>> updateLeaveStatus(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateLeaveStatusRequest request) {
@@ -98,7 +99,7 @@ public class LeaveController {
     }
 
     @PatchMapping("/{id}/cancel")
-    @RequirePermission({"leaves.create", "leaves.manage"})
+    @RequirePermission({Permission.LEAVES_CREATE, Permission.LEAVES_MANAGE})
     public ResponseEntity<ApiResponse<LeaveRequestDto>> cancelLeave(@PathVariable UUID id) {
         LeaveRequestDto leave = leaveService.cancelLeave(id);
         log.info("Leave cancelled via API: leaveId={}", id);
@@ -107,7 +108,7 @@ public class LeaveController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("leaves.manage")
+    @RequirePermission(Permission.LEAVES_MANAGE)
     public ResponseEntity<ApiResponse<Void>> deleteLeave(@PathVariable UUID id) {
         leaveService.deleteLeave(id);
         log.info("Leave deleted via API: leaveId={}", id);
@@ -116,7 +117,7 @@ public class LeaveController {
     }
 
     @GetMapping("/staff/{staffId}/check")
-    @RequirePermission({"leaves.view", "calendar.view_all", "calendar.view_own"})
+    @RequirePermission({Permission.LEAVES_VIEW, Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
     public ResponseEntity<ApiResponse<Boolean>> checkStaffOnLeave(
             @PathVariable UUID staffId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -125,7 +126,7 @@ public class LeaveController {
     }
 
     @GetMapping("/calendar")
-    @RequirePermission({"leaves.view", "calendar.view_all", "calendar.view_own"})
+    @RequirePermission({Permission.LEAVES_VIEW, Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
     public ResponseEntity<ApiResponse<List<LeaveRequestDto>>> getLeavesForCalendar(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {

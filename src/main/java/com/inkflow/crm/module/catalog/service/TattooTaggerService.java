@@ -23,7 +23,11 @@ public class TattooTaggerService {
 
     @PostConstruct
     void loadStyles() {
-        reloadKeywords();
+        try {
+            reloadKeywords();
+        } catch (Exception e) {
+            log.warn("Failed to preload tattoo styles: {}", e.getMessage());
+        }
     }
 
     public void reloadKeywords() {

@@ -1,6 +1,7 @@
 package com.inkflow.crm.security;
 
 import com.inkflow.crm.common.exception.AccessDeniedException;
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,7 @@ public class PermissionAspect {
 
         if (annotation == null) return;
 
-        String[] requiredPermissions = annotation.value();
+        Permission[] requiredPermissions = annotation.value();
         boolean requireAll = annotation.requireAll();
 
         UUID tenantId = SecurityUtils.getCurrentTenantId();
@@ -40,10 +41,10 @@ public class PermissionAspect {
         boolean hasAccess;
         if (requireAll) {
             hasAccess = Arrays.stream(requiredPermissions)
-                    .allMatch(p -> rolePermissionService.hasPermission(tenantId, role, p));
+                    .allMatch(permission -> rolePermissionService.hasPermission(tenantId, role, permission.getValue()));
         } else {
             hasAccess = Arrays.stream(requiredPermissions)
-                    .anyMatch(p -> rolePermissionService.hasPermission(tenantId, role, p));
+                    .anyMatch(permission -> rolePermissionService.hasPermission(tenantId, role, permission.getValue()));
         }
 
         if (!hasAccess) {

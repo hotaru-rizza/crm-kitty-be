@@ -4,7 +4,7 @@ import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.ApiResponses;
 import com.inkflow.crm.module.consumer.dto.ConsumerBookingListItemDto;
 import com.inkflow.crm.module.consumer.dto.ConsumerBookingResultDto;
-import com.inkflow.crm.module.consumer.dto.PublicBookingRequest;
+import com.inkflow.crm.module.consumer.dto.ConsumerBookingRequest;
 import com.inkflow.crm.module.consumer.entity.ConsumerUser;
 import com.inkflow.crm.module.consumer.service.ConsumerBookingService;
 import jakarta.validation.Valid;
@@ -27,7 +27,9 @@ public class ConsumerBookingController {
     @PostMapping
     public ResponseEntity<ApiResponse<ConsumerBookingResultDto>> submitBookingRequest(
             @AuthenticationPrincipal ConsumerUser consumer,
-            @Valid @RequestBody PublicBookingRequest body) {
+            @Valid @RequestBody ConsumerBookingRequest body) {
+        ApiResponses.requireConsumer(consumer);
+
         ConsumerBookingResultDto result = consumerBookingService.submitBookingRequest(consumer, body);
         log.info("Consumer booking request submitted via API: consumerId={} requestId={}", consumer.getId(), result.id());
 

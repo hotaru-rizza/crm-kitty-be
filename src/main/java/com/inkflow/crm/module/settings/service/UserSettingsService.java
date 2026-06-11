@@ -1,0 +1,59 @@
+package com.inkflow.crm.module.settings.service;
+
+import com.inkflow.crm.config.InkflowProperties;
+import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.settings.dto.UpdateUserSettingsRequest;
+import com.inkflow.crm.module.settings.dto.UserSettingsDto;
+import com.inkflow.crm.module.staff.service.StaffLookup;
+import com.inkflow.crm.security.SecurityUtils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class UserSettingsService {
+
+    private final StaffLookup staffLookup;
+    private final StaffRepository staffRepository;
+    private final InkflowProperties inkflowProperties;
+
+    @Transactional(readOnly = true)
+    public UserSettingsDto getCurrentUserSettings() {
+        Staff staff = staffLookup.requireStaff(SecurityUtils.getCurrentUserId());
+        return toDto(staff);
+    }
+
+    @Transactional
+    public UserSettingsDto updateCurrentUserSettings(UpdateUserSettingsRequest request) {
+        UUID staffId = SecurityUtils.getCurrentUserId();
+        Staff staff = staffLookup.requireStaff(staffId);
+
+        if (request.getLanguage() != null) {
+            staff.setUiLanguage(request.getLanguage());
+        }
+        if (request.getStartPage() != null) {
+            staff.setStartPage(request.getStartPage());
+        }
+
+        staff = staffRepository.save(staff);
+        log.info("User settings updated: staffId={}", staffId);
+
+        return toDto(staff);
+    }
+
+    private UserSettingsDto toDto(Staff staff) {
+        String language = staff.getUiLanguage() != null
+                ? staff.getUiLanguage()
+                : inkflowProperties.getDefaultLanguage();
+        String startPage = staff.getStartPage() != null
+                ? staff.getStartPage()
+                : inkflowProperties.getDefaultStartPage();
+        return new UserSettingsDto(language, startPage);
+    }
+}

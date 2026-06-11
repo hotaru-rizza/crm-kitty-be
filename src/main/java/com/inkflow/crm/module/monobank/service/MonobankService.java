@@ -111,15 +111,29 @@ public class MonobankService {
 
     @Transactional
     public void handleWebhook(MonobankWebhookPayload payload) {
+        if (payload == null || payload.getInvoiceId() == null || payload.getInvoiceId().isBlank()) {
+            log.warn("Monobank webhook ignored — missing invoiceId");
+            return;
+        }
+
         log.info("Monobank webhook received: invoiceId={} status={}", payload.getInvoiceId(), payload.getStatus());
 
         MonobankInvoice invoice = invoiceRepository.findByMonobankInvoiceId(payload.getInvoiceId())
-                .orElseGet(() -> {
-                    log.warn("Unknown Monobank invoiceId: {}", payload.getInvoiceId());
-                    return null;
-                });
+                .orElse(null);
 
-        if (invoice == null) return;
+        if (invoice == null) {
+            log.warn("Unknown Monobank invoiceId: {}", payload.getInvoiceId());
+            return;
+        }
+
+        if ("success".equals(invoice.getStatus()) && invoice.getTransactionId() != null) {
+            log.info("Monobank webhook ignored — invoice already processed: {}", payload.getInvoiceId());
+            return;
+        }
+
+        if ("success".equals(payload.getStatus()) && !verifySuccessPayload(invoice, payload)) {
+            return;
+        }
 
         invoice.setStatus(payload.getStatus());
 
@@ -127,12 +141,50 @@ public class MonobankService {
             invoice.setPaidAt(Instant.now());
             if ("SUBSCRIPTION".equals(invoice.getInvoiceType())) {
                 subscriptionService.activateSubscription(invoice.getTenantId(), payload.getInvoiceId());
-            } else {
+            } else if (invoice.getTransactionId() == null) {
                 recordSuccessfulPayment(invoice, payload);
             }
         }
 
         invoiceRepository.save(invoice);
+    }
+
+    private boolean verifySuccessPayload(MonobankInvoice invoice, MonobankWebhookPayload payload) {
+        if (!amountMatches(invoice, payload)) {
+            log.warn("Monobank amount mismatch for invoice {}: expected={} received={}",
+                    payload.getInvoiceId(), invoice.getAmount(), payload.getAmountDecimal());
+            return false;
+        }
+
+        if (config.getToken() == null || config.getToken().startsWith("REPLACE_")) {
+            return true;
+        }
+
+        String remoteStatus = fetchRemoteInvoiceStatus(payload.getInvoiceId());
+        if (remoteStatus != null && !"success".equals(remoteStatus)) {
+            log.warn("Monobank remote status mismatch for invoice {}: {}", payload.getInvoiceId(), remoteStatus);
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean amountMatches(MonobankInvoice invoice, MonobankWebhookPayload payload) {
+        long expectedKopecks = invoice.getAmount().multiply(BigDecimal.valueOf(100)).longValue();
+        Long receivedKopecks = payload.getFinalAmount() != null ? payload.getFinalAmount() : payload.getAmount();
+        return receivedKopecks == null || receivedKopecks == expectedKopecks;
+    }
+
+    @SuppressWarnings("unchecked")
+    private String fetchRemoteInvoiceStatus(String invoiceId) {
+        try {
+            Map<String, Object> response = callMonobankApi("GET", "/api/merchant/invoice/status?invoiceId=" + invoiceId, null);
+            Object status = response.get("status");
+            return status != null ? status.toString() : null;
+        } catch (Exception e) {
+            log.warn("Failed to verify Monobank invoice status for {}: {}", invoiceId, e.getMessage());
+            return null;
+        }
     }
 
     private void recordSuccessfulPayment(MonobankInvoice invoice, MonobankWebhookPayload payload) {
@@ -182,6 +234,9 @@ public class MonobankService {
     @SuppressWarnings("unchecked")
     private Map<String, Object> callMonobankApi(String method, String path, Object body) {
         if (config.getToken() == null || config.getToken().startsWith("REPLACE_")) {
+            if ("GET".equals(method)) {
+                return Map.of("status", "success");
+            }
             log.warn("Monobank token not configured — returning sandbox invoice");
             String fakeId = "sandbox_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
             return Map.of(
@@ -191,17 +246,21 @@ public class MonobankService {
         }
 
         try {
-            String requestBody = objectMapper.writeValueAsString(body);
-
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(config.getApiUrl() + path))
-                    .header("X-Token", config.getToken())
-                    .header("Content-Type", "application/json")
-                    .method(method, HttpRequest.BodyPublishers.ofString(requestBody))
-                    .build();
+                    .header("X-Token", config.getToken());
+
+            if ("GET".equals(method)) {
+                requestBuilder.GET();
+            } else {
+                String requestBody = objectMapper.writeValueAsString(body);
+                requestBuilder
+                        .header("Content-Type", "application/json")
+                        .method(method, HttpRequest.BodyPublishers.ofString(requestBody));
+            }
 
             HttpClient client = HttpClient.newHttpClient();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
                 log.error("Monobank API error {}: {}", response.statusCode(), response.body());

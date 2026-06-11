@@ -2,6 +2,7 @@ package com.inkflow.crm.module.storage.service;
 
 import com.inkflow.crm.config.R2Properties;
 import com.inkflow.crm.module.storage.dto.PresignedUploadResult;
+import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 import java.io.InputStream;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -22,14 +24,16 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FileStorageService {
 
+    public static final Set<String> ALLOWED_FOLDERS = Set.of(
+            "avatars", "gallery", "sketches", "portfolio", "locations"
+    );
+
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
     private final R2Properties r2Properties;
 
-
     public PresignedUploadResult generatePresignedUploadUrl(String folder, String originalFilename, String contentType) {
-        String ext = extractExtension(originalFilename);
-        String key = folder + "/" + UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
+        String key = buildTenantKey(folder, originalFilename);
 
         PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
                 .signatureDuration(Duration.ofMinutes(15))
@@ -51,10 +55,8 @@ public class FileStorageService {
         );
     }
 
-
     public String uploadFile(String folder, String originalFilename, String contentType, InputStream inputStream, long contentLength) {
-        String ext = extractExtension(originalFilename);
-        String key = folder + "/" + UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
+        String key = buildTenantKey(folder, originalFilename);
 
         s3Client.putObject(
                 PutObjectRequest.builder()
@@ -70,7 +72,6 @@ public class FileStorageService {
         return buildPublicUrl(key);
     }
 
-
     public String uploadBytes(byte[] data, String key, String contentType) {
         s3Client.putObject(
                 PutObjectRequest.builder()
@@ -84,8 +85,9 @@ public class FileStorageService {
         return buildPublicUrl(key);
     }
 
-
     public void deleteFile(String key) {
+        validateDeleteKey(key);
+
         try {
             s3Client.deleteObject(DeleteObjectRequest.builder()
                     .bucket(r2Properties.getBucketName())
@@ -96,7 +98,6 @@ public class FileStorageService {
             log.warn("Failed to delete file from R2: {}", key, e);
         }
     }
-
 
     public String extractKeyFromUrl(String url) {
         if (url == null || url.isBlank()) return null;
@@ -110,6 +111,42 @@ public class FileStorageService {
             return url.substring(idx + r2Properties.getBucketName().length()).replaceAll("^/+", "");
         }
         return null;
+    }
+
+    private String buildTenantKey(String folder, String originalFilename) {
+        String ext = extractExtension(originalFilename);
+        String suffix = UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        return tenantId + "/" + folder + "/" + suffix;
+    }
+
+    private void validateDeleteKey(String key) {
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("Key is required");
+        }
+        if (key.contains("..")) {
+            throw new IllegalArgumentException("Invalid key");
+        }
+
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        String tenantPrefix = tenantId + "/";
+        if (!key.startsWith(tenantPrefix)) {
+            throw new IllegalArgumentException("Invalid key");
+        }
+
+        validateFolderInPath(key.substring(tenantPrefix.length()));
+    }
+
+    private void validateFolderInPath(String path) {
+        int slashIndex = path.indexOf('/');
+        if (slashIndex <= 0) {
+            throw new IllegalArgumentException("Invalid key");
+        }
+
+        String folder = path.substring(0, slashIndex);
+        if (!ALLOWED_FOLDERS.contains(folder)) {
+            throw new IllegalArgumentException("Invalid folder in key: " + folder);
+        }
     }
 
     private String buildPublicUrl(String key) {

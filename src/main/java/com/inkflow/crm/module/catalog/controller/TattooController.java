@@ -2,8 +2,6 @@ package com.inkflow.crm.module.catalog.controller;
 
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.ApiResponses;
-import com.inkflow.crm.module.catalog.dto.CatalogRetagResultDto;
-import com.inkflow.crm.module.catalog.dto.CatalogSeedResultDto;
 import com.inkflow.crm.module.catalog.dto.TattooDto;
 import com.inkflow.crm.module.catalog.dto.TattooStyleDto;
 import com.inkflow.crm.module.catalog.service.TattooCatalogService;
@@ -68,21 +66,5 @@ public class TattooController {
     @GetMapping("/tags")
     public ResponseEntity<ApiResponse<Set<String>>> getAvailableTags() {
         return ApiResponses.ok(tattooCatalogService.getAvailableTags());
-    }
-
-    @PostMapping("/seed")
-    public ResponseEntity<ApiResponse<CatalogSeedResultDto>> seed() {
-        CatalogSeedResultDto result = tattooCatalogService.seed();
-        log.info("Tattoo catalog seeded via API: saved={} total={}", result.saved(), result.total());
-
-        return ApiResponses.ok(result);
-    }
-
-    @PostMapping("/retag")
-    public ResponseEntity<ApiResponse<CatalogRetagResultDto>> retag() {
-        CatalogRetagResultDto result = tattooCatalogService.retag();
-        log.info("Tattoo catalog retagged via API: retagged={}", result.retagged());
-
-        return ApiResponses.ok(result);
     }
 }

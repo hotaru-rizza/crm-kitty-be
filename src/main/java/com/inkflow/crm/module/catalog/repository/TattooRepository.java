@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.catalog.repository;
 
 import com.inkflow.crm.module.catalog.entity.Tattoo;
+import com.inkflow.crm.module.catalog.entity.TattooStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,7 +39,7 @@ public interface TattooRepository extends JpaRepository<Tattoo, Long> {
 
     @Query(value = """
             SELECT * FROM tattoos
-            WHERE status = 'READY'
+            WHERE status = :status
               AND (:tag IS NULL OR :tag = ANY(tags))
               AND (:author IS NULL OR author_name = :author)
               AND (:staffId IS NULL OR staff_id = CAST(:staffId AS uuid))
@@ -45,18 +47,24 @@ public interface TattooRepository extends JpaRepository<Tattoo, Long> {
             """,
             countQuery = """
             SELECT COUNT(*) FROM tattoos
-            WHERE status = 'READY'
+            WHERE status = :status
               AND (:tag IS NULL OR :tag = ANY(tags))
               AND (:author IS NULL OR author_name = :author)
               AND (:staffId IS NULL OR staff_id = CAST(:staffId AS uuid))
             """,
             nativeQuery = true)
     Page<Tattoo> findByTagOrAll(@Param("tag") String tag, @Param("author") String author,
-                                @Param("staffId") String staffId, Pageable pageable);
+                                @Param("staffId") String staffId, @Param("status") String status,
+                                Pageable pageable);
 
     List<Tattoo> findAllByIdIn(List<Long> ids);
 
     long countByStaffIdAndShowcase(UUID staffId, boolean showcase);
+
+    List<Tattoo> findByStaffIdInAndShowcaseTrueOrderBySortOrderAsc(Collection<UUID> staffIds);
+
+    List<Tattoo> findByStaffIdInAndStatusOrderBySortOrderAscCreatedAtDesc(
+            Collection<UUID> staffIds, TattooStatus status);
 
     List<Tattoo> findByStaffIdAndShowcaseTrueOrderBySortOrderAsc(UUID staffId);
 }

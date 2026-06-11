@@ -5,10 +5,13 @@ import com.inkflow.crm.common.dto.ApiResponses;
 import com.inkflow.crm.module.consumer.dto.TryOnRequest;
 import com.inkflow.crm.module.consumer.dto.TryOnResponse;
 import com.inkflow.crm.module.consumer.dto.PlacementDto;
+import com.inkflow.crm.module.consumer.entity.ConsumerUser;
 import com.inkflow.crm.module.consumer.service.GeminiTattooService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -20,7 +23,11 @@ public class TryOnController {
     private final GeminiTattooService geminiService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<TryOnResponse>> tryOn(@RequestBody TryOnRequest request) {
+    public ResponseEntity<ApiResponse<TryOnResponse>> tryOn(
+            @AuthenticationPrincipal ConsumerUser consumer,
+            @Valid @RequestBody TryOnRequest request) {
+        ApiResponses.requireConsumer(consumer);
+
         try {
             PlacementDto placement = request.placement();
 
@@ -30,13 +37,13 @@ public class TryOnController {
                     placement.xNorm(), placement.yNorm(), placement.sizeNorm(), placement.angle()
             );
 
-            log.info("Tattoo try-on generated via API: xNorm={} yNorm={} sizeNorm={} angle={}",
-                    placement.xNorm(), placement.yNorm(), placement.sizeNorm(), placement.angle());
+            log.info("Tattoo try-on generated via API: consumerId={} xNorm={} yNorm={} sizeNorm={} angle={}",
+                    consumer.getId(), placement.xNorm(), placement.yNorm(), placement.sizeNorm(), placement.angle());
 
             return ApiResponses.ok(TryOnResponse.success(resultDataUri));
 
         } catch (Exception e) {
-            log.error("Tattoo try-on generation failed via API", e);
+            log.error("Tattoo try-on generation failed via API: consumerId={}", consumer.getId(), e);
             return ApiResponses.ok(TryOnResponse.failure(e.getMessage()));
         }
     }

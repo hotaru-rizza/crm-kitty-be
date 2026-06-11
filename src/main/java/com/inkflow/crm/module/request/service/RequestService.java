@@ -57,9 +57,7 @@ public class RequestService {
 
     @Transactional
     public RequestDto createRequest(CreateRequestRequest createRequest) {
-        UUID tenantId = createRequest.getTenantId() != null
-                ? createRequest.getTenantId()
-                : SecurityUtils.getCurrentTenantId();
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         Request request = Request.builder()
                 .tenantId(tenantId)

@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.email.controller;
 
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.ApiResponses;
 import com.inkflow.crm.domain.enums.EmailType;
@@ -34,7 +35,7 @@ public class EmailController {
     private final EmailManagementService emailManagementService;
 
     @GetMapping("/log")
-    @RequirePermission("emails.view")
+    @RequirePermission(Permission.EMAILS_VIEW)
     public ResponseEntity<ApiResponse<List<EmailLogDto>>> getLog(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -46,14 +47,14 @@ public class EmailController {
     }
 
     @GetMapping("/stats")
-    @RequirePermission("emails.view")
+    @RequirePermission(Permission.EMAILS_VIEW)
     public ResponseEntity<ApiResponse<EmailStatsDto>> getStats() {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         return ApiResponses.ok(emailService.getStats(tenantId));
     }
 
     @PostMapping("/send")
-    @RequirePermission("emails.send")
+    @RequirePermission(Permission.EMAILS_SEND)
     public ResponseEntity<ApiResponse<SendEmailResultDto>> send(@Valid @RequestBody SendEmailRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         SendEmailResultDto result = emailManagementService.sendBulk(tenantId, request);
@@ -63,14 +64,14 @@ public class EmailController {
     }
 
     @GetMapping("/templates")
-    @RequirePermission("emails.manage")
+    @RequirePermission(Permission.EMAILS_MANAGE)
     public ResponseEntity<ApiResponse<List<EmailTemplateDto>>> getTemplates() {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         return ApiResponses.ok(emailManagementService.getTemplates(tenantId));
     }
 
     @PutMapping("/templates/{type}")
-    @RequirePermission("emails.manage")
+    @RequirePermission(Permission.EMAILS_MANAGE)
     public ResponseEntity<ApiResponse<EmailTemplateDto>> updateTemplate(
             @PathVariable String type,
             @RequestBody EmailTemplateDto dto) {
@@ -82,7 +83,7 @@ public class EmailController {
     }
 
     @DeleteMapping("/templates/{type}")
-    @RequirePermission("emails.manage")
+    @RequirePermission(Permission.EMAILS_MANAGE)
     public ResponseEntity<ApiResponse<Void>> resetTemplate(@PathVariable String type) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         emailManagementService.resetTemplate(tenantId, type);
@@ -92,14 +93,14 @@ public class EmailController {
     }
 
     @GetMapping("/settings")
-    @RequirePermission("emails.manage")
+    @RequirePermission(Permission.EMAILS_MANAGE)
     public ResponseEntity<ApiResponse<EmailSettingsDto>> getEmailSettings() {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         return ApiResponses.ok(emailManagementService.getEmailSettings(tenantId));
     }
 
     @PatchMapping("/settings")
-    @RequirePermission("emails.manage")
+    @RequirePermission(Permission.EMAILS_MANAGE)
     public ResponseEntity<ApiResponse<EmailSettingsDto>> updateEmailSettings(@RequestBody EmailSettingsDto dto) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         EmailSettingsDto updated = emailManagementService.updateEmailSettings(tenantId, dto);

@@ -1,10 +1,8 @@
 # Backend Tech Debt & Quality Audit
 
-> Зафиксировано: 2026-06-10 (обновлено 2026-06-10)  
-> Репозиторий: `crm-kitty-be` (~300 Java files, 29 controllers)  
+> Зафиксировано: 2026-06-10 (обновлено 2026-06-11)  
+> Репозиторий: `crm-kitty-be` (~365 Java files, 29 controllers)  
 > Контекст: аудит после удаления мёртвых модулей (inventory, waiver, gift certificates, promotions)
-
-**Решение по приоритетам:** P0 (security) — отложено на потом. Старт рефакторинга с P1+ после фиксации формата API.
 
 Статусы: `[ ]` open · `[~]` in progress · `[x]` done · `[—]` deferred
 
@@ -14,14 +12,14 @@
 
 | Severity | Count | Focus |
 |----------|-------|-------|
-| Critical | 5 | Security, schema management |
-| High | 8 | Architecture, RBAC, layer violations |
-| Medium | 9 | API consistency, duplication, frontend sync |
-| Low | 7 | Style, i18n, tests, validation |
+| Critical | 0 | P0 closed |
+| High | 0 | P1 closed |
+| Medium | 1 | Gemini Vision |
+| Low | 2 | i18n properties unused, cost tracking |
 
-**Tests today:** 1 smoke test (`InkFlowCrmApplicationTests.contextLoads`)
+**Tests today:** 20 tests — `contextLoads` + unit tests + integration tests (AppointmentService tenant isolation, RequestController auth/validation, public endpoint security)
 
-**Largest services:** `PaymentService` (~368 ln), `AppointmentService` (~390), `StaffService` (~115 CRUD only)
+**Largest services:** `AppointmentService` (~270), `GoogleCalendarSyncService` (~312), `MonobankService` (~280)
 
 ---
 
@@ -53,73 +51,31 @@
 
 ---
 
-## P0 — Critical (Security & Data Integrity) `[—]` DEFERRED
+## P0 — Critical (Security & Data Integrity)
 
-> Намеренно отложено. Вернуться перед prod / публичным трафиком.
+- [x] **P0-1. Onboarding JWT not verified**  
+  `OnboardingController` → `JwtTokenProvider.verifyToken()` (Supabase JWKS). Idempotent: returns existing tenant if staff with `authUserId` already exists.
 
-- [—] **P0-1. Onboarding JWT not verified**  
-  `OnboardingController` uses `JWT.decode(token)` without signature verification. Endpoint is `permitAll`. Attacker can forge `sub`/`email` and create tenants.  
-  → Fix: verify via `JwtTokenProvider` / Supabase JWKS (same as consumer auth).
+- [x] **P0-2. Public admin endpoints on tattoo catalog**  
+  `seed`/`retag` removed from `/public/catalog/tattoos`. Moved to `POST /catalog/admin/tattoos/seed|retag` with `@RequirePermission("settings.access")`.
 
-- [—] **P0-2. Public admin endpoints on tattoo catalog**  
-  `POST /public/catalog/tattoos/seed` and `/retag` — no auth. Anyone can trigger Unsplash/Gemini jobs and load DB/API.  
-  → Fix: move behind CRM admin auth or disable in prod.
+- [x] **P0-3. Monobank webhook without verification**  
+  Idempotent handler (skip if already `success` + transaction recorded). Amount cross-check. Remote status verify via `GET /api/merchant/invoice/status`. Sandbox mode skips remote verify.
 
-- [—] **P0-3. Monobank webhook without verification**  
-  `POST /payments/monobank/webhook` is public; payload trusted as-is. Fake `success` can activate subscriptions or record payments.  
-  → Fix: signature/IP validation + idempotent handler.
+- [x] **P0-4. Cross-tenant IDOR**  
+  - Google Calendar → `StaffLookup` + signed OAuth state (`GoogleOAuthStateSigner`, HMAC, 10 min TTL)  
+  - Staff FAQ → `StaffLookup.requireStaff()` (was fixed earlier)  
+  - `POST /requests` → removed from `permitAll`; requires CRM JWT + `requests.create`; `tenantId` removed from body; always uses `SecurityUtils.getCurrentTenantId()`
 
-- [—] **P0-4. Cross-tenant IDOR**  
-  - `GoogleCalendarController` / `GoogleCalendarSyncService` — `staffRepository.findById(id)` without `tenantId`  
-  - `StaffService.upsertFaq` / `getFaq` — `getCurrentTenantId()` result not used to verify staff ownership  
-  - Public `POST /requests` — `tenantId` accepted from body; leads can be injected into arbitrary tenants  
-  → Fix: always `findByIdAndTenantId`; validate tenant on public endpoints.
-
-- [—] **P0-5. Schema management (ddl-auto, no Flyway)**  
-  Default/dev: `ddl-auto: update`, Flyway disabled, no files in `db/migration/`. Schema drift managed via manual SQL scripts.  
-  → Fix: enable Flyway, baseline migration, `ddl-auto: validate` (or `none`) on non-dev profiles.
+- [x] **P0-5. Schema management (Flyway)**  
+  Prod: `ddl-auto: none`, Flyway enabled with `baseline-on-migrate`.  
+  `V1__baseline.sql` exported from Supabase (`public` schema, ~1900 lines). Script: `./scripts/export_flyway_baseline.sh` (reads `.env`).
 
 ---
 
-## P1 — High (Architecture & RBAC)
+## P1 — High (Architecture & RBAC) — DONE
 
-### Layer violations (fat controllers)
-
-- [x] **P1-1. EmailController** — templates/settings/bulk send → `EmailManagementService` + `EmailSettingsMapper`  
-  File: `module/email/controller/EmailController.java`
-
-- [x] **P1-2. ConsumerUserController** — → `ConsumerUserService` + `ConsumerUserMapper`; DTOs in `dto/`  
-  File: `module/consumer/controller/ConsumerUserController.java`
-
-- [x] **P1-3. ConsumerBookingController** — → `ConsumerBookingService`  
-  File: `module/consumer/controller/ConsumerBookingController.java`
-
-- [x] **P1-4. AIGeneratorController** — → `AIGeneratorService`, `AIGeneratorPromptBuilder`, shared `GeminiImageClient`  
-  File: `module/consumer/controller/AIGeneratorController.java`
-
-- [x] **P1-5. TattooController** — → `TattooCatalogService` + `TattooMapper`  
-  File: `module/catalog/controller/TattooController.java`
-
-- [x] **P1-6. Service depends on controller DTO** — `AppointmentFilterRequest` moved to `module/appointment/dto/`  
-  File: `module/appointment/service/AppointmentService.java`
-
-### God services (split by bounded context)
-
-- [x] **P1-7. StaffService (530 ln)** — split: Invite, Schedule, Pricing, Lifecycle, FAQ, Detail + `StaffLookup`  
-  `StaffService` → CRUD + thin delegation (~175 ln)
-
-- [x] **P1-8. AnalyticsService (540 ln)** — split into facade + 5 query services + support (CommissionCalculator, StaffUtilizationCalculator, AnalyticsTimeSeriesBuilder)
-
-- [x] **P1-9. AppointmentService** — side effects → `AppointmentSideEffectService`; CRUD → `AppointmentMapper` + `AppointmentEntityResolver`
-
-- [ ] **P1-10. PaymentService (368 ln)** — payments + refunds + receipt numbering  
-  → Consider split if grows further.
-
-### RBAC gaps
-
-- [x] **P1-11. Missing `@RequirePermission`** — added to Leave, Service, Location, Email, Payment, File, Google Calendar, Monobank invoice
-
-- [x] **P1-12. Permission enum incomplete** — added leaves, services, locations, emails, payments, files permissions
+All P1 items closed. See Done section at bottom.
 
 ---
 
@@ -132,28 +88,27 @@
 - [~] **P2-3. Inconsistent error handling**  
   `IllegalArgumentException` → 400 via `GlobalExceptionHandler`. Remaining: `RuntimeException` in email settings path replaced with `ResourceNotFoundException`.
 
-- [ ] **P2-4. Inconsistent module layout**  
-  Good: `module/{name}/controller|service|dto|mapper` (appointment, client, staff, email, analytics).  
-  Flat: audit, finance, google.  
-  Split entity ownership: `domain/entity` vs `module/catalog/entity` vs `module/consumer/entity`.
+- [x] **P2-4. Inconsistent module layout**  
+  Good: `module/{name}/controller|service|dto|mapper` (appointment, client, staff, email, analytics, audit, finance, google).  
+  Remaining split entity ownership: `domain/entity` vs `module/catalog/entity` vs `module/consumer/entity`.
 
-- [ ] **P2-5. Duplicate parallel flows**  
-  - `POST /public/consumer/requests` vs `POST /requests` (two public booking paths)  
-  - Gemini client duplicated: ~~`AIGeneratorController` + `GeminiTattooService`~~ → shared `GeminiImageClient`; VisionService still separate  
-  - Timezone: `Europe/Kiev` vs `Europe/Kyiv`
+- [x] **P2-5. Duplicate parallel flows**  
+  Intentional separation by design:  
+  - `POST /public/consumer/requests` — B2C client app (consumer JWT, tenant from artist)  
+  - `POST /requests` — CRM internal leads (CRM JWT, tenant from auth context)  
+  Subdomain public booking removed.
 
-- [ ] **P2-6. Frontend ↔ backend mismatch**  
-  CRM calls `GET/PATCH /api/settings/user` — **endpoint does not exist on backend**.  
-  Frontend: `crm-kitty` → `SystemSettings.tsx` / `services/settings/api/settings.api.ts`
+- [x] **P2-6. Frontend ↔ backend mismatch**  
+  CRM calls `GET/PATCH /api/settings/user` — implemented via `UserSettingsService` (`Staff.uiLanguage`, `Staff.startPage`)
 
-- [ ] **P2-7. CORS misconfiguration**  
-  `SecurityConfig`: `allowedOriginPatterns("*")` + `allowCredentials(true)` — known anti-pattern.
+- [x] **P2-7. CORS misconfiguration**  
+  Prod `SecurityConfig` → explicit origins from `inkflow.cors.allowed-origins` in `application.yml`. Dev profile keeps permissive CORS.
 
-- [ ] **P2-8. File delete without ownership check**  
-  `FileController.deleteFile(key)` — authenticated but no tenant/path validation; possible cross-tenant deletion if key guessed.
+- [x] **P2-8. File delete without ownership check**  
+  New uploads: `{tenantId}/{folder}/...`. Delete requires tenant prefix match; legacy keys without prefix rejected.
 
-- [ ] **P2-9. Public AI cost abuse**  
-  `POST /public/consumer/generate` — no auth; burns Gemini API key.
+- [x] **P2-9. Public AI cost abuse**  
+  `POST /public/consumer/generate` and `/try-on` require consumer JWT (`ApiResponses.requireConsumer`). Booking submit also requires auth.
 
 ---
 
@@ -161,45 +116,44 @@
 
 ### Magic strings & config drift
 
-- [ ] **P3-1. Status/permission literals in JPQL and code**  
-  `'DONE'`, `'CANCELLED'`, `'WORKING'` in queries; `"calendar.view_all"` inline instead of `Permission` enum.
+- [x] **P3-1. Status/permission literals in JPQL and code**  
+  JPQL enum literals in Appointment/Staff/Leave repositories.  
+  `@RequirePermission(Permission.*)` on all controllers.  
+  Native SQL in `TattooRepository` → `:status` param with `TattooStatus.READY.name()`.
 
 - [~] **P3-2. Gemini config drift** — `GeminiProperties` covers image + text endpoints; VisionService migrated
 
-- [ ] **P3-3. Timezone not centralized**  
-  `Europe/Kiev` / `Europe/Kyiv` scattered; not in `application.yml`.
+- [x] **P3-3. Timezone not centralized**  
+  `InkflowProperties` + `application.yml`; all runtime code migrated. Entity default on `Tenant` remains as schema default.
 
 ### i18n
 
-- [ ] **P3-4. Dead i18n infrastructure**  
-  `MessageUtil` + `messages_uk/en.properties` exist but unused. Messages hardcoded in Ukrainian/English in services and filters.
+- [~] **P3-4. Dead i18n infrastructure**  
+  Removed unused `MessageUtil`. `I18nConfig` + `messages_uk/en.properties` kept for future; messages still hardcoded in services.
 
-### N+1 queries
+### N+1 queries — DONE
 
-- [ ] **P3-5. PublicArtistService** — FAQ + showcase fetched per artist in loop (critical for B2C)  
-  File: `module/catalog/service/PublicArtistService.java`
-
-- [ ] **P3-6. StaffService.getStaffServices** — lazy `Service` per pricing row  
-- [ ] **P3-7. ConsumerBookingController.getMyRequests** — lazy `Staff` per request  
-
-  Note: `AppointmentRepository` uses `@EntityGraph` correctly — good pattern to replicate.
+- [x] **P3-5. PublicArtistService** — batch FAQ + `PortfolioShowcaseResolver`
+- [x] **P3-6. StaffService.getStaffServices** — `@EntityGraph(service)`
+- [x] **P3-7. ConsumerBookingController.getMyRequests** — `@EntityGraph(assignedStaff)`
 
 ### Validation & silent failures
 
-- [ ] **P3-8. Missing `@Valid`** on consumer endpoints: `AIGeneratorController`, `TryOnController`, `ConsumerUserController`; portfolio `BulkUploadRequest` without `@NotEmpty`.
+- [x] **P3-8. Missing `@Valid`** on consumer endpoints + portfolio bulk upload
 
-- [ ] **P3-9. Appointment time validation** — no check that `endTime > startTime` on create/update.
+- [x] **P3-9. Appointment time validation** — `@ValidAppointmentTimeRange` on create/update DTOs
 
-- [ ] **P3-10. Silent exception swallowing**  
-  `AppointmentService` — email failures now logged (LOG-1). Google sync errors still unchecked.
+- [x] **P3-10. Silent exception swallowing**  
+  Google sync: structured warn logs with `tenantId` + `appointmentId`; `syncCalendarSafely` in side-effect service; OAuth callback → `BusinessRuleException`.
 
 ### Tests & docs
 
-- [ ] **P3-11. No meaningful test coverage**  
-  Only `contextLoads`. Priority targets: `AppointmentService`, `StaffService`, tenant isolation, public endpoints.
+- [x] **P3-11. Test coverage**  
+  Unit: `AppointmentTimeRangeValidatorTest`, `GoogleOAuthStateSignerTest`, `PortfolioShowcaseResolverTest`, `StaffLookupTest`, `RequestServiceTest`.  
+  Integration: `AppointmentServiceIntegrationTest`, `RequestControllerIntegrationTest`, `PublicEndpointSecurityIntegrationTest` (test profile + `TestSecurityConfig`).
 
-- [ ] **P3-12. Stale documentation**  
-  `API_SPECIFICATION.md` still describes removed modules (waivers, inventory). `docs/FEATURES.md` largely obsolete.
+- [x] **P3-12. Stale documentation**  
+  Added `docs/API_SPECIFICATION_SUMMARY.md`; deprecation notice on root `API_SPECIFICATION.md`.
 
 ---
 
@@ -217,13 +171,13 @@
 
 ## Recommended refactor phases
 
-| Phase | Scope | Goal |
-|-------|-------|------|
-| **P0** | Security hotfixes | Close holes before prod traffic |
-| **P1** | RBAC + layer extraction | Safe multi-user CRM |
-| **P2** | API/error consistency, Gemini client, `/settings/user` | Predictable contracts for frontends |
-| **P3** | God service splits, Flyway, module layout | Long-term maintainability |
-| **P4** | Tests, i18n, N+1 fixes | Confidence when changing code |
+| Phase | Scope | Status |
+|-------|-------|--------|
+| **P0** | Security hotfixes | Done |
+| **P1** | RBAC + layer extraction | Done |
+| **P2** | API/error consistency | ~95% — entity ownership split open |
+| **P3** | Tests, i18n, magic strings | ~95% |
+| **P4** | i18n, Gemini Vision, cost tracking | Next |
 
 ---
 
@@ -234,9 +188,8 @@ Removed modules & DB tables:
 - Inventory cluster (products, warehouses, stock, invoices, counts) — backend controllers/services removed
 - Gift certificates — backend removed
 - Promotions — fully removed (backend + frontend + DB script)
+- Public subdomain booking (`module/booking/`, `/public/book/**`) — removed; client app uses `POST /public/consumer/requests`
 - `NotificationController` REST (internal `NotificationService` kept)
-
-Still active: `module/booking/` (public subdomain booking)
 
 Script: `drop_removed_modules.sql`
 
@@ -250,9 +203,14 @@ Script: `drop_removed_modules.sql`
 ### Done
 
 - 2026-06-10: Option A API format (`docs/API_FORMAT.md`)
-- 2026-06-10: P1-1/2/3/6 layer extraction — EmailManagementService, ConsumerUserService, ConsumerBookingService, AppointmentFilterRequest dto
-- 2026-06-10: P1-7/9/11/12 — StaffService split, AppointmentSideEffectService, RBAC permissions
-- 2026-06-10: EmailService refactor — EmailLogMapper, AppointmentEmailComposer, EmailTenantContextLoader
-- 2026-06-10: AnalyticsService split — 5 query services + support calculators; controller unchanged
-- 2026-06-10: Dead module cleanup — warehouse/inventory/giftcertificate controllers removed; promotion fully dropped
-- 2026-06-10: Controller logging pass — Payment, Transaction, Settings, Email, File, Subscription, Finance, Portfolio, Tattoo, Booking, Consumer
+- 2026-06-10: P1 layer extraction + StaffService split + RBAC permissions
+- 2026-06-10: EmailService refactor; AnalyticsService split; dead module cleanup
+- 2026-06-11: P1-10 PaymentService split; P2-6 `/settings/user`
+- 2026-06-11: Removed public subdomain booking; consumer app booking via `/public/consumer/requests`
+- 2026-06-11: Portfolio tenant checks; Google Calendar IDOR partial; analytics timezone
+- 2026-06-11: File storage tenant-prefixed keys; consumer `@Valid`; N+1 fixes; timezone cleanup
+- 2026-06-11: **Security wave** — onboarding JWT verify + idempotency; catalog admin auth; Monobank webhook hardening; requests tenant injection fix; OAuth state signing; CORS config; AI/booking auth required; appointment time validation; unit tests; docs summary
+- 2026-06-11: **Quality wave** — `@RequirePermission(Permission.*)`; JPQL enum literals; Google sync logging; removed MessageUtil; StaffLookupTest; Flyway export script
+- 2026-06-11: **Layout wave** — audit/finance/google → `controller|service` subpackages; TattooRepository status param; RequestServiceTest
+- 2026-06-11: **Integration tests** — TestSecurityConfig (test profile), AppointmentService/RequestController/PublicEndpoint security tests (20 total)
+- 2026-06-11: **Flyway baseline** — `V1__baseline.sql` from Supabase public schema; script reads `.env`

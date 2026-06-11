@@ -21,6 +21,7 @@ import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.AppointmentSpecifications;
 import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
 import com.inkflow.crm.domain.repository.LeaveRequestRepository;
+import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.module.appointment.dto.*;
 import com.inkflow.crm.module.appointment.mapper.AppointmentMapper;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
@@ -34,7 +35,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,8 +43,7 @@ import java.util.UUID;
 @Slf4j
 public class AppointmentService {
 
-    private static final ZoneId UKRAINE_ZONE = ZoneId.of("Europe/Kiev");
-
+    private final InkflowProperties inkflowProperties;
     private final AppointmentRepository appointmentRepository;
     private final GalleryPhotoRepository galleryPhotoRepository;
     private final LeaveRequestRepository leaveRequestRepository;
@@ -213,7 +212,7 @@ public class AppointmentService {
     }
 
     private void validateArtistAvailable(UUID tenantId, UUID artistId, Instant startTime) {
-        LocalDate date = startTime.atZone(UKRAINE_ZONE).toLocalDate();
+        LocalDate date = startTime.atZone(inkflowProperties.defaultZoneId()).toLocalDate();
         List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate(tenantId, artistId, date);
 
         if (!activeLeaves.isEmpty()) {
