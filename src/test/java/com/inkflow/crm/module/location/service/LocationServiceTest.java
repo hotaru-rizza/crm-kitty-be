@@ -7,7 +7,9 @@ import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TransactionRepository;
+import com.inkflow.crm.module.location.dto.AssignStaffRequest;
 import com.inkflow.crm.module.location.dto.CreateLocationRequest;
+import com.inkflow.crm.module.location.dto.UpdateLocationRequest;
 import com.inkflow.crm.module.location.mapper.LocationMapper;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
@@ -19,11 +21,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -107,6 +112,75 @@ class LocationServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> locationService.getLocationById(locationId));
+    }
+
+    @Test
+    void updateLocation_rejectsArtistRole() {
+        UUID tenantId = UUID.randomUUID();
+        UUID locationId = UUID.randomUUID();
+        authenticateArtist(tenantId);
+
+        UpdateLocationRequest request = UpdateLocationRequest.builder()
+                .name("Updated Studio")
+                .build();
+
+        assertThrows(AccessDeniedException.class, () -> locationService.updateLocation(locationId, request));
+    }
+
+    @Test
+    void updateLocation_rejectsForeignTenant() {
+        UUID tenantId = UUID.randomUUID();
+        UUID locationId = UUID.randomUUID();
+        authenticateAdmin(tenantId);
+
+        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> locationService.updateLocation(locationId, UpdateLocationRequest.builder().name("Updated").build()));
+    }
+
+    @Test
+    void deleteLocation_rejectsMissingLocation() {
+        UUID tenantId = UUID.randomUUID();
+        UUID locationId = UUID.randomUUID();
+        authenticateOwner(tenantId);
+
+        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> locationService.deleteLocation(locationId));
+        verify(locationRepository, never()).save(any());
+    }
+
+    @Test
+    void assignStaff_rejectsArtistRole() {
+        UUID tenantId = UUID.randomUUID();
+        UUID locationId = UUID.randomUUID();
+        authenticateArtist(tenantId);
+
+        AssignStaffRequest request = AssignStaffRequest.builder()
+                .staffIds(List.of(UUID.randomUUID()))
+                .build();
+
+        assertThrows(AccessDeniedException.class, () -> locationService.assignStaff(locationId, request));
+    }
+
+    @Test
+    void assignStaff_rejectsForeignTenant() {
+        UUID tenantId = UUID.randomUUID();
+        UUID locationId = UUID.randomUUID();
+        authenticateAdmin(tenantId);
+
+        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+                .thenReturn(Optional.empty());
+
+        AssignStaffRequest request = AssignStaffRequest.builder()
+                .staffIds(List.of(UUID.randomUUID()))
+                .build();
+
+        assertThrows(ResourceNotFoundException.class, () -> locationService.assignStaff(locationId, request));
+        verify(staffRepository, never()).findAllById(any());
     }
 
     private void authenticateOwner(UUID tenantId) {

@@ -1,10 +1,16 @@
 package com.inkflow.crm.module.project.service;
 
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
+import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.domain.entity.Client;
+import com.inkflow.crm.domain.entity.GalleryPhoto;
+import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Project;
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.enums.GalleryStage;
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.domain.enums.ProjectStatus;
+import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
@@ -23,10 +29,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -336,10 +345,260 @@ class ProjectServiceTest {
         assertNotNull(captor.getValue().getDeletedAt());
     }
 
-    private void authenticate(UUID tenantId) {
-        UserPrincipal principal = UserPrincipal.builder()
-                .id(UUID.randomUUID())
+    @Test
+    void shouldReturnProjectWhenFoundById() {
+        UUID tenantId = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        Project project = Project.builder()
+                .id(projectId)
                 .tenantId(tenantId)
+                .title("Sleeve")
+                .status(ProjectStatus.IN_PROGRESS)
+                .estimatedCost(BigDecimal.valueOf(5000))
+                .totalSessions(3)
+                .build();
+
+        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(galleryPhotoRepository.findByProjectId(projectId)).thenReturn(List.of());
+        when(projectMapper.toSessionDtos(project)).thenReturn(List.of());
+        when(projectMapper.toDto(eq(project), eq(List.of()), eq(List.of())))
+                .thenReturn(ProjectDto.builder().id(projectId).title("Sleeve").build());
+
+        ProjectDto result = projectService.getProjectById(projectId);
+
+        assertEquals(projectId, result.getId());
+        assertEquals("Sleeve", result.getTitle());
+    }
+
+    @Test
+    void shouldForceOnlyMineWhenLackingViewAllPermission() {
+        UUID tenantId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        authenticateAsArtist(tenantId, artistId);
+
+        when(rolePermissionService.hasPermission(tenantId, UserRole.ARTIST, Permission.PROJECTS_VIEW_ALL.getValue()))
+                .thenReturn(false);
+        when(projectRepository.findWithFilters(
+                eq(tenantId), eq(null), eq(List.of(artistId)), eq(null), eq(null), eq(null), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        PageRequest pageRequest = new PageRequest();
+        pageRequest.setPage(0);
+        pageRequest.setSize(20);
+
+        projectService.getAllProjects(pageRequest, null, null, null, null, false, null);
+
+        verify(projectRepository).findWithFilters(
+                eq(tenantId), eq(null), eq(List.of(artistId)), eq(null), eq(null), eq(null), any());
+    }
+
+    @Test
+    void shouldPersistLocationWhenProvidedOnCreate() {
+        UUID tenantId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        UUID locationId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        Client client = Client.builder().id(clientId).tenantId(tenantId).build();
+        Staff artist = Staff.builder().id(artistId).tenantId(tenantId).build();
+        Location location = Location.builder().id(locationId).tenantId(tenantId).build();
+
+        CreateProjectRequest request = CreateProjectRequest.builder()
+                .clientId(clientId)
+                .artistId(artistId)
+                .locationId(locationId)
+                .title("Sleeve")
+                .estimatedCost(BigDecimal.valueOf(5000))
+                .totalSessions(3)
+                .build();
+
+        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId)).thenReturn(Optional.of(client));
+        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(artistId, tenantId)).thenReturn(Optional.of(artist));
+        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId)).thenReturn(Optional.of(location));
+        when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
+            Project project = invocation.getArgument(0);
+            project.setId(UUID.randomUUID());
+            return project;
+        });
+        when(galleryPhotoRepository.findByProjectId(any())).thenReturn(List.of());
+        when(projectMapper.toSessionDtos(any())).thenReturn(List.of());
+        when(projectMapper.toDto(any(), any(), any())).thenReturn(ProjectDto.builder().title("Sleeve").build());
+
+        projectService.createProject(request);
+
+        ArgumentCaptor<Project> captor = ArgumentCaptor.forClass(Project.class);
+        verify(projectRepository).save(captor.capture());
+        assertEquals(location, captor.getValue().getLocation());
+    }
+
+    @Test
+    void shouldUpdateEditableFieldsWhenProvided() {
+        UUID tenantId = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        Project project = Project.builder()
+                .id(projectId)
+                .tenantId(tenantId)
+                .title("Old Title")
+                .description("Old description")
+                .status(ProjectStatus.IN_PROGRESS)
+                .estimatedCost(BigDecimal.valueOf(5000))
+                .totalSessions(3)
+                .build();
+
+        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(galleryPhotoRepository.findByProjectId(projectId)).thenReturn(List.of());
+        when(projectMapper.toSessionDtos(project)).thenReturn(List.of());
+        when(projectMapper.toDto(any(), any(), any())).thenReturn(ProjectDto.builder().build());
+
+        projectService.updateProject(projectId, UpdateProjectRequest.builder()
+                .title("New Title")
+                .description("New description")
+                .estimatedCost(BigDecimal.valueOf(8000))
+                .totalSessions(5)
+                .sketchImage("https://cdn.example/sketch.png")
+                .build());
+
+        ArgumentCaptor<Project> captor = ArgumentCaptor.forClass(Project.class);
+        verify(projectRepository).save(captor.capture());
+        Project updated = captor.getValue();
+        assertEquals("New Title", updated.getTitle());
+        assertEquals("New description", updated.getDescription());
+        assertEquals(BigDecimal.valueOf(8000), updated.getEstimatedCost());
+        assertEquals(5, updated.getTotalSessions());
+        assertEquals("https://cdn.example/sketch.png", updated.getSketchImage());
+    }
+
+    @Test
+    void shouldThrowWhenProjectNotFoundOnUpdate() {
+        UUID tenantId = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> projectService.updateProject(projectId, UpdateProjectRequest.builder().title("New").build()));
+    }
+
+    @Test
+    void shouldThrowWhenProjectNotFoundOnDelete() {
+        UUID tenantId = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> projectService.deleteProject(projectId));
+    }
+
+    @Test
+    void shouldPersistGalleryPhotoWhenAddingPhoto() {
+        UUID tenantId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+        authenticate(tenantId, userId);
+
+        Project project = Project.builder()
+                .id(projectId)
+                .tenantId(tenantId)
+                .title("Sleeve")
+                .status(ProjectStatus.IN_PROGRESS)
+                .estimatedCost(BigDecimal.valueOf(5000))
+                .totalSessions(3)
+                .build();
+
+        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(galleryPhotoRepository.save(any(GalleryPhoto.class))).thenAnswer(invocation -> {
+            GalleryPhoto photo = invocation.getArgument(0);
+            photo.setId(UUID.randomUUID());
+            return photo;
+        });
+        when(projectMapper.toPhotoDto(any(GalleryPhoto.class)))
+                .thenReturn(ProjectDto.PhotoDto.builder().url("https://cdn.example/photo.jpg").stage("sketch").build());
+
+        ProjectDto.PhotoDto result = projectService.addPhoto(projectId, "https://cdn.example/photo.jpg", "sketch");
+
+        ArgumentCaptor<GalleryPhoto> captor = ArgumentCaptor.forClass(GalleryPhoto.class);
+        verify(galleryPhotoRepository).save(captor.capture());
+        GalleryPhoto savedPhoto = captor.getValue();
+        assertEquals(GalleryStage.SKETCH, savedPhoto.getStage());
+        assertEquals(userId, savedPhoto.getUploadedBy());
+        assertEquals(project, savedPhoto.getProject());
+        assertEquals("https://cdn.example/photo.jpg", result.getUrl());
+    }
+
+    @Test
+    void shouldDeletePhotoFromProject() {
+        UUID tenantId = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+        UUID photoId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        Project project = Project.builder()
+                .id(projectId)
+                .tenantId(tenantId)
+                .title("Sleeve")
+                .status(ProjectStatus.IN_PROGRESS)
+                .estimatedCost(BigDecimal.valueOf(5000))
+                .totalSessions(3)
+                .build();
+        GalleryPhoto photo = GalleryPhoto.builder().id(photoId).tenantId(tenantId).project(project).build();
+
+        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(galleryPhotoRepository.findById(photoId)).thenReturn(Optional.of(photo));
+
+        projectService.deletePhoto(projectId, photoId);
+
+        verify(galleryPhotoRepository).delete(photo);
+    }
+
+    @Test
+    void shouldThrowWhenPhotoNotFoundOnDelete() {
+        UUID tenantId = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+        UUID photoId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        Project project = Project.builder()
+                .id(projectId)
+                .tenantId(tenantId)
+                .title("Sleeve")
+                .status(ProjectStatus.IN_PROGRESS)
+                .estimatedCost(BigDecimal.valueOf(5000))
+                .totalSessions(3)
+                .build();
+
+        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(galleryPhotoRepository.findById(photoId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> projectService.deletePhoto(projectId, photoId));
+    }
+
+    private void authenticate(UUID tenantId) {
+        authenticate(tenantId, UUID.randomUUID());
+    }
+
+    private void authenticate(UUID tenantId, UUID userId) {
+        UserPrincipal principal = UserPrincipal.builder()
+                .id(userId)
+                .tenantId(tenantId)
+                .build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
+        );
+    }
+
+    private void authenticateAsArtist(UUID tenantId, UUID userId) {
+        UserPrincipal principal = UserPrincipal.builder()
+                .id(userId)
+                .tenantId(tenantId)
+                .role(UserRole.ARTIST)
                 .build();
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())

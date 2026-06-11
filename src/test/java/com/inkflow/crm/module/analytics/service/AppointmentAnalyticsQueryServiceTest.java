@@ -115,6 +115,82 @@ class AppointmentAnalyticsQueryServiceTest {
     }
 
     @Test
+    void shouldUseEarliestAppointmentWhenClientHasMultipleInRange() {
+        UUID tenantId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        Instant from = Instant.parse("2026-06-01T00:00:00Z");
+        Instant to = Instant.parse("2026-06-30T23:59:59Z");
+        UUID clientId = UUID.randomUUID();
+
+        Appointment laterVisit = Appointment.builder()
+                .status(AppointmentStatus.DONE)
+                .startTime(Instant.parse("2026-06-20T10:00:00Z"))
+                .finalPrice(BigDecimal.valueOf(200))
+                .client(Client.builder().id(clientId).build())
+                .build();
+        Appointment firstVisit = Appointment.builder()
+                .status(AppointmentStatus.DONE)
+                .startTime(Instant.parse("2026-06-05T10:00:00Z"))
+                .finalPrice(BigDecimal.valueOf(100))
+                .client(Client.builder().id(clientId).build())
+                .build();
+        List<Appointment> appointments = List.of(laterVisit, firstVisit);
+
+        stubEmptyMetrics(appointments, tenantId, from, to);
+
+        AppointmentAnalyticsDto result = appointmentAnalyticsQueryService.getAppointmentAnalytics(from, to, "day");
+
+        assertEquals(1, result.getNewClients());
+    }
+
+    @Test
+    void shouldExcludeClientWhoseFirstAppointmentIsBeforeRange() {
+        UUID tenantId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        Instant from = Instant.parse("2026-06-01T00:00:00Z");
+        Instant to = Instant.parse("2026-06-30T23:59:59Z");
+
+        Appointment priorVisit = Appointment.builder()
+                .status(AppointmentStatus.DONE)
+                .startTime(Instant.parse("2026-05-15T10:00:00Z"))
+                .finalPrice(BigDecimal.valueOf(150))
+                .client(Client.builder().id(UUID.randomUUID()).build())
+                .build();
+        List<Appointment> appointments = List.of(priorVisit);
+
+        stubEmptyMetrics(appointments, tenantId, from, to);
+
+        AppointmentAnalyticsDto result = appointmentAnalyticsQueryService.getAppointmentAnalytics(from, to, "day");
+
+        assertEquals(0, result.getNewClients());
+    }
+
+    @Test
+    void shouldExcludeClientWhoseFirstAppointmentIsAtRangeEnd() {
+        UUID tenantId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        Instant from = Instant.parse("2026-06-01T00:00:00Z");
+        Instant to = Instant.parse("2026-06-30T23:59:59Z");
+
+        Appointment atRangeEnd = Appointment.builder()
+                .status(AppointmentStatus.DONE)
+                .startTime(to)
+                .finalPrice(BigDecimal.valueOf(200))
+                .client(Client.builder().id(UUID.randomUUID()).build())
+                .build();
+        List<Appointment> appointments = List.of(atRangeEnd);
+
+        stubEmptyMetrics(appointments, tenantId, from, to);
+
+        AppointmentAnalyticsDto result = appointmentAnalyticsQueryService.getAppointmentAnalytics(from, to, "day");
+
+        assertEquals(0, result.getNewClients());
+    }
+
+    @Test
     void shouldCountPendingAsNewAndConfirmedStatuses() {
         UUID tenantId = UUID.randomUUID();
         authenticate(tenantId);
@@ -136,6 +212,19 @@ class AppointmentAnalyticsQueryServiceTest {
         AppointmentAnalyticsDto result = appointmentAnalyticsQueryService.getAppointmentAnalytics(from, to, "day");
 
         assertEquals(5, result.getNewAppointments());
+    }
+
+    private void stubEmptyMetrics(List<Appointment> appointments, UUID tenantId, Instant from, Instant to) {
+        when(appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to)).thenReturn(appointments);
+        when(metrics.countTotal(appointments)).thenReturn(appointments.size());
+        when(metrics.countCompleted(appointments)).thenReturn(0);
+        when(metrics.countCancelled(appointments)).thenReturn(0);
+        when(metrics.countByStatus(appointments, AppointmentStatus.NEW)).thenReturn(0);
+        when(metrics.countByStatus(appointments, AppointmentStatus.CONFIRMED)).thenReturn(0);
+        when(metrics.sumDoneRevenue(appointments)).thenReturn(BigDecimal.ZERO);
+        when(metrics.calculateAvgCheck(BigDecimal.ZERO, 0)).thenReturn(BigDecimal.ZERO);
+        when(metrics.hasClient(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        when(timeSeriesBuilder.buildAppointmentSeries(appointments, from, to, "day")).thenReturn(List.of());
     }
 
     private void authenticate(UUID tenantId) {

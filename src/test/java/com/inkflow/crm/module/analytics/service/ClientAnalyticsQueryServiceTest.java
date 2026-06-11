@@ -100,6 +100,57 @@ class ClientAnalyticsQueryServiceTest {
     }
 
     @Test
+    void shouldExcludeAppointmentsWithoutClientFromUniqueCount() {
+        UUID tenantId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        Instant from = Instant.parse("2026-06-01T00:00:00Z");
+        Instant to = Instant.parse("2026-06-30T23:59:59Z");
+
+        Appointment withoutClient = Appointment.builder().build();
+        Appointment withClient = appointment(UUID.randomUUID());
+        List<Appointment> inRange = List.of(withoutClient, withClient);
+
+        when(appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to)).thenReturn(inRange);
+        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), eq(Instant.EPOCH), eq(from)))
+                .thenReturn(List.of());
+        when(metrics.hasClient(withoutClient)).thenReturn(false);
+        when(metrics.hasClient(withClient)).thenReturn(true);
+        when(metrics.calculateRepeatRate(0, 1)).thenReturn(0.0);
+        when(timeSeriesBuilder.buildClientSeries(inRange, Set.of(), from, to, "month")).thenReturn(List.of());
+
+        ClientAnalyticsDto result = clientAnalyticsQueryService.getClientAnalytics(from, to, "month");
+
+        assertEquals(1, result.getTotalUniqueClients());
+        assertEquals(1, result.getNewClients());
+        assertEquals(0, result.getReturningClients());
+    }
+
+    @Test
+    void shouldCountDuplicateVisitsForSameClientOnce() {
+        UUID tenantId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        Instant from = Instant.parse("2026-06-01T00:00:00Z");
+        Instant to = Instant.parse("2026-06-30T23:59:59Z");
+        UUID clientId = UUID.randomUUID();
+
+        List<Appointment> inRange = List.of(appointment(clientId), appointment(clientId));
+
+        when(appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to)).thenReturn(inRange);
+        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), eq(Instant.EPOCH), eq(from)))
+                .thenReturn(List.of());
+        when(metrics.hasClient(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        when(metrics.calculateRepeatRate(0, 1)).thenReturn(0.0);
+        when(timeSeriesBuilder.buildClientSeries(inRange, Set.of(), from, to, "month")).thenReturn(List.of());
+
+        ClientAnalyticsDto result = clientAnalyticsQueryService.getClientAnalytics(from, to, "month");
+
+        assertEquals(1, result.getTotalUniqueClients());
+        assertEquals(1, result.getNewClients());
+    }
+
+    @Test
     void shouldTreatAllClientsAsNewWhenNoPriorHistory() {
         UUID tenantId = UUID.randomUUID();
         authenticate(tenantId);

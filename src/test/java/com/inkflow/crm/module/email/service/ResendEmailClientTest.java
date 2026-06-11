@@ -128,4 +128,52 @@ class ResendEmailClientTest {
 
         assertEquals("Failed to send email: connection reset", ex.getMessage());
     }
+
+    @Test
+    void shouldAcceptCreatedStatusAsSuccess() {
+        when(restTemplate.exchange(
+                eq(RESEND_API_URL),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(String.class)
+        )).thenReturn(new ResponseEntity<>("{\"id\":\"email_456\"}", HttpStatus.CREATED));
+
+        assertDoesNotThrow(() -> resendEmailClient.send(
+                "client@example.com",
+                "Welcome",
+                "<p>Hi</p>"
+        ));
+    }
+
+    @Test
+    void shouldThrowBusinessRuleExceptionWhenResendReturnsBadRequest() {
+        when(restTemplate.exchange(
+                eq(RESEND_API_URL),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(String.class)
+        )).thenReturn(new ResponseEntity<>("invalid recipient", HttpStatus.BAD_REQUEST));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                resendEmailClient.send("not-an-email", "Subject", "<p>Body</p>")
+        );
+
+        assertTrue(ex.getMessage().contains("400"));
+    }
+
+    @Test
+    void shouldWrapGenericExceptionFromRestTemplateAsBusinessRuleException() {
+        when(restTemplate.exchange(
+                eq(RESEND_API_URL),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(String.class)
+        )).thenThrow(new RestClientException("SSL handshake failed"));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                resendEmailClient.send("client@example.com", "Subject", "<p>Body</p>")
+        );
+
+        assertEquals("Failed to send email: SSL handshake failed", ex.getMessage());
+    }
 }

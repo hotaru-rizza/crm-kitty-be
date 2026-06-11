@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.service.service;
 
 import com.inkflow.crm.common.exception.AccessDeniedException;
+import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Service;
 import com.inkflow.crm.domain.repository.ArtistServicePricingRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
@@ -12,6 +13,7 @@ import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -22,8 +24,10 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -123,6 +127,68 @@ class ServiceServiceTest {
 
         serviceService.deleteService(serviceId);
 
+        ArgumentCaptor<Service> captor = ArgumentCaptor.forClass(Service.class);
+        verify(serviceRepository).save(captor.capture());
+        assertNotNull(captor.getValue().getDeletedAt());
+    }
+
+    @Test
+    void getServiceById_rejectsMissingService() {
+        UUID tenantId = UUID.randomUUID();
+        UUID serviceId = UUID.randomUUID();
+        authenticateOwner(tenantId);
+
+        when(serviceLookup.require(tenantId, serviceId))
+                .thenThrow(ResourceNotFoundException.service(serviceId.toString()));
+
+        assertThrows(ResourceNotFoundException.class, () -> serviceService.getServiceById(serviceId));
+    }
+
+    @Test
+    void updateService_rejectsMissingService() {
+        UUID tenantId = UUID.randomUUID();
+        UUID serviceId = UUID.randomUUID();
+        authenticateAdmin(tenantId);
+
+        when(serviceLookup.require(tenantId, serviceId))
+                .thenThrow(ResourceNotFoundException.service(serviceId.toString()));
+
+        UpdateServiceRequest request = UpdateServiceRequest.builder().title("Updated").build();
+
+        assertThrows(ResourceNotFoundException.class, () -> serviceService.updateService(serviceId, request));
+        verify(serviceRepository, never()).save(any());
+    }
+
+    @Test
+    void deleteService_rejectsMissingService() {
+        UUID tenantId = UUID.randomUUID();
+        UUID serviceId = UUID.randomUUID();
+        authenticateOwner(tenantId);
+
+        when(serviceLookup.require(tenantId, serviceId))
+                .thenThrow(ResourceNotFoundException.service(serviceId.toString()));
+
+        assertThrows(ResourceNotFoundException.class, () -> serviceService.deleteService(serviceId));
+        verify(serviceRepository, never()).save(any());
+    }
+
+    @Test
+    void updateService_persistsForAdmin() {
+        UUID tenantId = UUID.randomUUID();
+        UUID serviceId = UUID.randomUUID();
+        authenticateAdmin(tenantId);
+
+        Service service = Service.builder().id(serviceId).tenantId(tenantId).title("Old").build();
+        Service saved = Service.builder().id(serviceId).tenantId(tenantId).title("Updated").build();
+
+        when(serviceLookup.require(tenantId, serviceId)).thenReturn(service);
+        when(serviceRepository.save(service)).thenReturn(saved);
+        when(serviceMapper.toDto(saved)).thenReturn(ServiceDto.builder().id(serviceId).title("Updated").build());
+
+        UpdateServiceRequest request = UpdateServiceRequest.builder().title("Updated").build();
+        ServiceDto result = serviceService.updateService(serviceId, request);
+
+        assertEquals("Updated", result.getTitle());
         verify(serviceRepository).save(service);
     }
 

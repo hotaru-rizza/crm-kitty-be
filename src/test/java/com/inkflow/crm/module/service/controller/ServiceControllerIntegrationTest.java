@@ -26,6 +26,8 @@ import java.math.BigDecimal;
 
 import static com.inkflow.crm.support.SecurityTestSupport.crmUser;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -155,6 +157,75 @@ class ServiceControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void getService_withOwnerAuth_returnsDetail() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        mockMvc.perform(get("/services/{id}", bundle.service().getId())
+                        .with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(bundle.service().getId().toString()))
+                .andExpect(jsonPath("$.data.title").value("Tattoo Session"));
+    }
+
+    @Test
+    void deleteService_withOwnerAuth_softDeletesInDb() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        mockMvc.perform(delete("/services/{id}", bundle.service().getId())
+                        .with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        Service deleted = serviceRepository.findById(bundle.service().getId()).orElseThrow();
+        assertNotNull(deleted.getDeletedAt());
+    }
+
+    @Test
+    void deleteService_withArtistAuth_returnsForbidden() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        mockMvc.perform(delete("/services/{id}", bundle.service().getId())
+                        .with(crmUser(artist)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void createService_withArtistAuth_returnsForbidden() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        CreateServiceRequest body = CreateServiceRequest.builder()
+                .title("Blocked Service")
+                .pricingType("fixed")
+                .price(BigDecimal.valueOf(100))
+                .duration(30)
+                .color("#6366f1")
+                .build();
+
+        mockMvc.perform(post("/services")
+                        .with(crmUser(artist))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void getServicePrice_withOwnerAuth_returnsBasePrice() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        mockMvc.perform(get("/services/{id}/price", bundle.service().getId())
+                        .param("artistId", bundle.owner().getId().toString())
+                        .with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.serviceId").value(bundle.service().getId().toString()))
+                .andExpect(jsonPath("$.data.price").value(1000))
+                .andExpect(jsonPath("$.data.isOverride").value(false));
     }
 
     @Test

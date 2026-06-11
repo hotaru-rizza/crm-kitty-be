@@ -9,6 +9,9 @@ import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
+import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
+import com.inkflow.crm.module.appointment.dto.AddAppointmentPhotoRequest;
 import com.inkflow.crm.module.appointment.dto.CreateAppointmentRequest;
 import com.inkflow.crm.module.appointment.dto.UpdateAppointmentRequest;
 import com.inkflow.crm.support.IntegrationTest;
@@ -30,9 +33,13 @@ import java.util.UUID;
 
 import static com.inkflow.crm.support.SecurityTestSupport.crmUser;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -64,6 +71,9 @@ class AppointmentControllerIntegrationTest {
 
     @Autowired
     private AppointmentRepository appointmentRepository;
+
+    @Autowired
+    private GalleryPhotoRepository galleryPhotoRepository;
 
     @AfterEach
     void tearDown() {
@@ -229,6 +239,189 @@ class AppointmentControllerIntegrationTest {
 
         Appointment unchanged = appointmentRepository.findById(secondAppointmentId).orElseThrow();
         assertEquals(secondStart.truncatedTo(ChronoUnit.MILLIS), unchanged.getStartTime().truncatedTo(ChronoUnit.MILLIS));
+    }
+
+    @Test
+    void getAppointment_byId_returnsDetail() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        Instant start = Instant.now().plus(6, ChronoUnit.DAYS);
+        UUID appointmentId = createAppointment(bundle, start, start.plus(1, ChronoUnit.HOURS));
+
+        mockMvc.perform(get("/appointments/{id}", appointmentId).with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(appointmentId.toString()))
+                .andExpect(jsonPath("$.data.client.id").value(bundle.client().getId().toString()));
+    }
+
+    @Test
+    void getClientHistory_returnsClientAppointments() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        Instant start = Instant.now().plus(7, ChronoUnit.DAYS);
+        UUID appointmentId = createAppointment(bundle, start, start.plus(1, ChronoUnit.HOURS));
+
+        mockMvc.perform(get("/appointments/client/{clientId}", bundle.client().getId())
+                        .with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].id").value(appointmentId.toString()));
+    }
+
+    @Test
+    void getCalendar_withDateRange_returnsMatchingAppointments() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        Instant start = Instant.now().plus(8, ChronoUnit.DAYS);
+        UUID appointmentId = createAppointment(bundle, start, start.plus(1, ChronoUnit.HOURS));
+
+        Instant from = start.minus(1, ChronoUnit.DAYS);
+        Instant to = start.plus(2, ChronoUnit.DAYS);
+
+        mockMvc.perform(get("/appointments/calendar")
+                        .param("from", from.toString())
+                        .param("to", to.toString())
+                        .with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].id").value(appointmentId.toString()));
+    }
+
+    @Test
+    void getCalendar_withoutDateRange_returnsBadRequest() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        mockMvc.perform(get("/appointments/calendar").with(crmUser(bundle.owner())))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deleteAppointment_softDeletesInDb() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        Instant start = Instant.now().plus(9, ChronoUnit.DAYS);
+        UUID appointmentId = createAppointment(bundle, start, start.plus(1, ChronoUnit.HOURS));
+
+        mockMvc.perform(delete("/appointments/{id}", appointmentId).with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        Appointment persisted = appointmentRepository.findById(appointmentId).orElseThrow();
+        assertTrue(persisted.isDeleted());
+    }
+
+    @Test
+    void addPhoto_persistsGalleryPhoto() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        Instant start = Instant.now().plus(10, ChronoUnit.DAYS);
+        UUID appointmentId = createAppointment(bundle, start, start.plus(1, ChronoUnit.HOURS));
+
+        AddAppointmentPhotoRequest photoBody = new AddAppointmentPhotoRequest();
+        photoBody.setUrl("https://example.com/tattoo.jpg");
+        photoBody.setStage("fresh");
+
+        mockMvc.perform(post("/appointments/{id}/photos", appointmentId)
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(photoBody)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.url").value("https://example.com/tattoo.jpg"))
+                .andExpect(jsonPath("$.data.stage").value("fresh"));
+
+        var photos = galleryPhotoRepository.findByAppointmentId(appointmentId);
+        assertEquals(1, photos.size());
+        assertEquals("https://example.com/tattoo.jpg", photos.get(0).getUrl());
+    }
+
+    @Test
+    void addPhoto_withBlankUrl_returnsBadRequest() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        Instant start = Instant.now().plus(11, ChronoUnit.DAYS);
+        UUID appointmentId = createAppointment(bundle, start, start.plus(1, ChronoUnit.HOURS));
+
+        AddAppointmentPhotoRequest photoBody = new AddAppointmentPhotoRequest();
+        photoBody.setUrl("   ");
+        photoBody.setStage("fresh");
+
+        mockMvc.perform(post("/appointments/{id}/photos", appointmentId)
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(photoBody)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void addPhoto_withoutEditPermission_returnsForbidden() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        Instant start = Instant.now().plus(12, ChronoUnit.DAYS);
+        UUID appointmentId = createAppointment(bundle, start, start.plus(1, ChronoUnit.HOURS));
+
+        String stripEditPermission = """
+                {"permissions":["calendar.view_own","calendar.create","calendar.cancel","clients.view_own"]}
+                """;
+
+        mockMvc.perform(put("/settings/roles/artist")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(stripEditPermission))
+                .andExpect(status().isOk());
+
+        AddAppointmentPhotoRequest photoBody = new AddAppointmentPhotoRequest();
+        photoBody.setUrl("https://example.com/tattoo.jpg");
+        photoBody.setStage("fresh");
+
+        mockMvc.perform(post("/appointments/{id}/photos", appointmentId)
+                        .with(crmUser(artist))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(photoBody)))
+                .andExpect(status().isForbidden());
+
+        assertTrue(galleryPhotoRepository.findByAppointmentId(appointmentId).isEmpty());
+    }
+
+    @Test
+    void deletePhoto_removesFromDb() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        Instant start = Instant.now().plus(13, ChronoUnit.DAYS);
+        UUID appointmentId = createAppointment(bundle, start, start.plus(1, ChronoUnit.HOURS));
+
+        AddAppointmentPhotoRequest photoBody = new AddAppointmentPhotoRequest();
+        photoBody.setUrl("https://example.com/remove-me.jpg");
+        photoBody.setStage("sketch");
+
+        String photoResponse = mockMvc.perform(post("/appointments/{id}/photos", appointmentId)
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(photoBody)))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        UUID photoId = UUID.fromString(
+                objectMapper.readTree(photoResponse).path("data").path("id").asText());
+
+        mockMvc.perform(delete("/appointments/{id}/photos/{photoId}", appointmentId, photoId)
+                        .with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        assertFalse(galleryPhotoRepository.findById(photoId).isPresent());
     }
 
     private UUID createAppointment(TenantBundle bundle, Instant start, Instant end) throws Exception {

@@ -8,7 +8,9 @@ import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
+import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.module.client.dto.CreateClientRequest;
+import com.inkflow.crm.module.client.dto.UpdateClientRequest;
 
 import java.util.UUID;
 import com.inkflow.crm.support.IntegrationTest;
@@ -25,7 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static com.inkflow.crm.support.SecurityTestSupport.crmUser;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -135,6 +140,90 @@ class ClientControllerIntegrationTest {
                         .with(crmUser(bundle.owner())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(bundle.client().getId().toString()));
+    }
+
+    @Test
+    void updateClient_withOwnerAuth_persistsInDb() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        UpdateClientRequest body = UpdateClientRequest.builder()
+                .firstName("Updated")
+                .lastName("Name")
+                .status("inactive")
+                .build();
+
+        mockMvc.perform(patch("/clients/{id}", bundle.client().getId())
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.firstName").value("Updated"))
+                .andExpect(jsonPath("$.data.status").value("inactive"));
+
+        Client persisted = clientRepository
+                .findByIdAndTenantIdAndDeletedAtIsNull(bundle.client().getId(), bundle.tenant().getId())
+                .orElseThrow();
+        assertEquals("Updated", persisted.getFirstName());
+        assertEquals("Name", persisted.getLastName());
+        assertEquals(ClientStatus.INACTIVE, persisted.getStatus());
+    }
+
+    @Test
+    void updateClient_withInvalidBody_returnsBadRequest() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        UpdateClientRequest body = UpdateClientRequest.builder()
+                .phone("bad-phone")
+                .status("archived")
+                .build();
+
+        mockMvc.perform(patch("/clients/{id}", bundle.client().getId())
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void deleteClient_withOwnerAuth_softDeletesInDb() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        mockMvc.perform(delete("/clients/{id}", bundle.client().getId())
+                        .with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        Client deleted = clientRepository.findById(bundle.client().getId()).orElseThrow();
+        assertNotNull(deleted.getDeletedAt());
+    }
+
+    @Test
+    void updateClient_withArtistAuth_returnsForbidden() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        UpdateClientRequest body = UpdateClientRequest.builder()
+                .firstName("Blocked")
+                .build();
+
+        mockMvc.perform(patch("/clients/{id}", bundle.client().getId())
+                        .with(crmUser(artist))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void deleteClient_withArtistAuth_returnsForbidden() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        mockMvc.perform(delete("/clients/{id}", bundle.client().getId())
+                        .with(crmUser(artist)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.error.code").value("FORBIDDEN"));
     }
 
     private TenantBundle seedTenant() {

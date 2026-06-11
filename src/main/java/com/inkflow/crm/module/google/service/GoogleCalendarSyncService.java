@@ -29,6 +29,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -80,11 +81,7 @@ public class GoogleCalendarSyncService {
 
     private void completeOAuthConnection(String code, UUID staffId) {
         try {
-            GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
-                    httpTransport, jsonFactory,
-                    properties.getClientId(), properties.getClientSecret(),
-                    code, properties.getRedirectUri()
-            ).execute();
+            GoogleTokenResponse tokenResponse = exchangeAuthorizationCode(code);
 
             Staff staff = staffRepository.findById(staffId)
                     .orElseThrow(() -> ResourceNotFoundException.staff(staffId.toString()));
@@ -201,18 +198,7 @@ public class GoogleCalendarSyncService {
             return artist.getGoogleAccessToken();
         }
 
-        GoogleTokenResponse tokenResponse = new GoogleTokenResponse();
-        tokenResponse.setFactory(jsonFactory);
-
-        com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest refreshRequest =
-                new com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest(
-                        httpTransport, jsonFactory,
-                        artist.getGoogleRefreshToken(),
-                        properties.getClientId(),
-                        properties.getClientSecret()
-                );
-
-        tokenResponse = refreshRequest.execute();
+        GoogleTokenResponse tokenResponse = refreshAccessToken(artist.getGoogleRefreshToken());
 
         artist.setGoogleAccessToken(tokenResponse.getAccessToken());
         artist.setGoogleTokenExpiresAt(
@@ -296,6 +282,23 @@ public class GoogleCalendarSyncService {
             log.warn("Could not fetch Google Calendar email: {}", e.getMessage());
             return null;
         }
+    }
+
+    GoogleTokenResponse exchangeAuthorizationCode(String code) throws IOException {
+        return new GoogleAuthorizationCodeTokenRequest(
+                httpTransport, jsonFactory,
+                properties.getClientId(), properties.getClientSecret(),
+                code, properties.getRedirectUri()
+        ).execute();
+    }
+
+    GoogleTokenResponse refreshAccessToken(String refreshToken) throws IOException {
+        return new com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest(
+                httpTransport, jsonFactory,
+                refreshToken,
+                properties.getClientId(),
+                properties.getClientSecret()
+        ).execute();
     }
 
     private GoogleAuthorizationCodeFlow buildFlow() {

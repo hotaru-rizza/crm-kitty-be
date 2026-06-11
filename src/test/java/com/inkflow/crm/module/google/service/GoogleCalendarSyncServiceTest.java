@@ -1,6 +1,9 @@
 package com.inkflow.crm.module.google.service;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
+import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.Event;
+import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.config.GoogleCalendarProperties;
 import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.entity.Appointment;
@@ -24,11 +27,14 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -63,6 +69,10 @@ class GoogleCalendarSyncServiceTest {
     @InjectMocks
     private GoogleCalendarSyncService googleCalendarSyncService;
 
+    private void initGoogleTransport() {
+        googleCalendarSyncService.init();
+    }
+
     private void configureOAuthProperties() {
         when(properties.getClientId()).thenReturn(CLIENT_ID);
         when(properties.getClientSecret()).thenReturn(CLIENT_SECRET);
@@ -90,6 +100,115 @@ class GoogleCalendarSyncServiceTest {
         assertTrue(url.contains("redirect_uri="));
         assertTrue(url.contains("app.example.com"));
         verify(oauthStateSigner).sign(staffId);
+    }
+
+    @Test
+    void handleCallback_shouldThrowBusinessRuleExceptionWhenTokenExchangeFails() throws Exception {
+        UUID staffId = UUID.randomUUID();
+        when(oauthStateSigner.verify("signed-state")).thenReturn(staffId);
+        GoogleCalendarSyncService spy = spy(googleCalendarSyncService);
+
+        doThrow(new IOException("invalid_grant"))
+                .when(spy)
+                .exchangeAuthorizationCode("auth-code");
+
+        BusinessRuleException ex = assertThrows(
+                BusinessRuleException.class,
+                () -> spy.handleCallback("auth-code", "signed-state")
+        );
+
+        assertTrue(ex.getMessage().contains("Google OAuth callback failed"));
+        assertTrue(ex.getMessage().contains("invalid_grant"));
+        verify(staffRepository, never()).save(any());
+    }
+
+    @Test
+    void getCalendarService_shouldReuseValidAccessTokenWithoutRefresh() throws Exception {
+        initGoogleTransport();
+        Staff artist = GoogleCalendarTestFixtures.connectedArtist();
+        artist.setGoogleTokenExpiresAt(Instant.now().plusSeconds(3600));
+
+        var calendar = googleCalendarSyncService.getCalendarService(artist);
+
+        assertNotNull(calendar);
+        verify(staffRepository, never()).save(any());
+    }
+
+    @Test
+    void getCalendarService_shouldRefreshExpiredTokenAndPersistStaff() throws Exception {
+        initGoogleTransport();
+        Staff artist = GoogleCalendarTestFixtures.connectedArtist();
+        artist.setGoogleTokenExpiresAt(Instant.now().plusSeconds(30));
+        GoogleCalendarSyncService spy = spy(googleCalendarSyncService);
+        GoogleTokenResponse refreshed = GoogleCalendarTestFixtures.tokenResponse("new-access-token", 3600L);
+
+        doReturn(refreshed).when(spy).refreshAccessToken("refresh-token");
+        when(staffRepository.save(artist)).thenReturn(artist);
+
+        var calendar = spy.getCalendarService(artist);
+
+        assertNotNull(calendar);
+        assertEquals("new-access-token", artist.getGoogleAccessToken());
+        verify(staffRepository).save(artist);
+    }
+
+    @Test
+    void getCalendarService_shouldRefreshWhenTokenExpiryIsNull() throws Exception {
+        initGoogleTransport();
+        Staff artist = GoogleCalendarTestFixtures.connectedArtist();
+        artist.setGoogleTokenExpiresAt(null);
+        GoogleCalendarSyncService spy = spy(googleCalendarSyncService);
+        GoogleTokenResponse refreshed = GoogleCalendarTestFixtures.tokenResponse("new-access-token", 3600L);
+
+        doReturn(refreshed).when(spy).refreshAccessToken("refresh-token");
+        when(staffRepository.save(artist)).thenReturn(artist);
+
+        spy.getCalendarService(artist);
+
+        verify(staffRepository).save(artist);
+    }
+
+    @Test
+    void syncNewAppointment_buildsEventWithDefaultsWhenOptionalFieldsMissing() throws Exception {
+        configureTimezone();
+        Staff artist = GoogleCalendarTestFixtures.connectedArtist();
+        Appointment appointment = GoogleCalendarTestFixtures.minimalAppointment(artist);
+        GoogleCalendarSyncService spy = spy(googleCalendarSyncService);
+        ArgumentCaptor<Event> eventCaptor = ArgumentCaptor.forClass(Event.class);
+        var calendar = GoogleCalendarApiMocks.calendarWithInsert("event-id");
+
+        doReturn(calendar).when(spy).getCalendarService(artist);
+        when(appointmentRepository.findById(appointment.getId())).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.save(appointment)).thenReturn(appointment);
+
+        spy.syncNewAppointment(appointment);
+
+        verify(calendar.events()).insert(eq("primary"), eventCaptor.capture());
+        Event event = eventCaptor.getValue();
+        assertEquals("Запис — Клієнт", event.getSummary());
+        assertNull(event.getLocation());
+        assertTrue(event.getDescription().contains("INKAT CRM"));
+        assertTrue(event.getDescription().contains("автоматичний запис"));
+    }
+
+    @Test
+    void syncNewAppointment_omitsLocationWhenAddressMissing() throws Exception {
+        configureTimezone();
+        Staff artist = GoogleCalendarTestFixtures.connectedArtist();
+        Appointment appointment = GoogleCalendarTestFixtures.connectedAppointment(artist);
+        appointment.setLocation(com.inkflow.crm.domain.entity.Location.builder().address(null).build());
+        GoogleCalendarSyncService spy = spy(googleCalendarSyncService);
+        ArgumentCaptor<Event> eventCaptor = ArgumentCaptor.forClass(Event.class);
+        var calendar = GoogleCalendarApiMocks.calendarWithInsert("event-id");
+
+        doReturn(calendar).when(spy).getCalendarService(artist);
+        when(appointmentRepository.findById(appointment.getId())).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.save(appointment)).thenReturn(appointment);
+
+        spy.syncNewAppointment(appointment);
+
+        verify(calendar.events()).insert(eq("primary"), eventCaptor.capture());
+        assertNull(eventCaptor.getValue().getLocation());
     }
 
     @Test

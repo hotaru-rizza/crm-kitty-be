@@ -1,19 +1,27 @@
 package com.inkflow.crm.module.staff.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.ArtistServicePricing;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.StaffFaq;
+import com.inkflow.crm.domain.entity.StaffInvite;
 import com.inkflow.crm.domain.entity.StaffSchedule;
+import com.inkflow.crm.domain.enums.AccountStatus;
+import com.inkflow.crm.domain.enums.AppointmentStatus;
 import com.inkflow.crm.domain.enums.DayOfWeek;
+import com.inkflow.crm.domain.enums.UserRole;
+import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.ArtistServicePricingRepository;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
 import com.inkflow.crm.domain.repository.StaffFaqRepository;
+import com.inkflow.crm.domain.repository.StaffInviteRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.StaffScheduleRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
+import com.inkflow.crm.module.staff.dto.AcceptInviteRequest;
 import com.inkflow.crm.module.staff.dto.AddStaffServiceRequest;
 import com.inkflow.crm.module.staff.dto.CreateStaffRequest;
 import com.inkflow.crm.module.staff.dto.InviteStaffRequest;
@@ -34,13 +42,17 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 import static com.inkflow.crm.support.SecurityTestSupport.crmUser;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -84,6 +96,12 @@ class StaffControllerIntegrationTest {
 
     @Autowired
     private ArtistServicePricingRepository artistServicePricingRepository;
+
+    @Autowired
+    private StaffInviteRepository staffInviteRepository;
+
+    @Autowired
+    private AppointmentRepository appointmentRepository;
 
     @AfterEach
     void tearDown() {
@@ -588,6 +606,147 @@ class StaffControllerIntegrationTest {
     }
 
     @Test
+    void inviteStaff_withoutAuth_returnsUnauthorized() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        InviteStaffRequest body = InviteStaffRequest.builder()
+                .email("invite-target@test.com")
+                .role("artist")
+                .calendarColor("#6366f1")
+                .locationIds(List.of(bundle.location().getId()))
+                .build();
+
+        mockMvc.perform(post("/staff/invite")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void inviteStaff_withOwnerAuth_persistsStaffInviteInDb() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        InviteStaffRequest body = InviteStaffRequest.builder()
+                .email("invite-target@test.com")
+                .role("artist")
+                .calendarColor("#6366f1")
+                .locationIds(List.of(bundle.location().getId()))
+                .build();
+
+        mockMvc.perform(post("/staff/invite")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.token").isNotEmpty());
+
+        StaffInvite invite = staffInviteRepository
+                .findByEmailAndTenantIdAndAcceptedAtIsNull("invite-target@test.com", bundle.tenant().getId())
+                .orElseThrow();
+        assertEquals("invite-target@test.com", invite.getEmail());
+        assertEquals(UserRole.ARTIST, invite.getRole());
+        assertEquals(bundle.tenant().getId(), invite.getTenantId());
+        assertEquals(bundle.owner().getId(), invite.getInvitedBy());
+        assertNull(invite.getAcceptedAt());
+        assertFalse(invite.isExpired());
+        assertTrue(invite.getLocationIds().contains(bundle.location().getId()));
+    }
+
+    @Test
+    void getInviteInfo_withValidToken_returnsInviteDetails() throws Exception {
+        TenantBundle bundle = seedTenant();
+        String token = createInviteAndReturnToken(bundle, "invite-info@test.com");
+
+        mockMvc.perform(get("/staff/invite/info/{token}", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.email").value("invite-info@test.com"))
+                .andExpect(jsonPath("$.data.role").value("artist"))
+                .andExpect(jsonPath("$.data.expired").value(false))
+                .andExpect(jsonPath("$.data.accepted").value(false));
+    }
+
+    @Test
+    void acceptInvite_withValidToken_createsStaffAndMarksInviteAccepted() throws Exception {
+        TenantBundle bundle = seedTenant();
+        String token = createInviteAndReturnToken(bundle, "accepted-artist@test.com");
+
+        AcceptInviteRequest body = AcceptInviteRequest.builder()
+                .token(token)
+                .firstName("Invited")
+                .lastName("Artist")
+                .phone("+380991234567")
+                .authUserId(UUID.randomUUID().toString())
+                .build();
+
+        mockMvc.perform(post("/staff/accept-invite")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.email").value("accepted-artist@test.com"))
+                .andExpect(jsonPath("$.data.firstName").value("Invited"))
+                .andExpect(jsonPath("$.data.lastName").value("Artist"));
+
+        assertTrue(staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull(
+                "accepted-artist@test.com", bundle.tenant().getId()));
+
+        StaffInvite invite = staffInviteRepository.findByToken(token).orElseThrow();
+        assertNotNull(invite.getAcceptedAt());
+    }
+
+    @Test
+    void deactivateStaff_withOwnerAuth_setsDeactivatedInDb() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        mockMvc.perform(post("/staff/{id}/deactivate", artist.getId())
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        Staff deactivated = staffRepository.findById(artist.getId()).orElseThrow();
+        assertEquals(AccountStatus.DEACTIVATED, deactivated.getAccountStatus());
+        assertFalse(deactivated.getAvailableForOnlineBooking());
+    }
+
+    @Test
+    void reactivateStaff_withOwnerAuth_setsActiveInDb() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        artist.setAccountStatus(AccountStatus.DEACTIVATED);
+        artist.setAvailableForOnlineBooking(false);
+        staffRepository.save(artist);
+
+        mockMvc.perform(post("/staff/{id}/reactivate", artist.getId())
+                        .with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        Staff reactivated = staffRepository.findById(artist.getId()).orElseThrow();
+        assertEquals(AccountStatus.ACTIVE, reactivated.getAccountStatus());
+    }
+
+    @Test
+    void getFutureAppointmentsCount_withOwnerAuth_returnsCountMatchingDb() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        saveFutureAppointment(bundle, artist, AppointmentStatus.NEW);
+        saveFutureAppointment(bundle, artist, AppointmentStatus.CONFIRMED);
+        saveFutureAppointment(bundle, artist, AppointmentStatus.CANCELLED);
+
+        mockMvc.perform(get("/staff/{id}/future-appointments-count", artist.getId())
+                        .with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.count").value(2));
+    }
+
+    @Test
     void inviteStaff_withArtistAuth_returnsForbidden() throws Exception {
         TenantBundle bundle = seedTenant();
         Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
@@ -626,5 +785,43 @@ class StaffControllerIntegrationTest {
                 serviceRepository,
                 locationRepository
         );
+    }
+
+    private String createInviteAndReturnToken(TenantBundle bundle, String email) throws Exception {
+        InviteStaffRequest body = InviteStaffRequest.builder()
+                .email(email)
+                .role("artist")
+                .calendarColor("#6366f1")
+                .locationIds(List.of(bundle.location().getId()))
+                .build();
+
+        String response = mockMvc.perform(post("/staff/invite")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).path("data").path("token").asText();
+    }
+
+    private Appointment saveFutureAppointment(TenantBundle bundle, Staff artist, AppointmentStatus status) {
+        Instant startTime = Instant.now().plus(1, ChronoUnit.DAYS);
+        return appointmentRepository.save(Appointment.builder()
+                .tenantId(bundle.tenant().getId())
+                .client(bundle.client())
+                .artist(artist)
+                .service(bundle.service())
+                .location(bundle.location())
+                .startTime(startTime)
+                .endTime(startTime.plus(1, ChronoUnit.HOURS))
+                .status(status)
+                .price(BigDecimal.valueOf(1000))
+                .prepayment(BigDecimal.ZERO)
+                .discount(BigDecimal.ZERO)
+                .finalPrice(BigDecimal.valueOf(1000))
+                .build());
     }
 }

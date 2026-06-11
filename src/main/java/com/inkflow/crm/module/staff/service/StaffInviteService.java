@@ -4,6 +4,7 @@ import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.StaffInvite;
+import com.inkflow.crm.domain.enums.AccountStatus;
 import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.LocationRepository;
@@ -123,6 +124,7 @@ public class StaffInviteService {
                 .isServiceProvider(invite.getIsServiceProvider())
                 .authUserId(request.getAuthUserId())
                 .status(StaffStatus.WORKING)
+                .accountStatus(AccountStatus.ACTIVE)
                 .build();
     }
 

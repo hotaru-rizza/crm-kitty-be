@@ -4,8 +4,11 @@ import com.inkflow.crm.config.InkflowProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -36,5 +39,24 @@ class ReceiptNumberGeneratorTest {
         String second = generator.generate();
 
         assertTrue(!first.equals(second));
+    }
+
+    @Test
+    void shouldUseConfiguredTimezoneForDatePrefix() {
+        String expectedPrefix = LocalDateTime.now(ZoneId.of("Europe/Kyiv"))
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+        String receipt = generator.generate();
+
+        assertTrue(receipt.startsWith(expectedPrefix + "-"));
+    }
+
+    @Test
+    void shouldFormatSequenceWithFiveDigits() {
+        String receipt = generator.generate();
+
+        String sequence = receipt.substring(receipt.indexOf('-') + 1);
+        assertEquals(5, sequence.length());
+        assertTrue(sequence.chars().allMatch(Character::isDigit));
     }
 }

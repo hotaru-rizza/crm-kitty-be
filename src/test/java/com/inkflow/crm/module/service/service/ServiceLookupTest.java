@@ -14,6 +14,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,5 +49,17 @@ class ServiceLookupTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> serviceLookup.require(tenantId, serviceId));
+    }
+
+    @Test
+    void require_rejectsForeignTenant() {
+        UUID currentTenantId = UUID.randomUUID();
+        UUID serviceId = UUID.randomUUID();
+
+        when(serviceRepository.findByIdAndTenantIdAndDeletedAtIsNull(serviceId, currentTenantId))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> serviceLookup.require(currentTenantId, serviceId));
+        verify(serviceRepository).findByIdAndTenantIdAndDeletedAtIsNull(serviceId, currentTenantId);
     }
 }

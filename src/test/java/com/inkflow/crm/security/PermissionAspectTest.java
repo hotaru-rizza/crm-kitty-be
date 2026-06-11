@@ -1,6 +1,7 @@
 package com.inkflow.crm.security;
 
 import com.inkflow.crm.common.exception.AccessDeniedException;
+import com.inkflow.crm.common.exception.ApiException;
 import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
@@ -117,6 +118,40 @@ class PermissionAspectTest {
         JoinPoint joinPoint = joinPointFor("securedAll");
 
         assertDoesNotThrow(() -> permissionAspect.checkPermission(joinPoint));
+    }
+
+    @Test
+    void shouldSkipCheckWhenAnnotationMissing() throws Exception {
+        Method method = Object.class.getDeclaredMethod("toString");
+        MethodSignature signature = mock(MethodSignature.class);
+        when(signature.getMethod()).thenReturn(method);
+
+        JoinPoint joinPoint = mock(JoinPoint.class);
+        when(joinPoint.getSignature()).thenReturn(signature);
+
+        assertDoesNotThrow(() -> permissionAspect.checkPermission(joinPoint));
+        verifyNoInteractions(rolePermissionService);
+    }
+
+    @Test
+    void shouldDenyArtistWhenRequireAnyAndNoPermissionMatches() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        authenticate(UserRole.ARTIST, tenantId);
+
+        when(rolePermissionService.hasPermission(eq(tenantId), eq(UserRole.ARTIST), any()))
+                .thenReturn(false);
+
+        JoinPoint joinPoint = joinPointFor("securedAny");
+
+        assertThrows(AccessDeniedException.class, () -> permissionAspect.checkPermission(joinPoint));
+    }
+
+    @Test
+    void shouldThrowWhenNotAuthenticated() throws Exception {
+        JoinPoint joinPoint = joinPointFor("securedSingle");
+
+        assertThrows(ApiException.class, () -> permissionAspect.checkPermission(joinPoint));
+        verifyNoInteractions(rolePermissionService);
     }
 
     @Test

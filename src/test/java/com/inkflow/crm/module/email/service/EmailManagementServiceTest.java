@@ -25,6 +25,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -261,5 +262,84 @@ class EmailManagementServiceTest {
 
         assertEquals("REMINDER", result.getType());
         verify(companySettingsRepository).save(settings);
+    }
+
+    @Test
+    void shouldReturnMappedSettingsWhenTenantHasCompanySettings() {
+        UUID tenantId = UUID.randomUUID();
+        CompanySettings settings = CompanySettings.builder()
+                .tenantId(tenantId)
+                .emailReminders(false)
+                .emailAftercare(true)
+                .build();
+        EmailSettingsDto mapped = EmailSettingsDto.builder()
+                .emailReminders(false)
+                .emailAftercare(true)
+                .build();
+
+        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.of(settings));
+        when(emailSettingsMapper.toDto(settings)).thenReturn(mapped);
+
+        EmailSettingsDto result = emailManagementService.getEmailSettings(tenantId);
+
+        assertEquals(false, result.isEmailReminders());
+        assertEquals(true, result.isEmailAftercare());
+        verify(emailSettingsMapper).toDto(settings);
+        verify(emailSettingsMapper, never()).defaultDto();
+    }
+
+    @Test
+    void shouldThrowWhenUpdateEmailSettingsAndSettingsMissing() {
+        UUID tenantId = UUID.randomUUID();
+        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> emailManagementService.updateEmailSettings(
+                        tenantId,
+                        EmailSettingsDto.builder().emailReminders(true).build()));
+    }
+
+    @Test
+    void shouldReturnZeroSentWhenSendBulkWithEmptyClientList() {
+        UUID tenantId = UUID.randomUUID();
+
+        when(clientRepository.findAllById(List.of())).thenReturn(List.of());
+
+        SendEmailResultDto result = emailManagementService.sendBulk(
+                tenantId,
+                new SendEmailRequest(List.of(), "Hello", "Body")
+        );
+
+        assertEquals(0, result.sent());
+        assertEquals(0, result.skipped());
+        verify(emailService, never()).sendManual(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldSaveWhenResetTemplateAndTypeNotPresent() {
+        UUID tenantId = UUID.randomUUID();
+        Map<String, Map<String, String>> templates = new HashMap<>();
+        templates.put("CONFIRMATION", Map.of("subject", "Custom"));
+        CompanySettings settings = CompanySettings.builder()
+                .tenantId(tenantId)
+                .emailTemplates(templates)
+                .build();
+
+        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.of(settings));
+
+        emailManagementService.resetTemplate(tenantId, "REMINDER");
+
+        assertEquals(1, templates.size());
+        assertTrue(templates.containsKey("CONFIRMATION"));
+        verify(companySettingsRepository).save(settings);
+    }
+
+    @Test
+    void shouldThrowWhenResetTemplateAndSettingsMissing() {
+        UUID tenantId = UUID.randomUUID();
+        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> emailManagementService.resetTemplate(tenantId, "REMINDER"));
     }
 }

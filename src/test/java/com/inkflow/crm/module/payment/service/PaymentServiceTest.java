@@ -71,6 +71,7 @@ class PaymentServiceTest {
         AppointmentPaymentSummaryDto result = paymentService.getAppointmentPaymentSummary(appointmentId);
 
         assertEquals(BigDecimal.valueOf(500), result.getRemainingBalance());
+        verify(summaryCalculator).calculate(appointment);
     }
 
     @Test

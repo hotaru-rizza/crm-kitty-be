@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.google.service;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.Location;
@@ -45,5 +46,24 @@ final class GoogleCalendarTestFixtures {
                 .prepayment(new BigDecimal("500"))
                 .notes("Bring reference")
                 .build();
+    }
+
+    static Appointment minimalAppointment(Staff artist) {
+        Instant start = Instant.parse("2026-06-15T10:00:00Z");
+        Instant end = Instant.parse("2026-06-15T12:00:00Z");
+        return Appointment.builder()
+                .id(UUID.randomUUID())
+                .tenantId(UUID.randomUUID())
+                .artist(artist)
+                .startTime(start)
+                .endTime(end)
+                .build();
+    }
+
+    static GoogleTokenResponse tokenResponse(String accessToken, long expiresInSeconds) {
+        GoogleTokenResponse response = new GoogleTokenResponse();
+        response.setAccessToken(accessToken);
+        response.setExpiresInSeconds(expiresInSeconds);
+        return response;
     }
 }

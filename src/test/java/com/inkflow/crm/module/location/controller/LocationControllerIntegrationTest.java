@@ -8,8 +8,11 @@ import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
+import com.inkflow.crm.module.location.dto.AssignStaffRequest;
 import com.inkflow.crm.module.location.dto.CreateLocationRequest;
 import com.inkflow.crm.module.location.dto.UpdateLocationRequest;
+
+import java.util.List;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
 import com.inkflow.crm.support.IntegrationTestData.TenantBundle;
@@ -163,6 +166,72 @@ class LocationControllerIntegrationTest {
                 .build();
 
         mockMvc.perform(post("/locations")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void getLocation_withOwnerAuth_returnsDetail() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        mockMvc.perform(get("/locations/{id}", bundle.location().getId())
+                        .with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(bundle.location().getId().toString()))
+                .andExpect(jsonPath("$.data.name").value("Main Studio"));
+    }
+
+    @Test
+    void assignStaff_withOwnerAuth_persistsInDb() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        AssignStaffRequest body = AssignStaffRequest.builder()
+                .staffIds(List.of(artist.getId()))
+                .build();
+
+        mockMvc.perform(post("/locations/{id}/staff", bundle.location().getId())
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        Location updated = locationRepository.findById(bundle.location().getId()).orElseThrow();
+        assertEquals(1, updated.getStaff().size());
+        assertTrue(updated.getStaff().stream()
+                .anyMatch(staff -> staff.getId().equals(artist.getId())));
+    }
+
+    @Test
+    void assignStaff_withArtistAuth_returnsForbidden() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        AssignStaffRequest body = AssignStaffRequest.builder()
+                .staffIds(List.of(artist.getId()))
+                .build();
+
+        mockMvc.perform(post("/locations/{id}/staff", bundle.location().getId())
+                        .with(crmUser(artist))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void assignStaff_withEmptyStaffIds_returnsBadRequest() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        AssignStaffRequest body = AssignStaffRequest.builder()
+                .staffIds(List.of())
+                .build();
+
+        mockMvc.perform(post("/locations/{id}/staff", bundle.location().getId())
                         .with(crmUser(bundle.owner()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))

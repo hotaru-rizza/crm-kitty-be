@@ -2,7 +2,7 @@
 
 > **Цель:** не гнаться за % JaCoCo ради цифры, а иметь тесты, которые ловят регрессии в бизнес-логике и API-контрактах.
 >
-> **JaCoCo (~2025-06, после волны 6):** ~650 тестов, **~70% instructions / ~72% lines** (excludes dto/entity/mapper).
+> **JaCoCo (~2025-06, после волны 11):** ~950 тестов, **~87% instructions / ~88% lines** (excludes dto/entity/mapper).
 > **Запуск:** `./mvnw test` → отчёт `target/site/jacoco/index.html`
 
 ---
@@ -32,7 +32,7 @@
 | `AppointmentControllerIntegrationTest` | PATCH, смена статуса, side effects | P1 | done (PATCH cancel + DB, 400, create count) |
 | `LeaveControllerIntegrationTest` | reject/cancel → статус в БД | P2 | done |
 | `PaymentControllerIntegrationTest` | суммы, receipt, связь с appointment | P1 | done (process + DB, artist 403) |
-| `StaffControllerIntegrationTest` | invite flow end-to-end | P2 | open |
+| `StaffControllerIntegrationTest` | invite flow end-to-end | P2 | done (wave 8) |
 
 **Улучшение:** после мутации — `repository.findById` / `assertThat(entity.getStatus())`, не только `jsonPath("$.success")`.
 
@@ -80,7 +80,7 @@
 | `RequestService` | status transitions, edge cases | P1 | done (convert, spam, repliedAt) |
 | `StaffService` / lifecycle | deactivate, permissions | P1 | done (delete soft, owner-only, dup email) |
 | `TransactionService` | create + rollback paths | P1 | done (delete soft, finance stats, missing location) |
-| `GoogleCalendarSyncService` | sync beyond early-return | P2 | open |
+| `GoogleCalendarSyncService` | sync beyond early-return | P2 | done (OAuth callback, refresh, buildEvent) |
 | `AppointmentService` | reschedule, conflict rules | P1 | done (unit: reschedule, cancel, done, pricing) |
 | `RefundProcessingService` | partial refund, deposit adjust | P0 | done |
 
@@ -130,5 +130,8 @@
 
 | Дата | Изменение |
 |------|-----------|
-| 2025-06-10 | Parallel waves 2–3: consumer, analytics, email, auth, catalog, appointment/payment, subscription (+~130 tests → 505) |
+| 2025-06-10 | Wave 11: JwtTokenProvider (13 tests), TransactionService depth (+14), controller DB assertions (Transaction/Project/Email) |
+| 2025-06-10 | Wave 10: GoogleCalendar OAuth branches, email module (+23), security filters (+24), analytics/payment support (+13) → ~915 tests, ~88% lines |
+| 2025-06-10 | Wave 9: Appointment/Email/Settings controllers, ProjectService depth, Location/Service branch tests |
+| 2025-06-10 | Wave 8: staff invite e2e + StaffInviteService accountStatus fix, controllers + catalog + security filters (+~70 tests → 790+) |
 | 2025-06-10 | Initial backlog after coverage wave (~310 tests) |
