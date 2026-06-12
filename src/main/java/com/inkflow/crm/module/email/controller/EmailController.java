@@ -4,16 +4,13 @@ import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.ApiResponses;
 import com.inkflow.crm.domain.enums.EmailType;
-import com.inkflow.crm.module.email.dto.EmailLogDto;
-import com.inkflow.crm.module.email.dto.EmailSettingsDto;
-import com.inkflow.crm.module.email.dto.EmailStatsDto;
-import com.inkflow.crm.module.email.dto.EmailTemplateDto;
-import com.inkflow.crm.module.email.dto.SendEmailRequest;
-import com.inkflow.crm.module.email.dto.SendEmailResultDto;
+import com.inkflow.crm.module.email.dto.*;
 import com.inkflow.crm.module.email.service.EmailManagementService;
 import com.inkflow.crm.module.email.service.EmailService;
+import com.inkflow.crm.module.email.service.EmailTemplateService;
 import com.inkflow.crm.security.RequirePermission;
 import com.inkflow.crm.security.SecurityUtils;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +21,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RestController
@@ -35,6 +31,7 @@ public class EmailController {
 
     private final EmailService emailService;
     private final EmailManagementService emailManagementService;
+    private final EmailTemplateService emailTemplateService;
 
     @GetMapping("/log")
     @RequirePermission(Permission.EMAILS_VIEW)
@@ -67,31 +64,45 @@ public class EmailController {
 
     @GetMapping("/templates")
     @RequirePermission(Permission.EMAILS_MANAGE)
-    public ResponseEntity<ApiResponse<List<EmailTemplateDto>>> getTemplates() {
+    public ResponseEntity<ApiResponse<List<TemplateListItemDto>>> getTemplates(
+            @RequestParam(defaultValue = "uk") String locale) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        return ApiResponses.ok(emailManagementService.getTemplates(tenantId));
+        return ApiResponses.ok(emailTemplateService.listConfigurable(tenantId, locale));
     }
 
-    @PutMapping("/templates/{type}")
+    @PutMapping("/templates/{key}")
     @RequirePermission(Permission.EMAILS_MANAGE)
-    public ResponseEntity<ApiResponse<EmailTemplateDto>> updateTemplate(
-            @PathVariable String type,
-            @RequestBody EmailTemplateDto dto) {
+    public ResponseEntity<ApiResponse<TemplateListItemDto>> updateTemplate(
+            @PathVariable String key,
+            @RequestParam(defaultValue = "uk") String locale,
+            @Valid @RequestBody UpdateTemplateRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        EmailTemplateDto updated = emailManagementService.updateTemplate(tenantId, type, dto);
-        log.info("Email template updated via API: tenantId={} type={}", tenantId, type);
+        UUID updatedBy = SecurityUtils.getCurrentUserId();
+        TemplateListItemDto updated = emailTemplateService.upsertOverride(tenantId, key, locale, request, updatedBy);
+        log.info("Email template updated: tenantId={} key={} locale={}", tenantId, key, locale);
 
         return ApiResponses.ok(updated);
     }
 
-    @DeleteMapping("/templates/{type}")
+    @DeleteMapping("/templates/{key}")
     @RequirePermission(Permission.EMAILS_MANAGE)
-    public ResponseEntity<ApiResponse<Void>> resetTemplate(@PathVariable String type) {
+    public ResponseEntity<ApiResponse<Void>> resetTemplate(
+            @PathVariable String key,
+            @RequestParam(defaultValue = "uk") String locale) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        emailManagementService.resetTemplate(tenantId, type);
-        log.info("Email template reset via API: tenantId={} type={}", tenantId, type);
+        emailTemplateService.resetOverride(tenantId, key, locale);
+        log.info("Email template reset: tenantId={} key={} locale={}", tenantId, key, locale);
 
         return ApiResponses.empty();
+    }
+
+    @GetMapping("/templates/{key}/preview")
+    @RequirePermission(Permission.EMAILS_MANAGE)
+    public ResponseEntity<String> previewTemplate(
+            @PathVariable String key,
+            @RequestParam(defaultValue = "uk") String locale) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        return ResponseEntity.ok(emailTemplateService.preview(tenantId, key, locale));
     }
 
     @GetMapping("/settings")

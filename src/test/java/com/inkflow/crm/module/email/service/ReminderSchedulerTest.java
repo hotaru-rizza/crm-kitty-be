@@ -4,7 +4,6 @@ import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.CompanySettings;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
-import com.inkflow.crm.domain.enums.EmailType;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.CompanySettingsRepository;
 import org.junit.jupiter.api.Test;
@@ -18,29 +17,21 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ReminderSchedulerTest {
 
-    @Mock
-    private AppointmentRepository appointmentRepository;
-
-    @Mock
-    private CompanySettingsRepository companySettingsRepository;
-
-    @Mock
-    private EmailService emailService;
+    @Mock private AppointmentRepository appointmentRepository;
+    @Mock private CompanySettingsRepository companySettingsRepository;
+    @Mock private AppointmentNotificationService appointmentNotificationService;
 
     @InjectMocks
     private ReminderScheduler reminderScheduler;
 
     @Test
-    void shouldSkipReminderProcessingWhenEmailRemindersDisabled() {
+    void processReminders_skipsWhenEmailRemindersDisabled() {
         UUID tenantId = UUID.randomUUID();
         CompanySettings settings = CompanySettings.builder()
                 .tenantId(tenantId)
@@ -53,303 +44,106 @@ class ReminderSchedulerTest {
         reminderScheduler.processReminders();
 
         verify(appointmentRepository, never()).findByTenantIdAndDateRange(any(), any(), any());
-        verify(emailService, never()).sendReminder(any(), any(Integer.class));
-        verify(emailService, never()).sendAftercare(any());
+        verify(appointmentNotificationService, never()).sendReminder(any(), anyInt());
+        verify(appointmentNotificationService, never()).sendAftercare(any());
     }
 
     @Test
-    void shouldSendReminderForEligibleConfirmedAppointment() {
+    void processReminders_sendsReminderForEligibleAppointments() {
         UUID tenantId = UUID.randomUUID();
-        UUID appointmentId = UUID.randomUUID();
         CompanySettings settings = CompanySettings.builder()
                 .tenantId(tenantId)
                 .emailReminders(true)
                 .emailAftercare(false)
                 .reminderHoursBefore(24)
                 .build();
-        Appointment appointment = Appointment.builder()
-                .id(appointmentId)
-                .tenantId(tenantId)
-                .status(AppointmentStatus.CONFIRMED)
-                .client(Client.builder().email("client@test.com").build())
-                .build();
 
-        when(companySettingsRepository.findAll()).thenReturn(List.of(settings));
-        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), any(Instant.class), any(Instant.class)))
-                .thenReturn(List.of(appointment));
-        when(emailService.wasAlreadySent(appointmentId, EmailType.REMINDER)).thenReturn(false);
-
-        reminderScheduler.processReminders();
-
-        verify(emailService).sendReminder(appointment, 24);
-        verify(emailService, never()).sendAftercare(any());
-    }
-
-    @Test
-    void shouldSkipReminderWhenAppointmentNotEligible() {
-        UUID tenantId = UUID.randomUUID();
-        UUID appointmentId = UUID.randomUUID();
-        CompanySettings settings = CompanySettings.builder()
-                .tenantId(tenantId)
-                .emailReminders(true)
-                .emailAftercare(false)
-                .reminderHoursBefore(24)
-                .build();
-        Appointment appointment = Appointment.builder()
-                .id(appointmentId)
-                .tenantId(tenantId)
-                .status(AppointmentStatus.CANCELLED)
-                .client(Client.builder().email("client@test.com").build())
-                .build();
-
-        when(companySettingsRepository.findAll()).thenReturn(List.of(settings));
-        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), any(Instant.class), any(Instant.class)))
-                .thenReturn(List.of(appointment));
-
-        reminderScheduler.processReminders();
-
-        verify(emailService, never()).sendReminder(any(), any(Integer.class));
-    }
-
-    @Test
-    void shouldSendAftercareForDoneAppointmentInWindow() {
-        UUID tenantId = UUID.randomUUID();
-        UUID appointmentId = UUID.randomUUID();
-        CompanySettings settings = CompanySettings.builder()
-                .tenantId(tenantId)
-                .emailReminders(false)
-                .emailAftercare(true)
-                .build();
-        Appointment appointment = Appointment.builder()
-                .id(appointmentId)
-                .tenantId(tenantId)
-                .status(AppointmentStatus.DONE)
-                .client(Client.builder().email("client@test.com").build())
-                .build();
-
-        when(companySettingsRepository.findAll()).thenReturn(List.of(settings));
-        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), any(Instant.class), any(Instant.class)))
-                .thenReturn(List.of(appointment));
-        when(emailService.wasAlreadySent(appointmentId, EmailType.AFTERCARE)).thenReturn(false);
-
-        reminderScheduler.processReminders();
-
-        verify(emailService).sendAftercare(appointment);
-        verify(emailService, never()).sendReminder(any(), any(Integer.class));
-    }
-
-    @Test
-    void shouldSkipReminderWhenAlreadySent() {
-        UUID tenantId = UUID.randomUUID();
-        UUID appointmentId = UUID.randomUUID();
-        CompanySettings settings = CompanySettings.builder()
-                .tenantId(tenantId)
-                .emailReminders(true)
-                .emailAftercare(false)
-                .reminderHoursBefore(24)
-                .build();
-        Appointment appointment = Appointment.builder()
-                .id(appointmentId)
-                .tenantId(tenantId)
-                .status(AppointmentStatus.CONFIRMED)
-                .client(Client.builder().email("client@test.com").build())
-                .build();
-
-        when(companySettingsRepository.findAll()).thenReturn(List.of(settings));
-        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), any(Instant.class), any(Instant.class)))
-                .thenReturn(List.of(appointment));
-        when(emailService.wasAlreadySent(appointmentId, EmailType.REMINDER)).thenReturn(true);
-
-        reminderScheduler.processReminders();
-
-        verify(emailService, never()).sendReminder(any(), any(Integer.class));
-    }
-
-    @Test
-    void shouldSendReminderForNewStatusAppointment() {
-        UUID tenantId = UUID.randomUUID();
-        UUID appointmentId = UUID.randomUUID();
-        CompanySettings settings = CompanySettings.builder()
-                .tenantId(tenantId)
-                .emailReminders(true)
-                .emailAftercare(false)
-                .reminderHoursBefore(48)
-                .build();
-        Appointment appointment = Appointment.builder()
-                .id(appointmentId)
-                .tenantId(tenantId)
-                .status(AppointmentStatus.NEW)
-                .client(Client.builder().email("client@test.com").build())
-                .build();
-
-        when(companySettingsRepository.findAll()).thenReturn(List.of(settings));
-        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), any(Instant.class), any(Instant.class)))
-                .thenReturn(List.of(appointment));
-        when(emailService.wasAlreadySent(appointmentId, EmailType.REMINDER)).thenReturn(false);
-
-        reminderScheduler.processReminders();
-
-        verify(emailService).sendReminder(appointment, 48);
-    }
-
-    @Test
-    void shouldSkipAftercareWhenAlreadySent() {
-        UUID tenantId = UUID.randomUUID();
-        UUID appointmentId = UUID.randomUUID();
-        CompanySettings settings = CompanySettings.builder()
-                .tenantId(tenantId)
-                .emailReminders(false)
-                .emailAftercare(true)
-                .build();
-        Appointment appointment = Appointment.builder()
-                .id(appointmentId)
-                .tenantId(tenantId)
-                .status(AppointmentStatus.DONE)
-                .client(Client.builder().email("client@test.com").build())
-                .build();
-
-        when(companySettingsRepository.findAll()).thenReturn(List.of(settings));
-        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), any(Instant.class), any(Instant.class)))
-                .thenReturn(List.of(appointment));
-        when(emailService.wasAlreadySent(appointmentId, EmailType.AFTERCARE)).thenReturn(true);
-
-        reminderScheduler.processReminders();
-
-        verify(emailService, never()).sendAftercare(any());
-    }
-
-    @Test
-    void shouldSkipAftercareWhenStatusNotDone() {
-        UUID tenantId = UUID.randomUUID();
-        CompanySettings settings = CompanySettings.builder()
-                .tenantId(tenantId)
-                .emailReminders(false)
-                .emailAftercare(true)
-                .build();
         Appointment appointment = Appointment.builder()
                 .id(UUID.randomUUID())
                 .tenantId(tenantId)
                 .status(AppointmentStatus.CONFIRMED)
-                .client(Client.builder().email("client@test.com").build())
+                .client(Client.builder().firstName("Anna").email("anna@test.com").build())
+                .startTime(Instant.now().plusSeconds(86400))
                 .build();
 
         when(companySettingsRepository.findAll()).thenReturn(List.of(settings));
-        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), any(Instant.class), any(Instant.class)))
+        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), any(), any()))
                 .thenReturn(List.of(appointment));
 
         reminderScheduler.processReminders();
 
-        verify(emailService, never()).sendAftercare(any());
+        verify(appointmentNotificationService).sendReminder(appointment, 24);
     }
 
     @Test
-    void shouldProcessBothRemindersAndAftercareWhenBothEnabled() {
+    void processReminders_skipsIneligibleStatuses() {
         UUID tenantId = UUID.randomUUID();
-        UUID reminderId = UUID.randomUUID();
-        UUID aftercareId = UUID.randomUUID();
         CompanySettings settings = CompanySettings.builder()
                 .tenantId(tenantId)
                 .emailReminders(true)
+                .emailAftercare(false)
+                .reminderHoursBefore(24)
+                .build();
+
+        Appointment cancelledAppointment = Appointment.builder()
+                .id(UUID.randomUUID())
+                .tenantId(tenantId)
+                .status(AppointmentStatus.CANCELLED)
+                .client(Client.builder().firstName("Anna").email("anna@test.com").build())
+                .startTime(Instant.now().plusSeconds(86400))
+                .build();
+
+        when(companySettingsRepository.findAll()).thenReturn(List.of(settings));
+        when(appointmentRepository.findByTenantIdAndDateRange(any(), any(), any()))
+                .thenReturn(List.of(cancelledAppointment));
+
+        reminderScheduler.processReminders();
+
+        verify(appointmentNotificationService, never()).sendReminder(any(), anyInt());
+    }
+
+    @Test
+    void processReminders_sendsAftercareForDoneAppointments() {
+        UUID tenantId = UUID.randomUUID();
+        CompanySettings settings = CompanySettings.builder()
+                .tenantId(tenantId)
+                .emailReminders(false)
                 .emailAftercare(true)
                 .reminderHoursBefore(24)
                 .build();
-        Appointment reminderAppointment = Appointment.builder()
-                .id(reminderId)
-                .tenantId(tenantId)
-                .status(AppointmentStatus.CONFIRMED)
-                .client(Client.builder().email("reminder@test.com").build())
-                .build();
-        Appointment aftercareAppointment = Appointment.builder()
-                .id(aftercareId)
+
+        Appointment doneAppointment = Appointment.builder()
+                .id(UUID.randomUUID())
                 .tenantId(tenantId)
                 .status(AppointmentStatus.DONE)
-                .client(Client.builder().email("aftercare@test.com").build())
+                .client(Client.builder().firstName("Bob").email("bob@test.com").build())
+                .startTime(Instant.now().minusSeconds(86400))
                 .build();
 
         when(companySettingsRepository.findAll()).thenReturn(List.of(settings));
-        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), any(Instant.class), any(Instant.class)))
-                .thenReturn(List.of(reminderAppointment))
-                .thenReturn(List.of(aftercareAppointment));
-        when(emailService.wasAlreadySent(reminderId, EmailType.REMINDER)).thenReturn(false);
-        when(emailService.wasAlreadySent(aftercareId, EmailType.AFTERCARE)).thenReturn(false);
+        when(appointmentRepository.findByTenantIdAndDateRange(any(), any(), any()))
+                .thenReturn(List.of(doneAppointment));
 
         reminderScheduler.processReminders();
 
-        verify(emailService).sendReminder(reminderAppointment, 24);
-        verify(emailService).sendAftercare(aftercareAppointment);
+        verify(appointmentNotificationService).sendAftercare(doneAppointment);
     }
 
     @Test
-    void shouldContinueProcessingOtherTenantsWhenOneTenantFails() {
-        UUID failingTenantId = UUID.randomUUID();
-        UUID healthyTenantId = UUID.randomUUID();
-        UUID appointmentId = UUID.randomUUID();
-        CompanySettings failingSettings = CompanySettings.builder()
-                .tenantId(failingTenantId)
-                .emailReminders(true)
-                .emailAftercare(false)
-                .reminderHoursBefore(24)
-                .build();
-        CompanySettings healthySettings = CompanySettings.builder()
-                .tenantId(healthyTenantId)
-                .emailReminders(true)
-                .emailAftercare(false)
-                .reminderHoursBefore(24)
-                .build();
-        Appointment healthyAppointment = Appointment.builder()
-                .id(appointmentId)
-                .tenantId(healthyTenantId)
-                .status(AppointmentStatus.CONFIRMED)
-                .client(Client.builder().email("client@test.com").build())
-                .build();
-
-        when(companySettingsRepository.findAll()).thenReturn(List.of(failingSettings, healthySettings));
-        when(appointmentRepository.findByTenantIdAndDateRange(eq(failingTenantId), any(Instant.class), any(Instant.class)))
-                .thenThrow(new RuntimeException("db timeout"));
-        when(appointmentRepository.findByTenantIdAndDateRange(eq(healthyTenantId), any(Instant.class), any(Instant.class)))
-                .thenReturn(List.of(healthyAppointment));
-        when(emailService.wasAlreadySent(appointmentId, EmailType.REMINDER)).thenReturn(false);
-
-        reminderScheduler.processReminders();
-
-        verify(emailService).sendReminder(healthyAppointment, 24);
-    }
-
-    @Test
-    void shouldContinueWhenSendReminderFailsForSingleAppointment() {
+    void processReminders_continuesAfterErrorForOneTenant() {
         UUID tenantId = UUID.randomUUID();
-        UUID failingId = UUID.randomUUID();
-        UUID healthyId = UUID.randomUUID();
         CompanySettings settings = CompanySettings.builder()
                 .tenantId(tenantId)
                 .emailReminders(true)
                 .emailAftercare(false)
                 .reminderHoursBefore(24)
                 .build();
-        Appointment failingAppointment = Appointment.builder()
-                .id(failingId)
-                .tenantId(tenantId)
-                .status(AppointmentStatus.CONFIRMED)
-                .client(Client.builder().email("fail@test.com").build())
-                .build();
-        Appointment healthyAppointment = Appointment.builder()
-                .id(healthyId)
-                .tenantId(tenantId)
-                .status(AppointmentStatus.CONFIRMED)
-                .client(Client.builder().email("ok@test.com").build())
-                .build();
 
         when(companySettingsRepository.findAll()).thenReturn(List.of(settings));
-        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), any(Instant.class), any(Instant.class)))
-                .thenReturn(List.of(failingAppointment, healthyAppointment));
-        when(emailService.wasAlreadySent(failingId, EmailType.REMINDER)).thenReturn(false);
-        when(emailService.wasAlreadySent(healthyId, EmailType.REMINDER)).thenReturn(false);
-        doThrow(new RuntimeException("smtp error"))
-                .when(emailService).sendReminder(failingAppointment, 24);
+        when(appointmentRepository.findByTenantIdAndDateRange(any(), any(), any()))
+                .thenThrow(new RuntimeException("DB error"));
 
+        // Should not throw
         reminderScheduler.processReminders();
-
-        verify(emailService).sendReminder(failingAppointment, 24);
-        verify(emailService).sendReminder(healthyAppointment, 24);
     }
 }

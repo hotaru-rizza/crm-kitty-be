@@ -6,48 +6,31 @@ import com.inkflow.crm.domain.entity.CompanySettings;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.CompanySettingsRepository;
 import com.inkflow.crm.module.email.dto.EmailSettingsDto;
-import com.inkflow.crm.module.email.dto.EmailTemplateDto;
 import com.inkflow.crm.module.email.dto.SendEmailRequest;
 import com.inkflow.crm.module.email.dto.SendEmailResultDto;
 import com.inkflow.crm.module.email.mapper.EmailSettingsMapper;
-import com.inkflow.crm.module.email.mapper.EmailTemplateMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class EmailManagementServiceTest {
 
-    @Mock
-    private EmailService emailService;
-
-    @Mock
-    private ClientRepository clientRepository;
-
-    @Mock
-    private CompanySettingsRepository companySettingsRepository;
-
-    @Mock
-    private EmailSettingsMapper emailSettingsMapper;
-
-    @Mock
-    private EmailTemplateMapper emailTemplateMapper;
+    @Mock private EmailService emailService;
+    @Mock private ClientRepository clientRepository;
+    @Mock private CompanySettingsRepository companySettingsRepository;
+    @Mock private EmailSettingsMapper emailSettingsMapper;
 
     @InjectMocks
     private EmailManagementService emailManagementService;
@@ -55,53 +38,92 @@ class EmailManagementServiceTest {
     @Test
     void sendBulk_skipsClientsWithoutEmail() {
         UUID tenantId = UUID.randomUUID();
-        UUID clientWithEmail = UUID.randomUUID();
-        UUID clientWithoutEmail = UUID.randomUUID();
+        UUID clientWithEmailId = UUID.randomUUID();
+        UUID clientWithoutEmailId = UUID.randomUUID();
 
         Client withEmail = Client.builder()
-                .id(clientWithEmail)
+                .id(clientWithEmailId)
                 .tenantId(tenantId)
                 .email("client@test.com")
-                .firstName("Anna")
-                .lastName("Ink")
-                .build();
+                .firstName("Anna").lastName("Ink").build();
         Client withoutEmail = Client.builder()
-                .id(clientWithoutEmail)
+                .id(clientWithoutEmailId)
                 .tenantId(tenantId)
-                .firstName("Bob")
-                .lastName("Ink")
-                .build();
+                .firstName("Bob").lastName("Ink").build();
 
-        when(clientRepository.findAllById(List.of(clientWithEmail, clientWithoutEmail)))
+        when(clientRepository.findAllById(List.of(clientWithEmailId, clientWithoutEmailId)))
                 .thenReturn(List.of(withEmail, withoutEmail));
 
-        SendEmailRequest request = new SendEmailRequest(
-                List.of(clientWithEmail, clientWithoutEmail),
-                "Hello",
-                "Body"
-        );
+        SendEmailResultDto result = emailManagementService.sendBulk(tenantId,
+                new SendEmailRequest(List.of(clientWithEmailId, clientWithoutEmailId), "Hello", "Body"));
 
-        SendEmailResultDto result = emailManagementService.sendBulk(tenantId, request);
-
-        assertEquals(1, result.sent());
-        assertEquals(1, result.skipped());
+        assertThat(result.sent()).isEqualTo(1);
+        assertThat(result.skipped()).isEqualTo(1);
         verify(emailService).sendManual(tenantId, "client@test.com", withEmail.getFullName(), "Hello", "Body");
     }
 
     @Test
-    void getTemplates_returnsManagedTypes() {
+    void sendBulk_skipsForeignTenantClients() {
         UUID tenantId = UUID.randomUUID();
+        UUID otherTenant = UUID.randomUUID();
+        UUID localId = UUID.randomUUID();
+        UUID foreignId = UUID.randomUUID();
+
+        Client local = Client.builder().id(localId).tenantId(tenantId)
+                .email("local@test.com").firstName("Local").lastName("C").build();
+        Client foreign = Client.builder().id(foreignId).tenantId(otherTenant)
+                .email("foreign@test.com").firstName("Foreign").lastName("C").build();
+
+        when(clientRepository.findAllById(List.of(localId, foreignId)))
+                .thenReturn(List.of(local, foreign));
+
+        SendEmailResultDto result = emailManagementService.sendBulk(tenantId,
+                new SendEmailRequest(List.of(localId, foreignId), "Hi", "Body"));
+
+        assertThat(result.sent()).isEqualTo(1);
+        verify(emailService).sendManual(tenantId, "local@test.com", local.getFullName(), "Hi", "Body");
+        verify(emailService, never()).sendManual(eq(tenantId), eq("foreign@test.com"), any(), any(), any());
+    }
+
+    @Test
+    void sendBulk_returnsZerosForEmptyList() {
+        UUID tenantId = UUID.randomUUID();
+        when(clientRepository.findAllById(List.of())).thenReturn(List.of());
+
+        SendEmailResultDto result = emailManagementService.sendBulk(tenantId,
+                new SendEmailRequest(List.of(), "Hello", "Body"));
+
+        assertThat(result.sent()).isZero();
+        assertThat(result.skipped()).isZero();
+        verify(emailService, never()).sendManual(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void getEmailSettings_returnsMappedSettings() {
+        UUID tenantId = UUID.randomUUID();
+        CompanySettings settings = CompanySettings.builder().tenantId(tenantId).emailReminders(false).build();
+        EmailSettingsDto dto = EmailSettingsDto.builder().emailReminders(false).build();
+
+        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.of(settings));
+        when(emailSettingsMapper.toDto(settings)).thenReturn(dto);
+
+        EmailSettingsDto result = emailManagementService.getEmailSettings(tenantId);
+
+        assertThat(result.isEmailReminders()).isFalse();
+    }
+
+    @Test
+    void getEmailSettings_returnsDefaultsWhenNoSettings() {
+        UUID tenantId = UUID.randomUUID();
+        EmailSettingsDto defaults = EmailSettingsDto.builder().emailReminders(true).build();
+
         when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.empty());
-        when(emailTemplateMapper.toDto("CONFIRMATION", null))
-                .thenReturn(EmailTemplateDto.builder().type("CONFIRMATION").build());
-        when(emailTemplateMapper.toDto("REMINDER", null))
-                .thenReturn(EmailTemplateDto.builder().type("REMINDER").build());
-        when(emailTemplateMapper.toDto("AFTERCARE", null))
-                .thenReturn(EmailTemplateDto.builder().type("AFTERCARE").build());
+        when(emailSettingsMapper.defaultDto()).thenReturn(defaults);
 
-        List<EmailTemplateDto> templates = emailManagementService.getTemplates(tenantId);
+        EmailSettingsDto result = emailManagementService.getEmailSettings(tenantId);
 
-        assertEquals(3, templates.size());
+        assertThat(result.isEmailReminders()).isTrue();
+        verify(emailSettingsMapper).defaultDto();
     }
 
     @Test
@@ -117,229 +139,17 @@ class EmailManagementServiceTest {
 
         EmailSettingsDto result = emailManagementService.updateEmailSettings(tenantId, input);
 
-        assertEquals(false, result.isEmailReminders());
+        assertThat(result.isEmailReminders()).isFalse();
         verify(emailSettingsMapper).applyUpdate(settings, input);
     }
 
     @Test
-    void resetTemplate_removesCustomEntry() {
-        UUID tenantId = UUID.randomUUID();
-        Map<String, Map<String, String>> templates = new HashMap<>();
-        templates.put("REMINDER", Map.of("subject", "Custom"));
-        CompanySettings settings = CompanySettings.builder()
-                .tenantId(tenantId)
-                .emailTemplates(templates)
-                .build();
-
-        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.of(settings));
-
-        emailManagementService.resetTemplate(tenantId, "reminder");
-
-        verify(companySettingsRepository).save(settings);
-    }
-
-    @Test
-    void updateTemplate_requiresSettings() {
+    void updateEmailSettings_throwsWhenSettingsMissing() {
         UUID tenantId = UUID.randomUUID();
         when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
-                () -> emailManagementService.updateTemplate(tenantId, "REMINDER", EmailTemplateDto.builder().build()));
-    }
-
-    @Test
-    void shouldSkipForeignTenantClientsWhenSendBulk() {
-        UUID tenantId = UUID.randomUUID();
-        UUID otherTenantId = UUID.randomUUID();
-        UUID localClientId = UUID.randomUUID();
-        UUID foreignClientId = UUID.randomUUID();
-
-        Client localClient = Client.builder()
-                .id(localClientId)
-                .tenantId(tenantId)
-                .email("local@test.com")
-                .firstName("Local")
-                .lastName("Client")
-                .build();
-        Client foreignClient = Client.builder()
-                .id(foreignClientId)
-                .tenantId(otherTenantId)
-                .email("foreign@test.com")
-                .firstName("Foreign")
-                .lastName("Client")
-                .build();
-
-        when(clientRepository.findAllById(List.of(localClientId, foreignClientId)))
-                .thenReturn(List.of(localClient, foreignClient));
-
-        SendEmailResultDto result = emailManagementService.sendBulk(
-                tenantId,
-                new SendEmailRequest(List.of(localClientId, foreignClientId), "Hello", "Body")
-        );
-
-        assertEquals(1, result.sent());
-        assertEquals(0, result.skipped());
-        verify(emailService).sendManual(tenantId, "local@test.com", localClient.getFullName(), "Hello", "Body");
-        verify(emailService, never()).sendManual(
-                tenantId, "foreign@test.com", foreignClient.getFullName(), "Hello", "Body");
-    }
-
-    @Test
-    void shouldReturnDefaultSettingsWhenTenantHasNoCompanySettings() {
-        UUID tenantId = UUID.randomUUID();
-        EmailSettingsDto defaults = EmailSettingsDto.builder().emailReminders(true).build();
-
-        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.empty());
-        when(emailSettingsMapper.defaultDto()).thenReturn(defaults);
-
-        EmailSettingsDto result = emailManagementService.getEmailSettings(tenantId);
-
-        assertEquals(true, result.isEmailReminders());
-        verify(emailSettingsMapper).defaultDto();
-    }
-
-    @Test
-    void shouldDoNothingWhenResetTemplateAndTemplatesNull() {
-        UUID tenantId = UUID.randomUUID();
-        CompanySettings settings = CompanySettings.builder()
-                .tenantId(tenantId)
-                .emailTemplates(null)
-                .build();
-
-        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.of(settings));
-
-        emailManagementService.resetTemplate(tenantId, "REMINDER");
-
-        verify(companySettingsRepository, never()).save(any());
-    }
-
-    @Test
-    void shouldUseCustomTemplatesWhenGetTemplates() {
-        UUID tenantId = UUID.randomUUID();
-        Map<String, Map<String, String>> custom = Map.of(
-                "REMINDER", Map.of("subject", "Custom reminder")
-        );
-        CompanySettings settings = CompanySettings.builder()
-                .tenantId(tenantId)
-                .emailTemplates(custom)
-                .build();
-
-        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.of(settings));
-        when(emailTemplateMapper.toDto("CONFIRMATION", custom))
-                .thenReturn(EmailTemplateDto.builder().type("CONFIRMATION").build());
-        when(emailTemplateMapper.toDto("REMINDER", custom))
-                .thenReturn(EmailTemplateDto.builder().type("REMINDER").subject("Custom reminder").build());
-        when(emailTemplateMapper.toDto("AFTERCARE", custom))
-                .thenReturn(EmailTemplateDto.builder().type("AFTERCARE").build());
-
-        List<EmailTemplateDto> templates = emailManagementService.getTemplates(tenantId);
-
-        assertEquals(3, templates.size());
-        assertEquals("Custom reminder", templates.stream()
-                .filter(t -> "REMINDER".equals(t.getType()))
-                .findFirst()
-                .orElseThrow()
-                .getSubject());
-    }
-
-    @Test
-    void shouldNormalizeTemplateTypeWhenUpdateTemplate() {
-        UUID tenantId = UUID.randomUUID();
-        CompanySettings settings = CompanySettings.builder().tenantId(tenantId).build();
-        EmailTemplateDto input = EmailTemplateDto.builder()
-                .subject("Custom subject")
-                .body("Custom body")
-                .fields(List.of("clientName"))
-                .build();
-        Map<String, String> storageEntry = Map.of("subject", "Custom subject", "body", "Custom body", "fields", "clientName");
-
-        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.of(settings));
-        when(emailTemplateMapper.templatesOrEmpty(settings)).thenReturn(new HashMap<>());
-        when(emailTemplateMapper.toStorageEntry(input)).thenReturn(storageEntry);
-        when(companySettingsRepository.save(settings)).thenReturn(settings);
-
-        EmailTemplateDto result = emailManagementService.updateTemplate(tenantId, "reminder", input);
-
-        assertEquals("REMINDER", result.getType());
-        verify(companySettingsRepository).save(settings);
-    }
-
-    @Test
-    void shouldReturnMappedSettingsWhenTenantHasCompanySettings() {
-        UUID tenantId = UUID.randomUUID();
-        CompanySettings settings = CompanySettings.builder()
-                .tenantId(tenantId)
-                .emailReminders(false)
-                .emailAftercare(true)
-                .build();
-        EmailSettingsDto mapped = EmailSettingsDto.builder()
-                .emailReminders(false)
-                .emailAftercare(true)
-                .build();
-
-        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.of(settings));
-        when(emailSettingsMapper.toDto(settings)).thenReturn(mapped);
-
-        EmailSettingsDto result = emailManagementService.getEmailSettings(tenantId);
-
-        assertEquals(false, result.isEmailReminders());
-        assertEquals(true, result.isEmailAftercare());
-        verify(emailSettingsMapper).toDto(settings);
-        verify(emailSettingsMapper, never()).defaultDto();
-    }
-
-    @Test
-    void shouldThrowWhenUpdateEmailSettingsAndSettingsMissing() {
-        UUID tenantId = UUID.randomUUID();
-        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class,
-                () -> emailManagementService.updateEmailSettings(
-                        tenantId,
-                        EmailSettingsDto.builder().emailReminders(true).build()));
-    }
-
-    @Test
-    void shouldReturnZeroSentWhenSendBulkWithEmptyClientList() {
-        UUID tenantId = UUID.randomUUID();
-
-        when(clientRepository.findAllById(List.of())).thenReturn(List.of());
-
-        SendEmailResultDto result = emailManagementService.sendBulk(
-                tenantId,
-                new SendEmailRequest(List.of(), "Hello", "Body")
-        );
-
-        assertEquals(0, result.sent());
-        assertEquals(0, result.skipped());
-        verify(emailService, never()).sendManual(any(), any(), any(), any(), any());
-    }
-
-    @Test
-    void shouldSaveWhenResetTemplateAndTypeNotPresent() {
-        UUID tenantId = UUID.randomUUID();
-        Map<String, Map<String, String>> templates = new HashMap<>();
-        templates.put("CONFIRMATION", Map.of("subject", "Custom"));
-        CompanySettings settings = CompanySettings.builder()
-                .tenantId(tenantId)
-                .emailTemplates(templates)
-                .build();
-
-        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.of(settings));
-
-        emailManagementService.resetTemplate(tenantId, "REMINDER");
-
-        assertEquals(1, templates.size());
-        assertTrue(templates.containsKey("CONFIRMATION"));
-        verify(companySettingsRepository).save(settings);
-    }
-
-    @Test
-    void shouldThrowWhenResetTemplateAndSettingsMissing() {
-        UUID tenantId = UUID.randomUUID();
-        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class,
-                () -> emailManagementService.resetTemplate(tenantId, "REMINDER"));
+        assertThatThrownBy(() -> emailManagementService.updateEmailSettings(tenantId,
+                EmailSettingsDto.builder().emailReminders(true).build()))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

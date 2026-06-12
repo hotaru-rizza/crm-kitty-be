@@ -3,11 +3,11 @@ package com.inkflow.crm.module.appointment.service;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.CompanySettings;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
-import com.inkflow.crm.domain.enums.EmailType;
 import com.inkflow.crm.domain.repository.CompanySettingsRepository;
+
 import com.inkflow.crm.module.appointment.dto.AppointmentUpdateContext;
 import com.inkflow.crm.module.audit.service.AuditLogService;
-import com.inkflow.crm.module.email.service.EmailService;
+import com.inkflow.crm.module.email.service.AppointmentNotificationService;
 import com.inkflow.crm.module.google.service.GoogleCalendarSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +20,7 @@ import java.util.UUID;
 @Slf4j
 public class AppointmentSideEffectService {
 
-    private final EmailService emailService;
+    private final AppointmentNotificationService appointmentNotificationService;
     private final CompanySettingsRepository companySettingsRepository;
     private final GoogleCalendarSyncService googleCalendarSyncService;
     private final AuditLogService auditLogService;
@@ -58,10 +58,10 @@ public class AppointmentSideEffectService {
             }
 
             if (settings.getEmailConfirmations()) {
-                emailService.sendConfirmation(appointment);
+                appointmentNotificationService.sendConfirmation(appointment);
             }
             if (Boolean.TRUE.equals(settings.getEmailStaffNewAppointment())) {
-                emailService.sendStaffNewAppointment(appointment);
+                appointmentNotificationService.sendStaffNewAppointment(appointment);
             }
         } catch (Exception e) {
             log.warn("Email side-effect failed on appointment create {} tenant {}: {}",
@@ -95,15 +95,14 @@ public class AppointmentSideEffectService {
             AppointmentStatus newStatus) {
         if (newStatus == AppointmentStatus.CONFIRMED
                 && previousStatus != AppointmentStatus.CONFIRMED
-                && settings.getEmailConfirmations()
-                && !emailService.wasAlreadySent(appointment.getId(), EmailType.CONFIRMATION)) {
-            emailService.sendConfirmation(appointment);
+                && settings.getEmailConfirmations()) {
+            appointmentNotificationService.sendConfirmation(appointment);
         }
 
         if (newStatus == AppointmentStatus.DONE
                 && previousStatus != AppointmentStatus.DONE
                 && settings.getEmailAftercare()) {
-            emailService.sendAftercare(appointment);
+            appointmentNotificationService.sendAftercare(appointment);
         }
 
         if (newStatus != AppointmentStatus.CANCELLED || previousStatus == AppointmentStatus.CANCELLED) {
@@ -111,19 +110,19 @@ public class AppointmentSideEffectService {
         }
 
         if (Boolean.TRUE.equals(settings.getEmailCancellation())) {
-            emailService.sendCancellation(appointment);
+            appointmentNotificationService.sendCancellation(appointment);
         }
         if (Boolean.TRUE.equals(settings.getEmailStaffCancellation())) {
-            emailService.sendStaffCancellation(appointment);
+            appointmentNotificationService.sendStaffCancellation(appointment);
         }
     }
 
     private void sendRescheduleEmails(Appointment appointment, CompanySettings settings) {
         if (Boolean.TRUE.equals(settings.getEmailReschedule())) {
-            emailService.sendReschedule(appointment);
+            appointmentNotificationService.sendReschedule(appointment);
         }
         if (Boolean.TRUE.equals(settings.getEmailStaffReschedule())) {
-            emailService.sendStaffReschedule(appointment);
+            appointmentNotificationService.sendStaffReschedule(appointment);
         }
     }
 

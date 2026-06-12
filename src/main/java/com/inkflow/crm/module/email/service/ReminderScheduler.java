@@ -3,7 +3,6 @@ package com.inkflow.crm.module.email.service;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.CompanySettings;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
-import com.inkflow.crm.domain.enums.EmailType;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.CompanySettingsRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,7 @@ public class ReminderScheduler {
 
     private final AppointmentRepository appointmentRepository;
     private final CompanySettingsRepository companySettingsRepository;
-    private final EmailService emailService;
+    private final AppointmentNotificationService appointmentNotificationService;
 
     @Scheduled(fixedRate = 900_000)
     public void processReminders() {
@@ -56,10 +55,9 @@ public class ReminderScheduler {
 
         for (Appointment appointment : appointments) {
             if (!isEligibleForReminder(appointment)) continue;
-            if (emailService.wasAlreadySent(appointment.getId(), EmailType.REMINDER)) continue;
 
             try {
-                emailService.sendReminder(appointment, hoursBefore);
+                appointmentNotificationService.sendReminder(appointment, hoursBefore);
             } catch (Exception e) {
                 log.error("Failed to send reminder for appointment {}: {}", appointment.getId(), e.getMessage());
             }
@@ -77,10 +75,9 @@ public class ReminderScheduler {
 
         for (Appointment appointment : appointments) {
             if (appointment.getStatus() != AppointmentStatus.DONE) continue;
-            if (emailService.wasAlreadySent(appointment.getId(), EmailType.AFTERCARE)) continue;
 
             try {
-                emailService.sendAftercare(appointment);
+                appointmentNotificationService.sendAftercare(appointment);
             } catch (Exception e) {
                 log.error("Failed to send aftercare for appointment {}: {}", appointment.getId(), e.getMessage());
             }

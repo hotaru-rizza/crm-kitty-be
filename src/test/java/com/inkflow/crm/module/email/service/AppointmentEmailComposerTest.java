@@ -4,136 +4,103 @@ import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.Service;
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.module.email.dto.EmailRecipient;
 import com.inkflow.crm.module.email.dto.EmailTenantContext;
-import com.inkflow.crm.module.email.dto.PreparedEmail;
-import com.inkflow.crm.module.email.mapper.EmailTemplateMapper;
-import org.junit.jupiter.api.BeforeEach;
+import com.inkflow.crm.module.email.dto.NotificationCommand;
+import com.inkflow.crm.module.email.enums.TemplateKey;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
-import java.util.Map;
+import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class AppointmentEmailComposerTest {
 
-    private static final Instant START_TIME = Instant.parse("2025-06-15T10:30:00Z");
-    private static final EmailTenantContext CONTEXT =
-            new EmailTenantContext("Ink Studio Kyiv", "Europe/Kyiv");
+    @Mock private NotificationSender notificationSender;
+    @Mock private EmailTenantContextLoader tenantContextLoader;
 
-    private AppointmentEmailComposer composer;
+    @InjectMocks
+    private AppointmentNotificationService service;
 
-    @BeforeEach
-    void setUp() {
-        composer = new AppointmentEmailComposer(new EmailTemplateMapper());
-    }
+    private static final Instant START_TIME = Instant.parse("2026-06-15T10:30:00Z");
+    private static final UUID TENANT = UUID.randomUUID();
 
-    @Test
-    void shouldIncludeClientNameInConfirmationSubjectAndBody() {
-        Appointment appointment = sampleAppointment();
-
-        PreparedEmail email = composer.confirmation(appointment, CONTEXT, Map.of());
-
-        assertEquals("client@example.com", email.recipientEmail());
-        assertEquals("Anna Kovalenko", email.recipientName());
-        assertTrue(email.subject().contains("Ink Studio Kyiv"));
-        assertTrue(email.html().contains("Anna"));
-        assertTrue(email.html().contains("Blackwork Sleeve"));
-        assertTrue(email.html().contains("Oleksii Petrenko"));
-    }
-
-    @Test
-    void shouldIncludeHoursBeforeInReminderWhenComposed() {
-        Appointment appointment = sampleAppointment();
-        Map<String, String> template = Map.of(
-                "subject", "Нагадування — {{studio}}",
-                "body", "Привіт, {{client_name}}! Через {{hours_before}}.",
-                "fields", "hours_before,service,datetime"
-        );
-
-        PreparedEmail email = composer.reminder(appointment, CONTEXT, template, 24);
-
-        assertEquals("client@example.com", email.recipientEmail());
-        assertTrue(email.subject().contains("Ink Studio Kyiv"));
-        assertTrue(email.html().contains("Anna"));
-        assertTrue(email.html().contains("1 дн."));
-        assertTrue(email.html().contains("Blackwork Sleeve"));
-    }
-
-    @Test
-    void shouldTargetArtistEmailForStaffNewAppointment() {
-        Appointment appointment = sampleAppointment();
-
-        PreparedEmail email = composer.staffNewAppointment(appointment, CONTEXT);
-
-        assertEquals("artist@example.com", email.recipientEmail());
-        assertEquals("Oleksii Petrenko", email.recipientName());
-        assertEquals("Новий запис — Anna Kovalenko", email.subject());
-        assertTrue(email.html().contains("Oleksii"));
-        assertTrue(email.html().contains("Anna Kovalenko"));
-        assertTrue(email.html().contains("Blackwork Sleeve"));
-    }
-
-    @Test
-    void shouldUseStudioNameInCancellationSubjectAndBody() {
-        Appointment appointment = sampleAppointment();
-
-        PreparedEmail email = composer.cancellation(appointment, CONTEXT, Map.of());
-
-        assertEquals("client@example.com", email.recipientEmail());
-        assertTrue(email.subject().contains("Ink Studio Kyiv"));
-        assertTrue(email.html().contains("Anna"));
-        assertTrue(email.html().contains("Blackwork Sleeve"));
-        assertTrue(email.html().contains("15 червня 2025, 13:30"));
-    }
-
-    @Test
-    void shouldIncludeArtistAndNewDatetimeInRescheduleEmail() {
-        Appointment appointment = sampleAppointment();
-
-        PreparedEmail email = composer.reschedule(appointment, CONTEXT, Map.of());
-
-        assertEquals("client@example.com", email.recipientEmail());
-        assertTrue(email.subject().contains("Ink Studio Kyiv"));
-        assertTrue(email.html().contains("Anna"));
-        assertTrue(email.html().contains("Oleksii Petrenko"));
-        assertTrue(email.html().contains("15 червня 2025, 13:30"));
-    }
-
-    @Test
-    void shouldComposeAftercareWithCustomTemplateEntry() {
-        Appointment appointment = sampleAppointment();
-        Map<String, String> template = Map.of(
-                "subject", "Догляд — {{studio}}",
-                "body", "Дякуємо, {{client_name}}, за {{service}}.",
-                "fields", "service"
-        );
-
-        PreparedEmail email = composer.aftercare(appointment, CONTEXT, template);
-
-        assertEquals("client@example.com", email.recipientEmail());
-        assertTrue(email.subject().contains("Ink Studio Kyiv"));
-        assertTrue(email.html().contains("Anna"));
-        assertTrue(email.html().contains("Blackwork Sleeve"));
-    }
-
-    private Appointment sampleAppointment() {
+    private Appointment buildAppointment(String clientEmail) {
         return Appointment.builder()
+                .id(UUID.randomUUID())
+                .tenantId(TENANT)
                 .client(Client.builder()
-                        .firstName("Anna")
-                        .lastName("Kovalenko")
-                        .email("client@example.com")
-                        .build())
+                        .firstName("Anna").lastName("Ink").email(clientEmail).build())
                 .artist(Staff.builder()
-                        .firstName("Oleksii")
-                        .lastName("Petrenko")
-                        .email("artist@example.com")
-                        .build())
-                .service(Service.builder()
-                        .title("Blackwork Sleeve")
-                        .build())
+                        .firstName("Alex").lastName("Tat").email("artist@test.com").build())
+                .service(Service.builder().title("Tattoo").build())
                 .startTime(START_TIME)
                 .build();
+    }
+
+    @Test
+    void sendConfirmation_callsNotificationSenderWithCorrectKey() {
+        Appointment appointment = buildAppointment("anna@test.com");
+        when(tenantContextLoader.loadContext(TENANT))
+                .thenReturn(new EmailTenantContext("Ink Studio", "Europe/Kyiv"));
+
+        service.sendConfirmation(appointment);
+
+        ArgumentCaptor<NotificationCommand> commandCaptor = ArgumentCaptor.forClass(NotificationCommand.class);
+        verify(notificationSender).send(commandCaptor.capture());
+
+        NotificationCommand command = commandCaptor.getValue();
+        assertThat(command.tenantId()).isEqualTo(TENANT);
+        assertThat(command.templateKey()).isEqualTo(TemplateKey.BOOKING_CONFIRMED);
+        assertThat(command.recipient()).isEqualTo(EmailRecipient.of("anna@test.com", "Anna Ink"));
+        assertThat(command.entityId()).isEqualTo(appointment.getId());
+        assertThat(command.studioName()).isEqualTo("Ink Studio");
+    }
+
+    @Test
+    void sendConfirmation_skipsWhenClientHasNoEmail() {
+        Appointment appointment = buildAppointment(null);
+
+        service.sendConfirmation(appointment);
+
+        verifyNoInteractions(notificationSender);
+    }
+
+    @Test
+    void sendStaffNewAppointment_usesNewAppointmentKey() {
+        Appointment appointment = buildAppointment("anna@test.com");
+        when(tenantContextLoader.loadContext(TENANT))
+                .thenReturn(new EmailTenantContext("Ink Studio", "Europe/Kyiv"));
+
+        service.sendStaffNewAppointment(appointment);
+
+        ArgumentCaptor<NotificationCommand> commandCaptor = ArgumentCaptor.forClass(NotificationCommand.class);
+        verify(notificationSender).send(commandCaptor.capture());
+
+        NotificationCommand command = commandCaptor.getValue();
+        assertThat(command.templateKey()).isEqualTo(TemplateKey.NEW_APPOINTMENT);
+        assertThat(command.recipient().email()).isEqualTo("artist@test.com");
+    }
+
+    @Test
+    void sendReminder_checksIdempotencyBeforeSending() {
+        Appointment appointment = buildAppointment("anna@test.com");
+        when(notificationSender.wasAlreadySent(TemplateKey.BOOKING_REMINDER, appointment.getId()))
+                .thenReturn(true);
+
+        service.sendReminder(appointment, 24);
+
+        verify(notificationSender, never()).send(org.mockito.ArgumentMatchers.any());
     }
 }

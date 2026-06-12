@@ -2,14 +2,11 @@ package com.inkflow.crm.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.time.LocalTime;
-import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -85,10 +82,6 @@ public class CompanySettings {
 
     @Column(name = "max_advance_days", nullable = false)
     private Integer maxAdvanceDays = 60;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "email_templates", columnDefinition = "jsonb")
-    private Map<String, Map<String, String>> emailTemplates;
 
     @LastModifiedDate
     @Column(name = "updated_at")

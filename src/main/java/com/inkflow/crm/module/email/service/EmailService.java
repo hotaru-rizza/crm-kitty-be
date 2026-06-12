@@ -1,15 +1,18 @@
 package com.inkflow.crm.module.email.service;
 
-import com.inkflow.crm.domain.entity.Appointment;
+import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.entity.EmailLog;
 import com.inkflow.crm.domain.enums.EmailStatus;
 import com.inkflow.crm.domain.enums.EmailType;
 import com.inkflow.crm.domain.repository.EmailLogRepository;
+import com.inkflow.crm.module.email.dto.EmailLayoutContext;
 import com.inkflow.crm.module.email.dto.EmailLogDto;
 import com.inkflow.crm.module.email.dto.EmailStatsDto;
 import com.inkflow.crm.module.email.dto.EmailTenantContext;
 import com.inkflow.crm.module.email.dto.PreparedEmail;
+import com.inkflow.crm.module.email.enums.TemplateCategory;
 import com.inkflow.crm.module.email.mapper.EmailLogMapper;
+import com.inkflow.crm.module.email.template.EmailLayout;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -30,60 +32,23 @@ public class EmailService {
     private final ResendEmailClient resendClient;
     private final EmailLogRepository emailLogRepository;
     private final EmailTenantContextLoader tenantContextLoader;
-    private final AppointmentEmailComposer appointmentEmailComposer;
     private final EmailLogMapper emailLogMapper;
-
-    public void sendConfirmation(Appointment appointment) {
-        sendToClient(appointment, "CONFIRMATION", EmailType.CONFIRMATION, (context, template) ->
-                appointmentEmailComposer.confirmation(appointment, context, template));
-    }
-
-    public void sendReminder(Appointment appointment, int hoursBefore) {
-        if (!hasClientEmail(appointment)) {
-            return;
-        }
-
-        UUID tenantId = appointment.getTenantId();
-        EmailTenantContext context = tenantContextLoader.loadContext(tenantId);
-        Map<String, String> template = tenantContextLoader.loadTemplateEntry(tenantId, "REMINDER");
-        PreparedEmail prepared = appointmentEmailComposer.reminder(appointment, context, template, hoursBefore);
-
-        sendAndLog(tenantId, prepared, EmailType.REMINDER, appointment.getId());
-    }
-
-    public void sendAftercare(Appointment appointment) {
-        sendToClient(appointment, "AFTERCARE", EmailType.AFTERCARE, (context, template) ->
-                appointmentEmailComposer.aftercare(appointment, context, template));
-    }
-
-    public void sendCancellation(Appointment appointment) {
-        sendToClient(appointment, "CANCELLATION", EmailType.CANCELLATION, (context, template) ->
-                appointmentEmailComposer.cancellation(appointment, context, template));
-    }
-
-    public void sendReschedule(Appointment appointment) {
-        sendToClient(appointment, "RESCHEDULE", EmailType.RESCHEDULE, (context, template) ->
-                appointmentEmailComposer.reschedule(appointment, context, template));
-    }
-
-    public void sendStaffNewAppointment(Appointment appointment) {
-        sendToStaff(appointment, EmailType.STAFF_NEW_APPOINTMENT,
-                context -> appointmentEmailComposer.staffNewAppointment(appointment, context));
-    }
-
-    public void sendStaffCancellation(Appointment appointment) {
-        sendToStaff(appointment, EmailType.STAFF_CANCELLATION,
-                context -> appointmentEmailComposer.staffCancellation(appointment, context));
-    }
-
-    public void sendStaffReschedule(Appointment appointment) {
-        sendToStaff(appointment, EmailType.STAFF_RESCHEDULE,
-                context -> appointmentEmailComposer.staffReschedule(appointment, context));
-    }
+    private final InkflowProperties inkflowProperties;
 
     public void sendManual(UUID tenantId, String recipientEmail, String recipientName, String subject, String textBody) {
         EmailTenantContext context = tenantContextLoader.loadContext(tenantId);
-        String html = EmailTemplates.manual(subject, textBody, context.studioName());
+        String bodyHtml = EmailLayout.toHtml(textBody);
+
+        EmailLayoutContext layout = new EmailLayoutContext(
+                inkflowProperties.getAppName(),
+                subject,
+                bodyHtml,
+                TemplateCategory.CLIENT_OP,
+                context.studioName(),
+                null,
+                null
+        );
+        String html = EmailLayout.wrap(layout);
 
         sendAndLog(
                 tenantId,
@@ -91,10 +56,6 @@ public class EmailService {
                 EmailType.MANUAL,
                 null
         );
-    }
-
-    public boolean wasAlreadySent(UUID appointmentId, EmailType type) {
-        return emailLogRepository.existsByAppointmentIdAndType(appointmentId, type);
     }
 
     @Transactional(readOnly = true)
@@ -121,44 +82,6 @@ public class EmailService {
                 .build();
     }
 
-    private void sendToClient(
-            Appointment appointment,
-            String templateType,
-            EmailType emailType,
-            EmailComposer composer) {
-        if (!hasClientEmail(appointment)) {
-            return;
-        }
-
-        UUID tenantId = appointment.getTenantId();
-        EmailTenantContext context = tenantContextLoader.loadContext(tenantId);
-        Map<String, String> template = tenantContextLoader.loadTemplateEntry(tenantId, templateType);
-        PreparedEmail prepared = composer.compose(context, template);
-
-        sendAndLog(tenantId, prepared, emailType, appointment.getId());
-    }
-
-    private void sendToStaff(
-            Appointment appointment,
-            EmailType emailType,
-            StaffEmailComposer composer) {
-        String email = appointment.getArtist().getEmail();
-        if (email == null || email.isBlank()) {
-            return;
-        }
-
-        UUID tenantId = appointment.getTenantId();
-        EmailTenantContext context = tenantContextLoader.loadContext(tenantId);
-        PreparedEmail prepared = composer.compose(context);
-
-        sendAndLog(tenantId, prepared, emailType, appointment.getId());
-    }
-
-    private boolean hasClientEmail(Appointment appointment) {
-        String email = appointment.getClient().getEmail();
-        return email != null && !email.isBlank();
-    }
-
     private void sendAndLog(UUID tenantId, PreparedEmail prepared, EmailType type, UUID appointmentId) {
         EmailLog.EmailLogBuilder logBuilder = EmailLog.builder()
                 .tenantId(tenantId)
@@ -180,13 +103,4 @@ public class EmailService {
         emailLogRepository.save(logBuilder.build());
     }
 
-    @FunctionalInterface
-    private interface EmailComposer {
-        PreparedEmail compose(EmailTenantContext context, Map<String, String> template);
-    }
-
-    @FunctionalInterface
-    private interface StaffEmailComposer {
-        PreparedEmail compose(EmailTenantContext context);
-    }
 }

@@ -48,6 +48,20 @@ public class EmailLog {
     @Column(name = "appointment_id")
     private UUID appointmentId;
 
+    /**
+     * New: TemplateKey name. Populated for all emails sent via NotificationSender.
+     * Legacy appointment emails keep only the old EmailType until migration is complete.
+     */
+    @Column(name = "template_key", length = 64)
+    private String templateKey;
+
+    /**
+     * General entity reference for idempotency checks (appointment ID, client ID, etc.).
+     * Replaces appointment_id for non-appointment emails.
+     */
+    @Column(name = "entity_id")
+    private UUID entityId;
+
     @Column(name = "sent_at", nullable = false)
     private Instant sentAt;
 

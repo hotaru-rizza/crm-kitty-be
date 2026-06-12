@@ -7,7 +7,7 @@ import com.inkflow.crm.domain.enums.AppointmentStatus;
 import com.inkflow.crm.domain.repository.CompanySettingsRepository;
 import com.inkflow.crm.module.audit.service.AuditLogService;
 import com.inkflow.crm.module.appointment.dto.AppointmentUpdateContext;
-import com.inkflow.crm.module.email.service.EmailService;
+import com.inkflow.crm.module.email.service.AppointmentNotificationService;
 import com.inkflow.crm.module.google.service.GoogleCalendarSyncService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 class AppointmentSideEffectServiceTest {
 
     @Mock
-    private EmailService emailService;
+    private AppointmentNotificationService appointmentNotificationService;
 
     @Mock
     private CompanySettingsRepository companySettingsRepository;
@@ -57,7 +57,7 @@ class AppointmentSideEffectServiceTest {
 
         sideEffectService.afterCreate(appointment);
 
-        verify(emailService).sendConfirmation(appointment);
+        verify(appointmentNotificationService).sendConfirmation(appointment);
         verify(googleCalendarSyncService).syncNewAppointment(appointment);
         verify(auditLogService).logCurrent("CREATE", "APPOINTMENT", appointment.getId().toString(),
                 "John Doe @ " + appointment.getStartTime());
@@ -87,13 +87,11 @@ class AppointmentSideEffectServiceTest {
                 .build();
 
         when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.of(settings));
-        when(emailService.wasAlreadySent(appointment.getId(), com.inkflow.crm.domain.enums.EmailType.CONFIRMATION))
-                .thenReturn(false);
 
         sideEffectService.afterUpdate(appointment, new AppointmentUpdateContext(
                 AppointmentStatus.NEW, "confirmed", false));
 
-        verify(emailService).sendConfirmation(appointment);
+        verify(appointmentNotificationService).sendConfirmation(appointment);
         verify(googleCalendarSyncService).syncUpdatedAppointment(appointment);
     }
 
@@ -113,7 +111,7 @@ class AppointmentSideEffectServiceTest {
         sideEffectService.afterUpdate(appointment, new AppointmentUpdateContext(
                 AppointmentStatus.CONFIRMED, "done", false));
 
-        verify(emailService).sendAftercare(appointment);
+        verify(appointmentNotificationService).sendAftercare(appointment);
     }
 
     @Test
@@ -133,7 +131,7 @@ class AppointmentSideEffectServiceTest {
         sideEffectService.afterUpdate(appointment, new AppointmentUpdateContext(
                 AppointmentStatus.CONFIRMED, "cancelled", false));
 
-        verify(emailService).sendCancellation(appointment);
+        verify(appointmentNotificationService).sendCancellation(appointment);
         verify(googleCalendarSyncService).syncDeletedAppointment(appointment);
         verify(googleCalendarSyncService, never()).syncUpdatedAppointment(appointment);
     }
@@ -154,8 +152,8 @@ class AppointmentSideEffectServiceTest {
         sideEffectService.afterUpdate(appointment, new AppointmentUpdateContext(
                 AppointmentStatus.NEW, "new", true));
 
-        verify(emailService).sendReschedule(appointment);
-        verify(emailService).sendStaffReschedule(appointment);
+        verify(appointmentNotificationService).sendReschedule(appointment);
+        verify(appointmentNotificationService).sendStaffReschedule(appointment);
         verify(googleCalendarSyncService).syncUpdatedAppointment(appointment);
     }
 
@@ -174,8 +172,8 @@ class AppointmentSideEffectServiceTest {
 
         sideEffectService.afterCreate(appointment);
 
-        verify(emailService).sendStaffNewAppointment(appointment);
-        verify(emailService, never()).sendConfirmation(appointment);
+        verify(appointmentNotificationService).sendStaffNewAppointment(appointment);
+        verify(appointmentNotificationService, never()).sendConfirmation(appointment);
         verify(googleCalendarSyncService).syncNewAppointment(appointment);
     }
 
@@ -196,31 +194,9 @@ class AppointmentSideEffectServiceTest {
         sideEffectService.afterUpdate(appointment, new AppointmentUpdateContext(
                 AppointmentStatus.CONFIRMED, "cancelled", false));
 
-        verify(emailService, never()).sendCancellation(appointment);
-        verify(emailService).sendStaffCancellation(appointment);
+        verify(appointmentNotificationService, never()).sendCancellation(appointment);
+        verify(appointmentNotificationService).sendStaffCancellation(appointment);
         verify(googleCalendarSyncService).syncDeletedAppointment(appointment);
-    }
-
-    @Test
-    void afterUpdate_onConfirmed_skipsConfirmationWhenAlreadySent() {
-        UUID tenantId = UUID.randomUUID();
-        Appointment appointment = appointment(tenantId);
-        appointment.setStatus(AppointmentStatus.CONFIRMED);
-
-        CompanySettings settings = CompanySettings.builder()
-                .tenantId(tenantId)
-                .emailConfirmations(true)
-                .build();
-
-        when(companySettingsRepository.findByTenantId(tenantId)).thenReturn(Optional.of(settings));
-        when(emailService.wasAlreadySent(appointment.getId(), com.inkflow.crm.domain.enums.EmailType.CONFIRMATION))
-                .thenReturn(true);
-
-        sideEffectService.afterUpdate(appointment, new AppointmentUpdateContext(
-                AppointmentStatus.NEW, "confirmed", false));
-
-        verify(emailService, never()).sendConfirmation(appointment);
-        verify(googleCalendarSyncService).syncUpdatedAppointment(appointment);
     }
 
     @Test
@@ -239,7 +215,7 @@ class AppointmentSideEffectServiceTest {
         sideEffectService.afterUpdate(appointment, new AppointmentUpdateContext(
                 AppointmentStatus.CONFIRMED, "done", false));
 
-        verifyNoInteractions(emailService);
+        verifyNoInteractions(appointmentNotificationService);
         verify(googleCalendarSyncService).syncUpdatedAppointment(appointment);
     }
 
@@ -258,7 +234,7 @@ class AppointmentSideEffectServiceTest {
         sideEffectService.afterUpdate(appointment, new AppointmentUpdateContext(
                 AppointmentStatus.NEW, null, true));
 
-        verify(emailService, never()).sendReschedule(appointment);
+        verify(appointmentNotificationService, never()).sendReschedule(appointment);
         verify(googleCalendarSyncService).syncUpdatedAppointment(appointment);
     }
 
@@ -271,7 +247,7 @@ class AppointmentSideEffectServiceTest {
 
         sideEffectService.afterCreate(appointment);
 
-        verify(emailService, never()).sendConfirmation(appointment);
+        verify(appointmentNotificationService, never()).sendConfirmation(appointment);
         verify(googleCalendarSyncService).syncNewAppointment(appointment);
     }
 

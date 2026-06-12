@@ -48,6 +48,7 @@ server:
     context-path: /api
 
 inkflow:
+  app-name: ${INKFLOW_APP_NAME:CRM}
   default-timezone: ${INKFLOW_DEFAULT_TIMEZONE:Europe/Kyiv}
   default-language: ${INKFLOW_DEFAULT_LANGUAGE:uk}
   default-start-page: ${INKFLOW_DEFAULT_START_PAGE:/calendar}
@@ -72,8 +73,9 @@ demo:
 
 resend:
   api-key: ${RESEND_API_KEY}
+  api-url: ${RESEND_API_URL:https://api.resend.com/emails}
   from-email: ${RESEND_FROM_EMAIL}
-  from-name: ${RESEND_FROM_NAME:INKAT}
+  from-name: ${RESEND_FROM_NAME:${inkflow.app-name:CRM}}
 
 supabase:
   url: ${SUPABASE_URL:}

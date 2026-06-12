@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @Setter
 public class ResendConfig {
     private String apiKey;
+    private String apiUrl = "https://api.resend.com/emails";
     private String fromEmail;
     private String fromName;
 

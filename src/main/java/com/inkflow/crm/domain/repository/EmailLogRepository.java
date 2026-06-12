@@ -32,6 +32,8 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, UUID> {
 
     boolean existsByAppointmentIdAndType(UUID appointmentId, EmailType type);
 
+    boolean existsByTemplateKeyAndEntityId(String templateKey, UUID entityId);
+
     long countByTenantIdAndSentAtAfter(UUID tenantId, Instant after);
 
     long countByTenantIdAndTypeAndSentAtAfter(UUID tenantId, EmailType type, Instant after);

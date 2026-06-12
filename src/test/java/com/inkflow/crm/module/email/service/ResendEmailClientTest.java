@@ -45,6 +45,7 @@ class ResendEmailClientTest {
     void setUp() {
         when(resendConfig.getApiKey()).thenReturn("re_test_key");
         when(resendConfig.getFrom()).thenReturn("Ink Studio <noreply@inkat.test>");
+        when(resendConfig.getApiUrl()).thenReturn(RESEND_API_URL);
 
         resendEmailClient = new ResendEmailClient(resendConfig);
         ReflectionTestUtils.setField(resendEmailClient, "restTemplate", restTemplate);

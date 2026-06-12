@@ -15,6 +15,7 @@ import java.util.List;
 @ConfigurationProperties(prefix = "inkflow")
 public class InkflowProperties {
 
+    private String appName = "CRM";
     private String defaultTimezone = "Europe/Kyiv";
     private String defaultLanguage = "uk";
     private String defaultStartPage = "/calendar";

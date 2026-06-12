@@ -17,8 +17,6 @@ import java.util.Map;
 @Slf4j
 public class ResendEmailClient {
 
-    private static final String RESEND_API_URL = "https://api.resend.com/emails";
-
     private final ResendConfig resendConfig;
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -38,7 +36,7 @@ public class ResendEmailClient {
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
-                    RESEND_API_URL, HttpMethod.POST, request, String.class
+                    resendConfig.getApiUrl(), HttpMethod.POST, request, String.class
             );
             if (response.getStatusCode().is2xxSuccessful()) {
                 log.info("Email sent to {} — subject: {}", to, subject);
