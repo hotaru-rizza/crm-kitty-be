@@ -37,14 +37,13 @@ class EmailContentRendererTest {
 
     @Test
     void render_substitutesVariablesAndWrapsLayout() {
-        when(templateResolver.resolve(TENANT, TemplateKey.WELCOME_ONBOARD, "uk"))
+        when(templateResolver.resolve(TENANT, TemplateKey.WELCOME_ONBOARD))
                 .thenReturn(new RenderedContent("Welcome to {app_name}", "Hi {user_name} from {app_name}"));
 
         RenderedEmail email = contentRenderer.render(
                 TENANT,
                 TemplateKey.WELCOME_ONBOARD,
                 Map.of("user_name", "Anna"),
-                "uk",
                 "Ink Studio"
         );
 

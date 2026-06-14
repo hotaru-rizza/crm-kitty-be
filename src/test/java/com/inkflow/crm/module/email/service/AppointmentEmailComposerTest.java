@@ -4,10 +4,13 @@ import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.Service;
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.enums.SupportedLocale;
 import com.inkflow.crm.module.email.dto.EmailRecipient;
 import com.inkflow.crm.module.email.dto.EmailTenantContext;
 import com.inkflow.crm.module.email.dto.NotificationCommand;
 import com.inkflow.crm.module.email.enums.TemplateKey;
+import com.inkflow.crm.module.email.service.sending.AppointmentNotificationService;
+import com.inkflow.crm.module.email.service.sending.NotificationSender;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -53,7 +56,7 @@ class AppointmentEmailComposerTest {
     void sendConfirmation_callsNotificationSenderWithCorrectKey() {
         Appointment appointment = buildAppointment("anna@test.com");
         when(tenantContextLoader.loadContext(TENANT))
-                .thenReturn(new EmailTenantContext("Ink Studio", "Europe/Kyiv"));
+                .thenReturn(new EmailTenantContext("Ink Studio", "Europe/Kyiv", SupportedLocale.UK));
 
         service.sendConfirmation(appointment);
 
@@ -81,7 +84,7 @@ class AppointmentEmailComposerTest {
     void sendStaffNewAppointment_usesNewAppointmentKey() {
         Appointment appointment = buildAppointment("anna@test.com");
         when(tenantContextLoader.loadContext(TENANT))
-                .thenReturn(new EmailTenantContext("Ink Studio", "Europe/Kyiv"));
+                .thenReturn(new EmailTenantContext("Ink Studio", "Europe/Kyiv", SupportedLocale.UK));
 
         service.sendStaffNewAppointment(appointment);
 

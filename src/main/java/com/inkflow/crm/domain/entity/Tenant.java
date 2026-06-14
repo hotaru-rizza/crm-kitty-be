@@ -1,5 +1,9 @@
 package com.inkflow.crm.domain.entity;
 
+import com.inkflow.crm.domain.converter.SupportedLocaleConverter;
+import com.inkflow.crm.domain.enums.AccountType;
+import com.inkflow.crm.domain.enums.SupportedCurrency;
+import com.inkflow.crm.domain.enums.SupportedLocale;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -27,23 +31,23 @@ public class Tenant {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "subdomain", nullable = false, unique = true)
-    private String subdomain;
+    @Column(name = "logo_url")
+    private String logoUrl;
 
-    @Column(name = "logo")
-    private String logo;
-
+    @Enumerated(EnumType.STRING)
     @Column(name = "currency", nullable = false)
-    private String currency = "UAH";
+    private SupportedCurrency currency = SupportedCurrency.UAH;
 
     @Column(name = "timezone", nullable = false)
     private String timezone = "Europe/Kyiv";
 
     @Column(name = "language", nullable = false)
-    private String language = "ua";
+    @Convert(converter = SupportedLocaleConverter.class)
+    private SupportedLocale language = SupportedLocale.UK;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "account_type", nullable = false)
-    private String accountType = "STUDIO";
+    private AccountType accountType = AccountType.STUDIO;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;

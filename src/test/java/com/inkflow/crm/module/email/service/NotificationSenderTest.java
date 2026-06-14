@@ -1,11 +1,17 @@
 package com.inkflow.crm.module.email.service;
 
-import com.inkflow.crm.config.InkflowProperties;
-import com.inkflow.crm.domain.repository.EmailLogRepository;
+import com.inkflow.crm.domain.entity.EmailMessage;
+import com.inkflow.crm.domain.enums.EmailMessageStatus;
+import com.inkflow.crm.domain.enums.SupportedLocale;
+import com.inkflow.crm.domain.repository.EmailMessageRepository;
 import com.inkflow.crm.module.email.dto.EmailRecipient;
+import com.inkflow.crm.module.email.dto.EmailTenantContext;
 import com.inkflow.crm.module.email.dto.NotificationCommand;
 import com.inkflow.crm.module.email.dto.RenderedEmail;
 import com.inkflow.crm.module.email.enums.TemplateKey;
+import com.inkflow.crm.module.email.enums.TriggerType;
+import com.inkflow.crm.module.email.service.sending.NotificationSender;
+import com.inkflow.crm.module.email.service.sending.ResendEmailClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,9 +19,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import com.inkflow.crm.domain.entity.EmailLog;
-import com.inkflow.crm.domain.enums.EmailStatus;
 
 import java.util.Map;
 import java.util.UUID;
@@ -31,7 +34,7 @@ class NotificationSenderTest {
 
     @Mock private EmailContentRenderer contentRenderer;
     @Mock private ResendEmailClient resendClient;
-    @Mock private EmailLogRepository emailLogRepository;
+    @Mock private EmailMessageRepository emailMessageRepository;
 
     @InjectMocks
     private NotificationSender notificationSender;
@@ -49,7 +52,7 @@ class NotificationSenderTest {
                 TemplateKey.BOOKING_CONFIRMED,
                 Map.of("client_name", "Anna"),
                 ENTITY,
-                "Ink Studio"
+                new EmailTenantContext("Ink Studio", "Europe/Kyiv", SupportedLocale.UK)
         );
     }
 
@@ -62,12 +65,12 @@ class NotificationSenderTest {
 
         verify(resendClient).send(eq("client@test.com"), eq("Booking confirmed"), eq("<html>body</html>"));
 
-        ArgumentCaptor<EmailLog> logCaptor = ArgumentCaptor.forClass(EmailLog.class);
-        verify(emailLogRepository).save(logCaptor.capture());
+        ArgumentCaptor<EmailMessage> logCaptor = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(emailMessageRepository).save(logCaptor.capture());
 
-        EmailLog log = logCaptor.getValue();
-        assertThat(log.getStatus()).isEqualTo(EmailStatus.SENT);
-        assertThat(log.getTemplateKey()).isEqualTo(TemplateKey.BOOKING_CONFIRMED.name());
+        EmailMessage log = logCaptor.getValue();
+        assertThat(log.getStatus()).isEqualTo(EmailMessageStatus.SENT);
+        assertThat(log.getTriggerType()).isEqualTo(TriggerType.BOOKING_CONFIRMED);
         assertThat(log.getEntityId()).isEqualTo(ENTITY);
         assertThat(log.getRecipientEmail()).isEqualTo("client@test.com");
     }
@@ -80,11 +83,11 @@ class NotificationSenderTest {
 
         notificationSender.send(bookingConfirmedCommand);
 
-        ArgumentCaptor<EmailLog> logCaptor = ArgumentCaptor.forClass(EmailLog.class);
-        verify(emailLogRepository).save(logCaptor.capture());
+        ArgumentCaptor<EmailMessage> logCaptor = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(emailMessageRepository).save(logCaptor.capture());
 
-        assertThat(logCaptor.getValue().getStatus()).isEqualTo(EmailStatus.FAILED);
-        assertThat(logCaptor.getValue().getErrorMessage()).contains("SMTP error");
+        assertThat(logCaptor.getValue().getStatus()).isEqualTo(EmailMessageStatus.FAILED);
+        assertThat(logCaptor.getValue().getLastError()).contains("SMTP error");
     }
 
     @Test
@@ -95,17 +98,18 @@ class NotificationSenderTest {
                 TemplateKey.BOOKING_CONFIRMED,
                 Map.of(),
                 null,
-                "Studio"
+                new EmailTenantContext("Studio", "Europe/Kyiv", SupportedLocale.UK)
         );
 
         notificationSender.send(command);
 
-        verifyNoInteractions(contentRenderer, resendClient, emailLogRepository);
+        verifyNoInteractions(contentRenderer, resendClient, emailMessageRepository);
     }
 
     @Test
     void wasAlreadySent_delegatesToRepository() {
-        when(emailLogRepository.existsByTemplateKeyAndEntityId(TemplateKey.BOOKING_REMINDER.name(), ENTITY))
+        when(emailMessageRepository.existsByTriggerTypeAndEntityIdAndStatus(
+                TriggerType.BEFORE_BOOKING, ENTITY, EmailMessageStatus.SENT))
                 .thenReturn(true);
 
         assertThat(notificationSender.wasAlreadySent(TemplateKey.BOOKING_REMINDER, ENTITY)).isTrue();
@@ -114,6 +118,6 @@ class NotificationSenderTest {
     @Test
     void wasAlreadySent_returnsFalseForNullEntityId() {
         assertThat(notificationSender.wasAlreadySent(TemplateKey.BOOKING_REMINDER, null)).isFalse();
-        verifyNoInteractions(emailLogRepository);
+        verifyNoInteractions(emailMessageRepository);
     }
 }

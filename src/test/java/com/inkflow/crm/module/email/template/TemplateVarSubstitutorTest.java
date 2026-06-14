@@ -1,12 +1,8 @@
 package com.inkflow.crm.module.email.template;
 
-import com.inkflow.crm.module.email.enums.TemplateKey;
-import com.inkflow.crm.module.email.enums.TemplateVar;
-
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -59,26 +55,4 @@ class TemplateVarSubstitutorTest {
         assertThat(result).isEqualTo("CRM is great. Use CRM today!");
     }
 
-    @Test
-    void missingVars_returnsEmptyWhenAllPresent() {
-        String body = "Hi {client_name}, your visit is on {date} at {time}.";
-
-        Set<String> missing = TemplateVarSubstitutor.missingVars(body, TemplateKey.BOOKING_REMINDER);
-
-        // BOOKING_REMINDER requires: app_name, studio_name, client_name, master_name, time, address, reminder_window
-        // Only checking that the ones not in our body string are flagged
-        assertThat(missing).contains("app_name", "studio_name");
-    }
-
-    @Test
-    void missingVars_returnsAllWhenBodyIsNull() {
-        Set<String> missing = TemplateVarSubstitutor.missingVars(null, TemplateKey.BOOKING_CONFIRMED);
-
-        // Should return all required vars for BOOKING_CONFIRMED
-        assertThat(missing).containsAll(
-                TemplateKey.BOOKING_CONFIRMED.getRequiredVars().stream()
-                        .map(TemplateVar::getPlaceholder)
-                        .toList()
-        );
-    }
 }

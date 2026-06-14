@@ -25,18 +25,12 @@ public class EmailContentRenderer {
     private final InkflowProperties inkflowProperties;
 
     public RenderedEmail render(NotificationCommand command) {
-        return render(
-                command.tenantId(),
-                command.templateKey(),
-                command.variables(),
-                command.locale(),
-                command.studioName()
-        );
+        return render(command.tenantId(), command.templateKey(), command.variables(), command.studioName());
     }
 
     public RenderedEmail render(UUID tenantId, TemplateKey templateKey, Map<String, String> variables,
-                                String locale, String studioName) {
-        RenderedContent template = templateResolver.resolve(tenantId, templateKey, locale);
+                                String studioName) {
+        RenderedContent template = templateResolver.resolve(tenantId, templateKey);
         Map<String, String> resolvedVariables = enrichVariables(variables, studioName);
 
         String subject = TemplateVarSubstitutor.substitute(template.subject(), resolvedVariables);
@@ -59,7 +53,7 @@ public class EmailContentRenderer {
     public Map<String, String> sampleVariables(TemplateKey templateKey) {
         Map<String, String> variables = new HashMap<>();
 
-        for (TemplateVar variable : templateKey.getRequiredVars()) {
+        for (TemplateVar variable : templateKey.getAvailableVars()) {
             variables.put(variable.getPlaceholder(), "[" + variable.getPlaceholder() + "]");
         }
 

@@ -1,7 +1,6 @@
 package com.inkflow.crm.module.email.enums;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Set;
 
@@ -10,7 +9,6 @@ import static com.inkflow.crm.module.email.enums.TemplateOwnership.*;
 import static com.inkflow.crm.module.email.enums.TemplateVar.*;
 
 @Getter
-@RequiredArgsConstructor
 public enum TemplateKey {
 
     WELCOME_ONBOARD(LIFECYCLE, SYSTEM,
@@ -41,7 +39,8 @@ public enum TemplateKey {
             Set.of(APP_NAME, STUDIO_NAME, CLIENT_NAME, MASTER_NAME, SERVICE, DATE, TIME, ADDRESS)),
 
     BOOKING_REMINDER(CLIENT_OP, CONFIGURABLE,
-            Set.of(APP_NAME, STUDIO_NAME, CLIENT_NAME, MASTER_NAME, TIME, ADDRESS, REMINDER_WINDOW)),
+            Set.of(APP_NAME, STUDIO_NAME, CLIENT_NAME, MASTER_NAME, TIME, ADDRESS, REMINDER_WINDOW),
+            24),
 
     PREP_INSTRUCTIONS(CLIENT_OP, CONFIGURABLE,
             Set.of(APP_NAME, STUDIO_NAME, CLIENT_NAME, MASTER_NAME, SERVICE, DATE, TIME)),
@@ -53,7 +52,8 @@ public enum TemplateKey {
             Set.of(APP_NAME, STUDIO_NAME, CLIENT_NAME, MASTER_NAME, SERVICE, DATE, TIME)),
 
     AFTERCARE_INSTRUCTIONS(CLIENT_OP, CONFIGURABLE,
-            Set.of(APP_NAME, STUDIO_NAME, CLIENT_NAME, MASTER_NAME, SERVICE)),
+            Set.of(APP_NAME, STUDIO_NAME, CLIENT_NAME, MASTER_NAME, SERVICE),
+            24),
 
     REVIEW_REQUEST(CLIENT_OP, CONFIGURABLE,
             Set.of(APP_NAME, STUDIO_NAME, CLIENT_NAME, MASTER_NAME, ACTION_URL)),
@@ -81,7 +81,20 @@ public enum TemplateKey {
 
     private final TemplateCategory category;
     private final TemplateOwnership ownership;
-    private final Set<TemplateVar> requiredVars;
+    private final Set<TemplateVar> availableVars;
+    private final Integer defaultScheduleHours;
+
+    TemplateKey(TemplateCategory category, TemplateOwnership ownership, Set<TemplateVar> availableVars) {
+        this(category, ownership, availableVars, null);
+    }
+
+    TemplateKey(TemplateCategory category, TemplateOwnership ownership, Set<TemplateVar> availableVars,
+                Integer defaultScheduleHours) {
+        this.category = category;
+        this.ownership = ownership;
+        this.availableVars = availableVars;
+        this.defaultScheduleHours = defaultScheduleHours;
+    }
 
     public boolean isConfigurable() {
         return ownership == CONFIGURABLE;
@@ -89,5 +102,16 @@ public enum TemplateKey {
 
     public boolean isMarketing() {
         return category == MARKETING;
+    }
+
+    public boolean isScheduled() {
+        return defaultScheduleHours != null;
+    }
+
+    public int getDefaultScheduleHours() {
+        if (defaultScheduleHours == null) {
+            throw new IllegalStateException("Template " + name() + " is not schedule-driven");
+        }
+        return defaultScheduleHours;
     }
 }

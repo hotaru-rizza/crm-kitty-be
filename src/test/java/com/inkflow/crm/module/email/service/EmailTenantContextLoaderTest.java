@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.email.service;
 
 import com.inkflow.crm.config.InkflowProperties;
+import com.inkflow.crm.domain.enums.SupportedLocale;
 import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.module.email.dto.EmailTenantContext;
@@ -30,11 +31,13 @@ class EmailTenantContextLoaderTest {
         UUID tenantId = UUID.randomUUID();
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.empty());
         when(inkflowProperties.getDefaultTimezone()).thenReturn("Europe/Kyiv");
+        when(inkflowProperties.getDefaultLanguage()).thenReturn("uk");
 
         EmailTenantContext context = loader.loadContext(tenantId);
 
         assertThat(context.studioName()).isEqualTo("Studio");
         assertThat(context.timezone()).isEqualTo("Europe/Kyiv");
+        assertThat(context.locale()).isEqualTo(SupportedLocale.UK);
     }
 
     @Test
@@ -44,6 +47,7 @@ class EmailTenantContextLoaderTest {
                 .id(tenantId)
                 .name("Ink Studio")
                 .timezone("America/New_York")
+                .language(SupportedLocale.EN)
                 .build();
 
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
@@ -52,5 +56,6 @@ class EmailTenantContextLoaderTest {
 
         assertThat(context.studioName()).isEqualTo("Ink Studio");
         assertThat(context.timezone()).isEqualTo("America/New_York");
+        assertThat(context.locale()).isEqualTo(SupportedLocale.EN);
     }
 }

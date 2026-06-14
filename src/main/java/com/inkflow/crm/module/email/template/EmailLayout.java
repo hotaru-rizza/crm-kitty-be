@@ -62,21 +62,21 @@ public final class EmailLayout {
             String line = rawLine.stripTrailing();
 
             if (line.startsWith("• ") || line.startsWith("- ")) {
-                inOrderedList = closeOrderedList(html, inOrderedList);
-                inBulletList = openBulletList(html, inBulletList);
+                if (inOrderedList) { html.append("</ol>\n"); inOrderedList = false; }
+                if (!inBulletList) { html.append(ulTag()); inBulletList = true; }
                 html.append("<li>%s</li>\n".formatted(escapeHtml(line.substring(2))));
                 continue;
             }
 
             if (line.matches("^\\d+\\. .+")) {
-                inBulletList = closeBulletList(html, inBulletList);
-                inOrderedList = openOrderedList(html, inOrderedList);
+                if (inBulletList) { html.append("</ul>\n"); inBulletList = false; }
+                if (!inOrderedList) { html.append(olTag()); inOrderedList = true; }
                 html.append("<li>%s</li>\n".formatted(escapeHtml(line.replaceFirst("^\\d+\\. ", ""))));
                 continue;
             }
 
-            inBulletList = closeBulletList(html, inBulletList);
-            inOrderedList = closeOrderedList(html, inOrderedList);
+            if (inBulletList) { html.append("</ul>\n"); inBulletList = false; }
+            if (inOrderedList) { html.append("</ol>\n"); inOrderedList = false; }
 
             if (line.isBlank()) {
                 html.append("<br/>\n");
@@ -86,44 +86,20 @@ public final class EmailLayout {
             }
         }
 
-        closeBulletList(html, inBulletList);
-        closeOrderedList(html, inOrderedList);
+        if (inBulletList) html.append("</ul>\n");
+        if (inOrderedList) html.append("</ol>\n");
 
         return html.toString();
     }
 
-    private static boolean openBulletList(StringBuilder html, boolean inBulletList) {
-        if (!inBulletList) {
-            html.append("<ul style=\"color:%s;font-size:14px;line-height:1.8;padding-left:20px;margin:12px 0;\">\n"
-                    .formatted(TEXT_COLOR));
-            return true;
-        }
-        return inBulletList;
+    private static String ulTag() {
+        return "<ul style=\"color:%s;font-size:14px;line-height:1.8;padding-left:20px;margin:12px 0;\">\n"
+                .formatted(TEXT_COLOR);
     }
 
-    private static boolean openOrderedList(StringBuilder html, boolean inOrderedList) {
-        if (!inOrderedList) {
-            html.append("<ol style=\"color:%s;font-size:14px;line-height:1.8;padding-left:20px;margin:12px 0;\">\n"
-                    .formatted(TEXT_COLOR));
-            return true;
-        }
-        return inOrderedList;
-    }
-
-    private static boolean closeBulletList(StringBuilder html, boolean inBulletList) {
-        if (inBulletList) {
-            html.append("</ul>\n");
-            return false;
-        }
-        return inBulletList;
-    }
-
-    private static boolean closeOrderedList(StringBuilder html, boolean inOrderedList) {
-        if (inOrderedList) {
-            html.append("</ol>\n");
-            return false;
-        }
-        return inOrderedList;
+    private static String olTag() {
+        return "<ol style=\"color:%s;font-size:14px;line-height:1.8;padding-left:20px;margin:12px 0;\">\n"
+                .formatted(TEXT_COLOR);
     }
 
     private static String buildButton(String url, String label) {

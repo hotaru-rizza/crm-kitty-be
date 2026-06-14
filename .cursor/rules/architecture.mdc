@@ -1,0 +1,54 @@
+---
+description: Backend package structure — domain vs module vs common (modular monolith)
+alwaysApply: false
+---
+# Package layout (modular monolith)
+
+This project uses a **hybrid**: shared CRM core in `domain/` + isolated bounded contexts in `module/`.
+
+## `domain/` — CRM core (shared)
+
+Put entity + repository here when the type belongs to the **tightly connected CRM graph**:
+`Tenant`, `Staff`, `Client`, `Service`, `Location`, `Appointment`, `Transaction`, `Subscription`, etc.
+
+- JPA relations across these types (`@ManyToOne`, `@OneToMany`) are expected.
+- Email entities tied to core lifecycle also live here: `EmailLog`, `NotificationPreference`, `EmailTemplateOverride`.
+- Cross-cutting infra entities used by schedulers: `SchedulerRun`.
+
+**Rule:** if multiple modules need the same entity via JPA navigation or it is part of appointment/client/staff/finance flow → `domain/entity` + `domain/repository`.
+
+## `module/*` — feature modules
+
+Each module owns: `controller/`, `service/`, `dto/`, `mapper/` (and optionally local `entity/`, `repository/`).
+
+### When to keep entity/repo **inside the module**
+
+Only for a **separate bounded context** that:
+- owns its tables end-to-end,
+- does **not** have JPA relations into CRM core (reference core by `UUID` only, via services),
+- is logically a different product or subsystem.
+
+Current examples: `module/consumer`, `module/catalog`, `module/notification`.
+
+### When NOT to add module-local entity/repo
+
+Do not split core types into modules just for “purity”. Extracting `Client` into `module/client/entity` while `Appointment` still `@ManyToOne Client` adds cost with no benefit.
+
+## `common/` — technical cross-cutting only
+
+Allowed: `ApiResponse`, exceptions, validation annotations, small utils, generic scheduler helpers (`SchedulerRunService`).
+
+**Not allowed:** business rules, domain-specific enums, feature logic. If “common” code needs domain knowledge → it belongs in `domain/` or the relevant `module/`.
+
+## Decision checklist (new entity)
+
+1. Is it part of the appointment/client/staff/finance graph? → `domain/`.
+2. Is it a self-contained subsystem with no JPA links to core? → `module/<name>/entity`.
+3. Is it used by only one module but **linked via JPA** to core entities? → still `domain/` (e.g. email logs).
+4. When unsure, match the nearest existing entity — do not invent a third placement pattern.
+
+## Consistency
+
+- One rule, not drift: core in `domain/`, bounded contexts in modules.
+- Modules talk to core through **services + IDs**, not cross-module JPA, except within `domain/` itself.
+- Before creating files, check sibling modules and `domain/` for the same pattern.

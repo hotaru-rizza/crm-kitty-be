@@ -9,7 +9,6 @@ import com.inkflow.crm.domain.repository.RolePermissionRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
-import com.inkflow.crm.module.settings.dto.UpdateCompanySettingsRequest;
 import com.inkflow.crm.module.settings.dto.UpdateRolePermissionsRequest;
 import com.inkflow.crm.module.settings.dto.UpdateUserSettingsRequest;
 import com.inkflow.crm.support.IntegrationTest;
@@ -147,55 +146,6 @@ class SettingsControllerIntegrationTest {
 
         mockMvc.perform(get("/settings/permissions").with(crmUser(artist)))
                 .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void patchCompanySettings_withArtistAuth_returnsForbidden() throws Exception {
-        TenantBundle bundle = IntegrationTestData.seedTenant(
-                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
-        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
-
-        UpdateCompanySettingsRequest body = UpdateCompanySettingsRequest.builder()
-                .smsReminders(true)
-                .build();
-
-        mockMvc.perform(patch("/settings/company")
-                        .with(crmUser(artist))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(body)))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void patchCompanySettings_withInvalidReminderHours_returnsBadRequest() throws Exception {
-        TenantBundle bundle = IntegrationTestData.seedTenant(
-                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
-
-        UpdateCompanySettingsRequest body = UpdateCompanySettingsRequest.builder()
-                .reminderHoursBefore(200)
-                .build();
-
-        mockMvc.perform(patch("/settings/company")
-                        .with(crmUser(bundle.owner()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(body)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void patchCompanySettings_withInvalidWorkingHours_returnsBadRequest() throws Exception {
-        TenantBundle bundle = IntegrationTestData.seedTenant(
-                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
-
-        UpdateCompanySettingsRequest body = UpdateCompanySettingsRequest.builder()
-                .workingHoursStart("25:00")
-                .build();
-
-        mockMvc.perform(patch("/settings/company")
-                        .with(crmUser(bundle.owner()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(body)))
-                .andExpect(status().isBadRequest());
     }
 
     @Test

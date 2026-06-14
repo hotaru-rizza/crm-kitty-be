@@ -2,24 +2,21 @@ package com.inkflow.crm.module.email.service;
 
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ErrorCode;
-import com.inkflow.crm.config.InkflowProperties;
-import com.inkflow.crm.domain.entity.EmailTemplateOverride;
-import com.inkflow.crm.domain.repository.EmailTemplateOverrideRepository;
-import com.inkflow.crm.module.email.dto.RenderedEmail;
-import com.inkflow.crm.module.email.dto.TemplateListItemDto;
-import com.inkflow.crm.module.email.dto.UpdateTemplateRequest;
-import com.inkflow.crm.module.email.enums.TemplateKey;
+import com.inkflow.crm.domain.entity.EmailTemplate;
+import com.inkflow.crm.domain.repository.EmailTemplateRepository;
+import com.inkflow.crm.module.email.dto.CreateEmailTemplateRequest;
+import com.inkflow.crm.module.email.dto.EmailTemplateResponseDto;
+import com.inkflow.crm.module.email.dto.UpdateEmailTemplateRequest;
 import com.inkflow.crm.module.email.enums.TemplateVar;
-import com.inkflow.crm.module.email.template.RenderedContent;
-import com.inkflow.crm.module.email.template.TemplateDefaults;
-import com.inkflow.crm.module.email.template.TemplateVarSubstitutor;
+import com.inkflow.crm.module.email.enums.TriggerType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -28,134 +25,149 @@ public class EmailTemplateService {
 
     private static final String PREVIEW_STUDIO_NAME = "Studio Name";
 
-    private final EmailTemplateOverrideRepository overrideRepository;
-    private final EmailContentRenderer contentRenderer;
-    private final InkflowProperties inkflowProperties;
+    private final EmailTemplateRepository emailTemplateRepository;
+    private final TemplateEmailRenderer templateEmailRenderer;
 
     @Transactional(readOnly = true)
-    public List<TemplateListItemDto> listConfigurable(UUID tenantId, String locale) {
-        String effectiveLocale = resolveLocale(locale);
-        Map<String, EmailTemplateOverride> overridesByKey = loadOverrides(tenantId, effectiveLocale);
-
-        return Arrays.stream(TemplateKey.values())
-                .filter(TemplateKey::isConfigurable)
-                .map(key -> toListItem(
-                        key,
-                        resolveContent(key, overridesByKey, effectiveLocale),
-                        overridesByKey.containsKey(key.name())))
+    public List<EmailTemplateResponseDto> list(UUID tenantId) {
+        return emailTemplateRepository.findByTenantIdOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc(tenantId).stream()
+                .map(this::toDto)
                 .toList();
     }
 
     @Transactional
-    public TemplateListItemDto upsertOverride(UUID tenantId, String keyName, String locale,
-                                              UpdateTemplateRequest request, UUID updatedBy) {
-        TemplateKey key = resolveConfigurableKey(keyName);
-        String effectiveLocale = resolveLocale(locale);
+    public EmailTemplateResponseDto create(UUID tenantId, CreateEmailTemplateRequest request, UUID createdBy) {
+        validateOffset(request.triggerType(), request.offsetMinutes());
 
-        validateVars(request.body(), key);
+        EmailTemplate template = EmailTemplate.builder()
+                .tenantId(tenantId)
+                .triggerType(request.triggerType())
+                .offsetMinutes(request.offsetMinutes())
+                .subject(request.subject())
+                .body(request.body())
+                .enabled(request.enabled() != null ? request.enabled() : true)
+                .deletable(true)
+                .category(request.triggerType().getCategory())
+                .updatedBy(createdBy)
+                .build();
 
-        EmailTemplateOverride override = overrideRepository
-                .findByTenantIdAndTemplateKeyAndLocale(tenantId, key.name(), effectiveLocale)
-                .orElseGet(() -> EmailTemplateOverride.builder()
-                        .tenantId(tenantId)
-                        .templateKey(key.name())
-                        .locale(effectiveLocale)
-                        .build());
-
-        override.setSubject(request.subject());
-        override.setBody(request.body());
-        override.setUpdatedBy(updatedBy);
-        overrideRepository.save(override);
-
-        log.info("Template override saved: tenantId={} key={} locale={}", tenantId, key, effectiveLocale);
-
-        return toListItem(key, new RenderedContent(request.subject(), request.body()), true);
+        EmailTemplate saved = emailTemplateRepository.save(template);
+        log.info("Email template created: tenantId={} id={}", tenantId, saved.getId());
+        return toDto(saved);
     }
 
     @Transactional
-    public void resetOverride(UUID tenantId, String keyName, String locale) {
-        TemplateKey key = resolveConfigurableKey(keyName);
-        String effectiveLocale = resolveLocale(locale);
+    public EmailTemplateResponseDto update(
+            UUID tenantId,
+            UUID templateId,
+            UpdateEmailTemplateRequest request,
+            UUID updatedBy) {
 
-        overrideRepository.deleteByTenantIdAndTemplateKeyAndLocale(tenantId, key.name(), effectiveLocale);
-        log.info("Template override reset: tenantId={} key={} locale={}", tenantId, key, effectiveLocale);
+        EmailTemplate template = requireTemplate(tenantId, templateId);
+
+        if (request.subject() != null) {
+            template.setSubject(request.subject());
+        }
+        if (request.body() != null) {
+            template.setBody(request.body());
+        }
+        if (request.enabled() != null) {
+            template.setEnabled(request.enabled());
+        }
+        if (request.offsetMinutes() != null) {
+            validateOffset(template.getTriggerType(), request.offsetMinutes());
+            template.setOffsetMinutes(request.offsetMinutes());
+        }
+        if (request.triggerType() != null && template.getBuiltinKey() == null) {
+            validateOffset(request.triggerType(), request.offsetMinutes() != null
+                    ? request.offsetMinutes()
+                    : template.getOffsetMinutes());
+            template.setTriggerType(request.triggerType());
+            template.setCategory(request.triggerType().getCategory());
+        }
+
+        template.setUpdatedBy(updatedBy);
+        EmailTemplate saved = emailTemplateRepository.save(template);
+        log.info("Email template updated: tenantId={} id={}", tenantId, saved.getId());
+        return toDto(saved);
+    }
+
+    @Transactional
+    public void delete(UUID tenantId, UUID templateId) {
+        EmailTemplate template = requireTemplate(tenantId, templateId);
+
+        if (Boolean.FALSE.equals(template.getDeletable())) {
+            throw new BusinessRuleException(ErrorCode.FORBIDDEN, "Built-in template cannot be deleted");
+        }
+
+        emailTemplateRepository.delete(template);
+        log.info("Email template deleted: tenantId={} id={}", tenantId, templateId);
     }
 
     @Transactional(readOnly = true)
-    public String preview(UUID tenantId, String keyName, String locale) {
-        TemplateKey key = resolveConfigurableKey(keyName);
-        String effectiveLocale = resolveLocale(locale);
-
-        RenderedEmail email = contentRenderer.render(
-                tenantId,
-                key,
-                contentRenderer.sampleVariables(key),
-                effectiveLocale,
+    public String preview(UUID tenantId, UUID templateId) {
+        EmailTemplate template = requireTemplate(tenantId, templateId);
+        return templateEmailRenderer.render(
+                template,
+                templateEmailRenderer.sampleVariables(template.getTriggerType()),
                 PREVIEW_STUDIO_NAME
-        );
-
-        return email.html();
+        ).html();
     }
 
-    private Map<String, EmailTemplateOverride> loadOverrides(UUID tenantId, String locale) {
-        return overrideRepository.findAllByTenantId(tenantId).stream()
-                .filter(override -> override.getLocale().equals(locale))
-                .collect(Collectors.toMap(EmailTemplateOverride::getTemplateKey, override -> override));
+    @Transactional(readOnly = true)
+    public List<TriggerTypeInfo> listTriggerTypes() {
+        return Arrays.stream(TriggerType.values())
+                .map(type -> new TriggerTypeInfo(
+                        type.name(),
+                        type.getCategory(),
+                        type.isScheduled(),
+                        type.isEventDriven(),
+                        type.isRequiresOffset(),
+                        type.getProvidedVars().stream().map(TemplateVar::getPlaceholder).sorted().toList()))
+                .toList();
     }
 
-    private RenderedContent resolveContent(TemplateKey key, Map<String, EmailTemplateOverride> overridesByKey,
-                                           String locale) {
-        EmailTemplateOverride override = overridesByKey.get(key.name());
-        if (override != null) {
-            return new RenderedContent(override.getSubject(), override.getBody());
+    private EmailTemplate requireTemplate(UUID tenantId, UUID templateId) {
+        return emailTemplateRepository.findByIdAndTenantId(templateId, tenantId)
+                .orElseThrow(() -> new BusinessRuleException(ErrorCode.NOT_FOUND, "Email template not found"));
+    }
+
+    private void validateOffset(TriggerType triggerType, Integer offsetMinutes) {
+        if (triggerType.isRequiresOffset() && (offsetMinutes == null || offsetMinutes <= 0)) {
+            throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+                    "Trigger " + triggerType + " requires positive offset_minutes");
         }
-
-        return TemplateDefaults.get(key, locale);
+        if (!triggerType.isRequiresOffset() && offsetMinutes != null) {
+            throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+                    "Trigger " + triggerType + " does not support offset_minutes");
+        }
     }
 
-    private TemplateListItemDto toListItem(TemplateKey key, RenderedContent content, boolean overridden) {
-        return TemplateListItemDto.builder()
-                .key(key.name())
-                .category(key.getCategory())
-                .subject(content.subject())
-                .body(content.body())
-                .availableVars(key.getRequiredVars().stream()
+    private EmailTemplateResponseDto toDto(EmailTemplate template) {
+        return EmailTemplateResponseDto.builder()
+                .id(template.getId())
+                .triggerType(template.getTriggerType())
+                .offsetMinutes(template.getOffsetMinutes())
+                .subject(template.getSubject())
+                .body(template.getBody())
+                .enabled(template.getEnabled())
+                .deletable(template.getDeletable())
+                .builtinKey(template.getBuiltinKey())
+                .category(template.getCategory())
+                .availableVars(template.getTriggerType().getProvidedVars().stream()
                         .map(TemplateVar::getPlaceholder)
                         .sorted()
                         .toList())
-                .isOverridden(overridden)
+                .updatedAt(template.getUpdatedAt())
                 .build();
     }
 
-    private TemplateKey resolveConfigurableKey(String keyName) {
-        TemplateKey key;
-        try {
-            key = TemplateKey.valueOf(keyName.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Unknown template key: " + keyName);
-        }
-
-        if (!key.isConfigurable()) {
-            throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
-                    "Template " + keyName + " is not configurable by studios");
-        }
-
-        return key;
-    }
-
-    private void validateVars(String body, TemplateKey key) {
-        Set<String> missing = TemplateVarSubstitutor.missingVars(body, key);
-        if (!missing.isEmpty()) {
-            throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
-                    "Body is missing required variables: " + missing);
-        }
-    }
-
-    private String resolveLocale(String locale) {
-        if (locale != null && !locale.isBlank()) {
-            return locale;
-        }
-
-        return inkflowProperties.getDefaultLanguage();
-    }
+    public record TriggerTypeInfo(
+            String type,
+            com.inkflow.crm.module.email.enums.TemplateCategory category,
+            boolean scheduled,
+            boolean eventDriven,
+            boolean requiresOffset,
+            List<String> availableVars
+    ) {}
 }

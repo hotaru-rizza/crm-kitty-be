@@ -2,6 +2,7 @@ package com.inkflow.crm.module.email.service;
 
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.config.ResendConfig;
+import com.inkflow.crm.module.email.service.sending.ResendEmailClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

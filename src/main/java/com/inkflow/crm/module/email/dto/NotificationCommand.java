@@ -10,7 +10,6 @@ public record NotificationCommand(
         TemplateKey templateKey,
         EmailRecipient recipient,
         Map<String, String> variables,
-        String locale,
         UUID entityId,
         String studioName) {
 
@@ -20,16 +19,15 @@ public record NotificationCommand(
             TemplateKey templateKey,
             Map<String, String> variables,
             UUID entityId,
-            String studioName) {
+            EmailTenantContext context) {
 
         return new NotificationCommand(
                 tenantId,
                 templateKey,
                 recipient,
                 variables,
-                null,
                 entityId,
-                studioName
+                context.studioName()
         );
     }
 }
