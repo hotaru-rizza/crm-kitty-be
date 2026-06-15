@@ -28,4 +28,5 @@ public class CreateRequestRequest {
     private String message;
     private String phone;
     private String instagram;
+    private String sketchUrl;
 }

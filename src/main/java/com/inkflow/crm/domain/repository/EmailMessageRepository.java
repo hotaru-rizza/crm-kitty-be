@@ -35,14 +35,35 @@ public interface EmailMessageRepository extends JpaRepository<EmailMessage, UUID
 
     @Query("SELECT e FROM EmailMessage e WHERE e.tenantId = :tenantId " +
             "AND (CAST(:triggerType AS string) IS NULL OR e.triggerType = :triggerType) " +
+            "AND (CAST(:status AS string) IS NULL OR e.status = :status) " +
             "AND (CAST(:from AS timestamp) IS NULL OR COALESCE(e.sentAt, e.createdAt) >= :from) " +
             "AND (CAST(:to AS timestamp) IS NULL OR COALESCE(e.sentAt, e.createdAt) < :to) " +
             "ORDER BY COALESCE(e.sentAt, e.createdAt) DESC")
     Page<EmailMessage> findFiltered(
             @Param("tenantId") UUID tenantId,
             @Param("triggerType") TriggerType triggerType,
+            @Param("status") EmailMessageStatus status,
             @Param("from") Instant from,
             @Param("to") Instant to,
+            Pageable pageable
+    );
+
+    @Query("SELECT e FROM EmailMessage e WHERE e.tenantId = :tenantId " +
+            "AND (CAST(:triggerType AS string) IS NULL OR e.triggerType = :triggerType) " +
+            "AND (CAST(:status AS string) IS NULL OR e.status = :status) " +
+            "AND (CAST(:from AS timestamp) IS NULL OR COALESCE(e.sentAt, e.createdAt) >= :from) " +
+            "AND (CAST(:to AS timestamp) IS NULL OR COALESCE(e.sentAt, e.createdAt) < :to) " +
+            "AND (LOWER(e.recipientEmail) LIKE :searchPattern " +
+            "     OR LOWER(COALESCE(e.recipientName, '')) LIKE :searchPattern " +
+            "     OR LOWER(e.subject) LIKE :searchPattern) " +
+            "ORDER BY COALESCE(e.sentAt, e.createdAt) DESC")
+    Page<EmailMessage> findFilteredWithSearch(
+            @Param("tenantId") UUID tenantId,
+            @Param("triggerType") TriggerType triggerType,
+            @Param("status") EmailMessageStatus status,
+            @Param("from") Instant from,
+            @Param("to") Instant to,
+            @Param("searchPattern") String searchPattern,
             Pageable pageable
     );
 

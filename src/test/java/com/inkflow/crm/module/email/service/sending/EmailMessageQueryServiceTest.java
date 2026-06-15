@@ -59,12 +59,13 @@ class EmailMessageQueryServiceTest {
                 .sentAt(message.getSentAt())
                 .build();
 
-        when(emailMessageRepository.findFiltered(tenantId, TriggerType.BEFORE_BOOKING, from, to, pageable))
+        when(emailMessageRepository.findFilteredWithSearch(
+                tenantId, TriggerType.BEFORE_BOOKING, EmailMessageStatus.SENT, from, to, "%client%", pageable))
                 .thenReturn(new PageImpl<>(List.of(message)));
         when(emailMessageMapper.toDto(message)).thenReturn(dto);
 
         Page<EmailMessageDto> result = emailMessageQueryService.getMessages(
-                tenantId, TriggerType.BEFORE_BOOKING, from, to, pageable);
+                tenantId, TriggerType.BEFORE_BOOKING, EmailMessageStatus.SENT, from, to, "client", pageable);
 
         assertEquals(1, result.getTotalElements());
         assertEquals(dto, result.getContent().getFirst());

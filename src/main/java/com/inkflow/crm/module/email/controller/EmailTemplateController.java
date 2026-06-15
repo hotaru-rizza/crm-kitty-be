@@ -4,6 +4,7 @@ import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.ApiResponses;
 import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.module.email.dto.CreateEmailTemplateRequest;
+import com.inkflow.crm.module.email.dto.EmailTemplatePreviewRequest;
 import com.inkflow.crm.module.email.dto.EmailTemplateResponseDto;
 import com.inkflow.crm.module.email.dto.UpdateEmailTemplateRequest;
 import com.inkflow.crm.module.email.service.EmailTemplateService;
@@ -67,6 +68,16 @@ public class EmailTemplateController {
         emailTemplateService.delete(tenantId, id);
         log.info("Email template deleted via API: tenantId={} id={}", tenantId, id);
         return ApiResponses.empty();
+    }
+
+    @PostMapping("/preview")
+    @RequirePermission(Permission.EMAILS_MANAGE)
+    public ResponseEntity<String> previewDraft(@Valid @RequestBody EmailTemplatePreviewRequest request) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        String html = emailTemplateService.previewDraft(tenantId, request);
+        log.info("Email template draft preview via API: tenantId={} triggerType={}", tenantId, request.triggerType());
+
+        return ResponseEntity.ok(html);
     }
 
     @GetMapping("/{id}/preview")

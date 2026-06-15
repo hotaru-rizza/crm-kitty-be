@@ -7,15 +7,14 @@ import com.inkflow.crm.module.email.dto.RenderedEmail;
 import com.inkflow.crm.module.email.enums.TemplateCategory;
 import com.inkflow.crm.module.email.enums.TemplateVar;
 import com.inkflow.crm.module.email.enums.TriggerType;
+import com.inkflow.crm.module.email.template.EmailBodyHtmlConverter;
 import com.inkflow.crm.module.email.template.EmailLayout;
+import com.inkflow.crm.module.email.template.EmailPreviewSampleData;
 import com.inkflow.crm.module.email.template.TemplateVarSubstitutor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -26,34 +25,68 @@ public class TemplateEmailRenderer {
     public RenderedEmail render(EmailTemplate template, Map<String, String> variables, String studioName) {
         Map<String, String> resolvedVariables = enrichVariables(variables, studioName, template.getTriggerType());
 
-        String subject = TemplateVarSubstitutor.substitute(template.getSubject(), resolvedVariables);
-        String plainBody = TemplateVarSubstitutor.substitute(template.getBody(), resolvedVariables);
-        String htmlBody = EmailLayout.toHtml(plainBody);
+        return renderContent(
+                template.getSubject(),
+                template.getBody(),
+                resolvedVariables,
+                template.getCategory(),
+                studioName,
+                resolvedVariables.get(TemplateVar.ACTION_URL.getPlaceholder())
+        );
+    }
+
+    public RenderedEmail renderDraft(TriggerType triggerType, String subject, String body, String studioName) {
+        Map<String, String> resolvedVariables = enrichVariables(
+                sampleVariables(triggerType, studioName),
+                studioName,
+                triggerType
+        );
+
+        return renderContent(
+                subject,
+                body,
+                resolvedVariables,
+                triggerType.getCategory(),
+                studioName,
+                resolvedVariables.get(TemplateVar.ACTION_URL.getPlaceholder())
+        );
+    }
+
+    private RenderedEmail renderContent(
+            String subject,
+            String body,
+            Map<String, String> resolvedVariables,
+            TemplateCategory category,
+            String studioName,
+            String actionUrl) {
+
+        String resolvedSubject = TemplateVarSubstitutor.substitute(subject, resolvedVariables);
+        String resolvedBody = TemplateVarSubstitutor.substitute(body, resolvedVariables);
+        String htmlBody = EmailBodyHtmlConverter.toHtml(resolvedBody);
 
         EmailLayoutContext layout = new EmailLayoutContext(
                 inkflowProperties.getAppName(),
-                subject,
+                resolvedSubject,
                 htmlBody,
-                template.getCategory(),
+                category,
                 studioName,
-                resolvedVariables.get(TemplateVar.ACTION_URL.getPlaceholder()),
+                actionUrl,
                 null
         );
 
-        return new RenderedEmail(subject, EmailLayout.wrap(layout));
+        return new RenderedEmail(resolvedSubject, EmailLayout.wrap(layout));
     }
 
     public Map<String, String> sampleVariables(TriggerType triggerType) {
-        Map<String, String> variables = new HashMap<>();
-        Set<TemplateVar> available = triggerType.getProvidedVars();
+        return sampleVariables(triggerType, null);
+    }
 
-        for (TemplateVar variable : available) {
-            variables.put(variable.getPlaceholder(), "[" + variable.getPlaceholder() + "]");
-        }
-
-        variables.put(TemplateVar.APP_NAME.getPlaceholder(), inkflowProperties.getAppName());
-        variables.put(TemplateVar.STUDIO_NAME.getPlaceholder(), "[studio_name]");
-        return variables;
+    public Map<String, String> sampleVariables(TriggerType triggerType, String studioName) {
+        return EmailPreviewSampleData.forTrigger(
+                triggerType,
+                inkflowProperties.getAppName(),
+                studioName
+        );
     }
 
     private Map<String, String> enrichVariables(
@@ -61,7 +94,7 @@ public class TemplateEmailRenderer {
             String studioName,
             TriggerType triggerType) {
 
-        Map<String, String> variables = new HashMap<>();
+        Map<String, String> variables = new java.util.HashMap<>();
         if (provided != null) {
             variables.putAll(provided);
         }

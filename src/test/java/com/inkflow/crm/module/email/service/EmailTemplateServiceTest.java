@@ -33,6 +33,9 @@ class EmailTemplateServiceTest {
     @Mock
     private TemplateEmailRenderer templateEmailRenderer;
 
+    @Mock
+    private EmailTenantContextLoader tenantContextLoader;
+
     @InjectMocks
     private EmailTemplateService service;
 

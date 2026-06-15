@@ -67,6 +67,7 @@ public class RequestService {
                 .message(createRequest.getMessage())
                 .phone(createRequest.getPhone())
                 .instagram(createRequest.getInstagram())
+                .sketchUrl(createRequest.getSketchUrl())
                 .status(RequestStatus.NEW)
                 .build();
 
@@ -172,6 +173,12 @@ public class RequestService {
                 .createdAt(request.getCreatedAt())
                 .repliedAt(request.getRepliedAt())
                 .convertedAt(request.getConvertedAt())
+                .sketchUrl(request.getSketchUrl())
+                .idea(request.getIdea())
+                .city(request.getCity())
+                .tattooSize(request.getTattooSize())
+                .tattooTiming(request.getTattooTiming())
+                .isCoverUp(request.getIsCoverUp())
                 .build();
     }
 }

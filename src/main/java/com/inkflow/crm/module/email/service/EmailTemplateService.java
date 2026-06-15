@@ -5,7 +5,9 @@ import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.domain.entity.EmailTemplate;
 import com.inkflow.crm.domain.repository.EmailTemplateRepository;
 import com.inkflow.crm.module.email.dto.CreateEmailTemplateRequest;
+import com.inkflow.crm.module.email.dto.EmailTemplatePreviewRequest;
 import com.inkflow.crm.module.email.dto.EmailTemplateResponseDto;
+import com.inkflow.crm.module.email.dto.EmailTenantContext;
 import com.inkflow.crm.module.email.dto.UpdateEmailTemplateRequest;
 import com.inkflow.crm.module.email.enums.TemplateVar;
 import com.inkflow.crm.module.email.enums.TriggerType;
@@ -23,10 +25,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EmailTemplateService {
 
-    private static final String PREVIEW_STUDIO_NAME = "Studio Name";
-
     private final EmailTemplateRepository emailTemplateRepository;
     private final TemplateEmailRenderer templateEmailRenderer;
+    private final EmailTenantContextLoader tenantContextLoader;
 
     @Transactional(readOnly = true)
     public List<EmailTemplateResponseDto> list(UUID tenantId) {
@@ -107,11 +108,30 @@ public class EmailTemplateService {
     @Transactional(readOnly = true)
     public String preview(UUID tenantId, UUID templateId) {
         EmailTemplate template = requireTemplate(tenantId, templateId);
+        String studioName = previewStudioName(tenantId);
+
         return templateEmailRenderer.render(
                 template,
-                templateEmailRenderer.sampleVariables(template.getTriggerType()),
-                PREVIEW_STUDIO_NAME
+                templateEmailRenderer.sampleVariables(template.getTriggerType(), studioName),
+                studioName
         ).html();
+    }
+
+    @Transactional(readOnly = true)
+    public String previewDraft(UUID tenantId, EmailTemplatePreviewRequest request) {
+        String studioName = previewStudioName(tenantId);
+
+        return templateEmailRenderer.renderDraft(
+                request.triggerType(),
+                request.subject(),
+                request.body(),
+                studioName
+        ).html();
+    }
+
+    private String previewStudioName(UUID tenantId) {
+        EmailTenantContext context = tenantContextLoader.loadContext(tenantId);
+        return context.studioName();
     }
 
     @Transactional(readOnly = true)

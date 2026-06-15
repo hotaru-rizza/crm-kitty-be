@@ -7,6 +7,7 @@ import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.enums.SupportedLocale;
 import com.inkflow.crm.module.email.dto.EmailTenantContext;
+import com.inkflow.crm.module.email.dto.EmailComposeRequest;
 import com.inkflow.crm.module.email.dto.SendEmailRequest;
 import com.inkflow.crm.module.email.dto.SendEmailResultDto;
 import com.inkflow.crm.module.email.enums.TriggerType;
@@ -50,6 +51,16 @@ class BulkEmailServiceTest {
     }
 
     @Test
+    void renderPreview_substitutesSampleRecipientAndStudio() {
+        String html = bulkEmailService.renderPreview(TENANT_ID,
+                new EmailComposeRequest("Flash Day", "<p>Hi {client_name} from {studio_name}</p>", true));
+
+        assertThat(html).contains("Олена");
+        assertThat(html).contains("Ink Studio");
+        assertThat(html).contains("CRM");
+    }
+
+    @Test
     void sendBulk_skipsClientsWithoutEmail() {
         UUID withEmailId = UUID.randomUUID();
         UUID withoutEmailId = UUID.randomUUID();
@@ -66,7 +77,7 @@ class BulkEmailServiceTest {
                 .thenReturn(List.of(withEmail, withoutEmail));
 
         SendEmailResultDto result = bulkEmailService.sendBulk(TENANT_ID,
-                new SendEmailRequest(List.of(withEmailId, withoutEmailId), null, SUBJECT, BODY));
+                new SendEmailRequest(List.of(withEmailId, withoutEmailId), null, SUBJECT, BODY, false));
 
         assertThat(result.sent()).isEqualTo(1);
         assertThat(result.skipped()).isEqualTo(1);
@@ -87,7 +98,7 @@ class BulkEmailServiceTest {
                 .thenReturn(List.of(staff));
 
         SendEmailResultDto result = bulkEmailService.sendBulk(TENANT_ID,
-                new SendEmailRequest(null, List.of(staffId), SUBJECT, BODY));
+                new SendEmailRequest(null, List.of(staffId), SUBJECT, BODY, false));
 
         assertThat(result.sent()).isEqualTo(1);
         assertThat(result.skipped()).isZero();
@@ -95,5 +106,31 @@ class BulkEmailServiceTest {
                 eq(TENANT_ID), eq(TriggerType.MANUAL), eq("artist@test.com"), eq(staff.getFullName()),
                 eq(SUBJECT), anyString(), isNull());
         verifyNoInteractions(clientRepository);
+    }
+
+    @Test
+    void sendBulk_substitutesClientNamePerRecipient() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+
+        Client clientOne = Client.builder()
+                .id(id1).tenantId(TENANT_ID)
+                .email("one@test.com").firstName("Anna").lastName("One").build();
+        Client clientTwo = Client.builder()
+                .id(id2).tenantId(TENANT_ID)
+                .email("two@test.com").firstName("Bob").lastName("Two").build();
+
+        when(clientRepository.findByIdInAndTenantIdAndDeletedAtIsNull(List.of(id1, id2), TENANT_ID))
+                .thenReturn(List.of(clientOne, clientTwo));
+
+        bulkEmailService.sendBulk(TENANT_ID,
+                new SendEmailRequest(List.of(id1, id2), null, SUBJECT, "Привіт, {client_name}!", false));
+
+        verify(notificationDispatcher).enqueueManual(
+                eq(TENANT_ID), eq(TriggerType.MANUAL), eq("one@test.com"), eq(clientOne.getFullName()),
+                eq(SUBJECT), argThat(html -> html.contains("Anna One")), isNull());
+        verify(notificationDispatcher).enqueueManual(
+                eq(TENANT_ID), eq(TriggerType.MANUAL), eq("two@test.com"), eq(clientTwo.getFullName()),
+                eq(SUBJECT), argThat(html -> html.contains("Bob Two")), isNull());
     }
 }

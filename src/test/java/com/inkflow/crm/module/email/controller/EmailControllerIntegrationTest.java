@@ -10,6 +10,7 @@ import com.inkflow.crm.domain.repository.ServiceRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.module.email.dto.CreateEmailTemplateRequest;
+import com.inkflow.crm.module.email.dto.EmailComposeRequest;
 import com.inkflow.crm.module.email.dto.SendEmailRequest;
 import com.inkflow.crm.module.email.dto.UpdateEmailTemplateRequest;
 import com.inkflow.crm.module.email.enums.TriggerType;
@@ -41,6 +42,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -108,7 +110,8 @@ class EmailControllerIntegrationTest {
                 List.of(bundle.client().getId()),
                 null,
                 "Campaign",
-                "Hello clients"
+                "Hello clients",
+                false
         );
 
         mockMvc.perform(post("/emails/send")
@@ -131,7 +134,8 @@ class EmailControllerIntegrationTest {
                 List.of(client.getId()),
                 null,
                 "Studio update",
-                "We moved to a new location"
+                "We moved to a new location",
+                false
         );
 
         mockMvc.perform(post("/emails/send")
@@ -146,7 +150,7 @@ class EmailControllerIntegrationTest {
         verify(resendEmailClient, never()).send(anyString(), anyString(), anyString());
 
         var messages = emailMessageRepository.findFiltered(
-                bundle.tenant().getId(), TriggerType.MANUAL, null, null, PageRequest.of(0, 10)).getContent();
+                bundle.tenant().getId(), TriggerType.MANUAL, null, null, null, PageRequest.of(0, 10)).getContent();
         assertEquals(1, messages.size());
         assertEquals(client.getEmail(), messages.get(0).getRecipientEmail());
         assertEquals(TriggerType.MANUAL, messages.get(0).getTriggerType());
@@ -218,7 +222,8 @@ class EmailControllerIntegrationTest {
                 Collections.emptyList(),
                 null,
                 "Subject",
-                "Body"
+                "Body",
+                false
         );
 
         mockMvc.perform(post("/emails/send")
@@ -243,7 +248,8 @@ class EmailControllerIntegrationTest {
                 List.of(otherTenantClient.getId()),
                 null,
                 "Subject",
-                "Body"
+                "Body",
+                false
         );
 
         mockMvc.perform(post("/emails/send")
@@ -255,7 +261,7 @@ class EmailControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.skipped").value(1));
 
         assertEquals(0, emailMessageRepository.findFiltered(
-                tenantA.tenant().getId(), null, null, null, PageRequest.of(0, 10)).getTotalElements());
+                tenantA.tenant().getId(), null, null, null, null, PageRequest.of(0, 10)).getTotalElements());
     }
 
     @Test
@@ -282,5 +288,28 @@ class EmailControllerIntegrationTest {
             mockMvc.perform(delete("/emails/templates/" + builtinId).with(crmUser(bundle.owner())))
                     .andExpect(status().isForbidden());
         }
+    }
+
+    @Test
+    void preview_withOwnerAuth_returnsRenderedHtmlWithoutSending() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        EmailComposeRequest body = new EmailComposeRequest(
+                "Flash Day",
+                "<p>Hello {client_name} from {studio_name}</p>",
+                true);
+
+        mockMvc.perform(post("/emails/preview")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Олена")));
+
+        verify(resendEmailClient, never()).send(anyString(), anyString(), anyString());
+        assertEquals(0, emailMessageRepository.findFiltered(
+                bundle.tenant().getId(), TriggerType.MANUAL, null, null, null, PageRequest.of(0, 10)).getTotalElements());
     }
 }

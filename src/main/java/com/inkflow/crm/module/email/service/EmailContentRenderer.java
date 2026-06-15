@@ -6,8 +6,10 @@ import com.inkflow.crm.module.email.dto.NotificationCommand;
 import com.inkflow.crm.module.email.dto.RenderedEmail;
 import com.inkflow.crm.module.email.enums.TemplateKey;
 import com.inkflow.crm.module.email.enums.TemplateVar;
+import com.inkflow.crm.module.email.template.EmailBodyHtmlConverter;
 import com.inkflow.crm.module.email.template.EmailLayout;
 import com.inkflow.crm.module.email.template.RenderedContent;
+import com.inkflow.crm.module.email.template.EmailPreviewSampleData;
 import com.inkflow.crm.module.email.template.TemplateResolver;
 import com.inkflow.crm.module.email.template.TemplateVarSubstitutor;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +37,7 @@ public class EmailContentRenderer {
 
         String subject = TemplateVarSubstitutor.substitute(template.subject(), resolvedVariables);
         String plainBody = TemplateVarSubstitutor.substitute(template.body(), resolvedVariables);
-        String htmlBody = EmailLayout.toHtml(plainBody);
+        String htmlBody = EmailBodyHtmlConverter.toHtml(plainBody);
 
         EmailLayoutContext layout = new EmailLayoutContext(
                 inkflowProperties.getAppName(),
@@ -51,14 +53,11 @@ public class EmailContentRenderer {
     }
 
     public Map<String, String> sampleVariables(TemplateKey templateKey) {
-        Map<String, String> variables = new HashMap<>();
-
-        for (TemplateVar variable : templateKey.getAvailableVars()) {
-            variables.put(variable.getPlaceholder(), "[" + variable.getPlaceholder() + "]");
-        }
-
-        variables.put(TemplateVar.APP_NAME.getPlaceholder(), inkflowProperties.getAppName());
-        return variables;
+        return EmailPreviewSampleData.forVars(
+                templateKey.getAvailableVars(),
+                inkflowProperties.getAppName(),
+                null
+        );
     }
 
     private Map<String, String> enrichVariables(Map<String, String> provided, String studioName) {

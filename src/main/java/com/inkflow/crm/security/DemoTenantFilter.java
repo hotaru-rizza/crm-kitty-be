@@ -24,6 +24,7 @@ import java.util.UUID;
 public class DemoTenantFilter extends OncePerRequestFilter {
 
     private static final Set<String> WRITE_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
+    private static final Set<String> DEMO_ALLOWED_WRITE_PATHS = Set.of("/emails/preview");
 
     @Value("${demo.tenant-id:}")
     private String demoTenantIdStr;
@@ -41,6 +42,11 @@ public class DemoTenantFilter extends OncePerRequestFilter {
         }
 
         if (!WRITE_METHODS.contains(request.getMethod())) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        if (isDemoAllowedWritePath(request.getRequestURI())) {
             chain.doFilter(request, response);
             return;
         }
@@ -72,5 +78,12 @@ public class DemoTenantFilter extends OncePerRequestFilter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    private boolean isDemoAllowedWritePath(String requestUri) {
+        if (requestUri == null) {
+            return false;
+        }
+        return DEMO_ALLOWED_WRITE_PATHS.stream().anyMatch(requestUri::endsWith);
     }
 }

@@ -10,7 +10,8 @@ public record SendEmailRequest(
         List<UUID> clientIds,
         List<UUID> staffIds,
         @NotBlank String subject,
-        @NotBlank String body) {
+        @NotBlank String body,
+        boolean html) {
 
     public List<UUID> clientIds() {
         return clientIds == null ? List.of() : clientIds;

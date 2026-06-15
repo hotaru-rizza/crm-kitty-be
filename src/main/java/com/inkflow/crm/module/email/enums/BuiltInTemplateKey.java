@@ -14,8 +14,8 @@ public enum BuiltInTemplateKey {
     AFTERCARE(TriggerType.AFTER_BOOKING, 24 * 60, TemplateCategory.CLIENT_OP, false),
     REVIEW_REQUEST(TriggerType.AFTER_BOOKING, 48 * 60, TemplateCategory.CLIENT_OP, true),
     PREP_INSTRUCTIONS(TriggerType.BEFORE_BOOKING, 72 * 60, TemplateCategory.CLIENT_OP, true),
-    BIRTHDAY(TriggerType.CLIENT_BIRTHDAY, null, TemplateCategory.MARKETING, true),
-    WINBACK(TriggerType.CLIENT_INACTIVE, 30 * 24 * 60, TemplateCategory.MARKETING, true);
+    BIRTHDAY(TriggerType.CLIENT_BIRTHDAY, null, TemplateCategory.MARKETING, false),
+    WINBACK(TriggerType.CLIENT_INACTIVE, 30 * 24 * 60, TemplateCategory.MARKETING, false);
 
     private final TriggerType triggerType;
     private final Integer defaultOffsetMinutes;

@@ -139,6 +139,13 @@
             <version>${springdoc.version}</version>
         </dependency>
 
+        <!-- HTML sanitization for bulk email -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.18.1</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

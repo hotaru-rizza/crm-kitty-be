@@ -107,6 +107,9 @@ public class Request {
     @Column(name = "contact_value")
     private String contactValue;
 
+    @Column(name = "sketch_url")
+    private String sketchUrl;
+
     public void markAsReplied() {
         this.status = RequestStatus.REPLIED;
         this.repliedAt = Instant.now();

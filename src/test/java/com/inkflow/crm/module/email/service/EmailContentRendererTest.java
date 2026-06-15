@@ -57,6 +57,6 @@ class EmailContentRendererTest {
         Map<String, String> variables = contentRenderer.sampleVariables(TemplateKey.BOOKING_CONFIRMED);
 
         assertThat(variables.get(TemplateVar.APP_NAME.getPlaceholder())).isEqualTo("TestApp");
-        assertThat(variables.get(TemplateVar.CLIENT_NAME.getPlaceholder())).isEqualTo("[client_name]");
+        assertThat(variables.get(TemplateVar.CLIENT_NAME.getPlaceholder())).isEqualTo("Олена");
     }
 }
