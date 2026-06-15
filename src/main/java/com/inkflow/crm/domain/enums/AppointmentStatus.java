@@ -3,6 +3,8 @@ package com.inkflow.crm.domain.enums;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+
+// TODO: What is in progress ? How it's being maintained?
 @Getter
 @RequiredArgsConstructor
 public enum AppointmentStatus {

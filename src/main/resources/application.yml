@@ -20,7 +20,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
@@ -30,8 +30,9 @@ spring:
     open-in-view: false
 
   flyway:
-    enabled: false
+    enabled: true
     baseline-on-migrate: true
+    baseline-version: 9
     locations: classpath:db/migration
     validate-on-migrate: true
 
@@ -48,9 +49,19 @@ server:
     context-path: /api
 
 inkflow:
+  app-name: ${INKFLOW_APP_NAME:CRM}
   default-timezone: ${INKFLOW_DEFAULT_TIMEZONE:Europe/Kyiv}
   default-language: ${INKFLOW_DEFAULT_LANGUAGE:uk}
   default-start-page: ${INKFLOW_DEFAULT_START_PAGE:/calendar}
+  email:
+    scheduler:
+      fixed-rate-ms: ${INKFLOW_EMAIL_SCHEDULER_FIXED_RATE_MS:900000}
+      catch-up-max-hours: ${INKFLOW_EMAIL_SCHEDULER_CATCH_UP_MAX_HOURS:48}
+    outbox:
+      fixed-rate-ms: ${INKFLOW_EMAIL_OUTBOX_FIXED_RATE_MS:30000}
+      batch-size: ${INKFLOW_EMAIL_OUTBOX_BATCH_SIZE:20}
+      max-attempts: ${INKFLOW_EMAIL_OUTBOX_MAX_ATTEMPTS:5}
+      base-backoff-ms: ${INKFLOW_EMAIL_OUTBOX_BASE_BACKOFF_MS:60000}
   openapi:
     enabled: ${OPENAPI_ENABLED:false}
   cors:
@@ -72,8 +83,9 @@ demo:
 
 resend:
   api-key: ${RESEND_API_KEY}
+  api-url: ${RESEND_API_URL:https://api.resend.com/emails}
   from-email: ${RESEND_FROM_EMAIL}
-  from-name: ${RESEND_FROM_NAME:INKAT}
+  from-name: ${RESEND_FROM_NAME:${inkflow.app-name:CRM}}
 
 supabase:
   url: ${SUPABASE_URL:}
@@ -163,11 +175,13 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
 
   flyway:
-    enabled: false
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 9
 
 inkflow:
   openapi:
@@ -194,6 +208,7 @@ spring:
   flyway:
     enabled: ${FLYWAY_ENABLED:true}
     baseline-on-migrate: true
+    baseline-version: 9
     locations: classpath:db/migration
     validate-on-migrate: true
 

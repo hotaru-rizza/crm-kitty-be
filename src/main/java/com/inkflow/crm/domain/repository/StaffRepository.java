@@ -29,6 +29,9 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
 
     Optional<Staff> findByEmailAndTenantIdAndDeletedAtIsNull(String email, UUID tenantId);
 
+    @Query("SELECT s FROM Staff s WHERE s.id IN :ids AND s.tenantId = :tenantId AND s.deletedAt IS NULL")
+    List<Staff> findByIdInAndTenantIdAndDeletedAtIsNull(@Param("ids") List<UUID> ids, @Param("tenantId") UUID tenantId);
+
     @EntityGraph(attributePaths = {"locations"})
     Page<Staff> findByTenantIdAndRoleAndDeletedAtIsNull(UUID tenantId, UserRole role, Pageable pageable);
     boolean existsByEmailAndTenantIdAndDeletedAtIsNull(String email, UUID tenantId);

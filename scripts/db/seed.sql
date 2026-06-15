@@ -24,7 +24,7 @@ VALUES (
     'inkflow',
     'UAH',
     'Europe/Kyiv',
-    'ua', NOW(),
+    'uk', NOW(),
     NOW()
 ) ON CONFLICT (id) DO NOTHING;
 
@@ -778,6 +778,53 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
+-- EMAIL LOGS (mock history for Журнал tab)
+-- ============================================================
+INSERT INTO email_logs (id, tenant_id, recipient_email, recipient_name, subject, template_key, status, error_message, entity_id, sent_at)
+VALUES
+    ('f1000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001',
+     'iryna.savchenko@gmail.com', 'Ірина Савченко',
+     'Підтвердження запису в InkFlow Studio', 'BOOKING_CONFIRMED', 'SENT', NULL, NULL,
+     NOW() - INTERVAL '2 hours'),
+
+    ('f1000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001',
+     'kate.shevchenko@ukr.net', 'Катерина Шевченко',
+     'Нагадування про ваш візит завтра', 'BOOKING_REMINDER', 'SENT', NULL, NULL,
+     NOW() - INTERVAL '1 day'),
+
+    ('f1000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001',
+     'oleksii.p@gmail.com', 'Олексій Петренко',
+     'Догляд після тату — важливо!', 'AFTERCARE_INSTRUCTIONS', 'SENT', NULL, NULL,
+     NOW() - INTERVAL '3 days'),
+
+    ('f1000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000001',
+     'sofia.i@gmail.com', 'Софія Іваненко',
+     'Акція на новий рік — знижка 10%', 'BULK_EMAIL', 'SENT', NULL, NULL,
+     NOW() - INTERVAL '5 days'),
+
+    ('f1000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000001',
+     'andrii.lysenko@gmail.com', 'Андрій Лисенко',
+     'Ваш запис скасовано', 'BOOKING_CANCELED', 'SENT', NULL, NULL,
+     NOW() - INTERVAL '8 days'),
+
+    ('f1000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000001',
+     'yulia.p@gmail.com', 'Юлія Поліщук',
+     'Новий час вашого запису', 'BOOKING_RESCHEDULED', 'SENT', NULL, NULL,
+     NOW() - INTERVAL '12 days'),
+
+    ('f1000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000001',
+     'natalia.k@ukr.net', 'Наталія Кравченко',
+     'Нагадування про візит', 'BOOKING_REMINDER', 'FAILED', 'Mailbox unavailable', NULL,
+     NOW() - INTERVAL '15 days'),
+
+    ('f1000000-0000-0000-0000-000000000008', 'a0000000-0000-0000-0000-000000000001',
+     'iryna.savchenko@gmail.com', 'Ірина Савченко',
+     'Спеціальна пропозиція для постійних клієнтів', 'BULK_EMAIL', 'SENT', NULL, NULL,
+     NOW() - INTERVAL '20 days')
+
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
 -- DONE — підсумок
 -- ============================================================
 SELECT 'tenants'   AS tbl, COUNT(*) FROM tenants   WHERE id = 'a0000000-0000-0000-0000-000000000001'
@@ -787,4 +834,5 @@ UNION ALL SELECT 'services',   COUNT(*) FROM services   WHERE tenant_id = 'a0000
 UNION ALL SELECT 'clients',    COUNT(*) FROM clients    WHERE tenant_id = 'a0000000-0000-0000-0000-000000000001'
 UNION ALL SELECT 'projects',   COUNT(*) FROM projects   WHERE tenant_id = 'a0000000-0000-0000-0000-000000000001'
 UNION ALL SELECT 'appointments', COUNT(*) FROM appointments WHERE tenant_id = 'a0000000-0000-0000-0000-000000000001'
-UNION ALL SELECT 'transactions', COUNT(*) FROM transactions WHERE tenant_id = 'a0000000-0000-0000-0000-000000000001';
+UNION ALL SELECT 'transactions', COUNT(*) FROM transactions WHERE tenant_id = 'a0000000-0000-0000-0000-000000000001'
+UNION ALL SELECT 'email_logs',   COUNT(*) FROM email_logs   WHERE tenant_id = 'a0000000-0000-0000-0000-000000000001';

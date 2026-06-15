@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -49,6 +50,20 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
             @Param("status") ClientStatus status,
             @Param("artistId") UUID artistId,
             Pageable pageable);
+
+    @Query("SELECT c FROM Client c WHERE c.id IN :ids AND c.tenantId = :tenantId AND c.deletedAt IS NULL")
+    List<Client> findByIdInAndTenantIdAndDeletedAtIsNull(@Param("ids") List<UUID> ids, @Param("tenantId") UUID tenantId);
+
+    @Query("SELECT c FROM Client c WHERE c.tenantId = :tenantId AND c.deletedAt IS NULL " +
+           "AND c.birthDate IS NOT NULL AND c.birthDate = :birthDate")
+    List<Client> findByTenantIdAndBirthDateAndDeletedAtIsNull(
+            @Param("tenantId") UUID tenantId,
+            @Param("birthDate") java.time.LocalDate birthDate);
+
+    @Query("SELECT c FROM Client c WHERE c.tenantId = :tenantId AND c.deletedAt IS NULL " +
+           "AND c.email IS NOT NULL AND c.email <> '' " +
+           "AND c.totalVisits > 0 AND (c.lastVisit IS NULL OR c.lastVisit < :cutoff)")
+    List<Client> findInactiveClients(@Param("tenantId") UUID tenantId, @Param("cutoff") Instant cutoff);
 
     @Query("SELECT DISTINCT c FROM Client c " +
            "LEFT JOIN Project p ON p.client.id = c.id AND p.deletedAt IS NULL " +

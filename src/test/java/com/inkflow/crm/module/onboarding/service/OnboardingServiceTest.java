@@ -1,15 +1,17 @@
 package com.inkflow.crm.module.onboarding.service;
 
 import com.inkflow.crm.config.InkflowProperties;
-import com.inkflow.crm.domain.entity.CompanySettings;
+import com.inkflow.crm.domain.enums.AccountType;
+import com.inkflow.crm.domain.enums.SupportedCurrency;
+import com.inkflow.crm.domain.enums.SupportedLocale;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.enums.UserRole;
-import com.inkflow.crm.domain.repository.CompanySettingsRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
+import com.inkflow.crm.module.email.service.BuiltInTemplateSeeder;
 import com.inkflow.crm.module.onboarding.dto.OnboardingRequest;
 import com.inkflow.crm.module.onboarding.dto.OnboardingResponse;
 import com.inkflow.crm.module.subscription.service.SubscriptionService;
@@ -20,7 +22,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -45,7 +46,7 @@ class OnboardingServiceTest {
     private LocationRepository locationRepository;
 
     @Mock
-    private CompanySettingsRepository companySettingsRepository;
+    private BuiltInTemplateSeeder builtInTemplateSeeder;
 
     @Mock
     private SubscriptionService subscriptionService;
@@ -108,7 +109,7 @@ class OnboardingServiceTest {
             return staff;
         });
         when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(companySettingsRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inkflowProperties.getDefaultLanguage()).thenReturn("uk");
 
         OnboardingRequest request = new OnboardingRequest();
         request.setCompanyName("Ink Studio");
@@ -147,7 +148,7 @@ class OnboardingServiceTest {
             return staff;
         });
         when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(companySettingsRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inkflowProperties.getDefaultLanguage()).thenReturn("uk");
 
         OnboardingRequest request = new OnboardingRequest();
         request.setCompanyName("Big Studio");
@@ -159,40 +160,7 @@ class OnboardingServiceTest {
 
         ArgumentCaptor<Tenant> tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
         verify(tenantRepository).save(tenantCaptor.capture());
-        assertEquals("STUDIO", tenantCaptor.getValue().getAccountType());
-    }
-
-    @Test
-    void completeOnboarding_sanitizesSubdomainFromCompanyName() {
-        UUID supabaseUserId = UUID.randomUUID();
-
-        when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(supabaseUserId.toString()))
-                .thenReturn(Optional.empty());
-        when(inkflowProperties.getDefaultTimezone()).thenReturn("Europe/Kyiv");
-        when(tenantRepository.save(any(Tenant.class))).thenAnswer(invocation -> {
-            Tenant tenant = invocation.getArgument(0);
-            tenant.setId(UUID.randomUUID());
-            return tenant;
-        });
-        when(staffRepository.save(any(Staff.class))).thenAnswer(invocation -> {
-            Staff staff = invocation.getArgument(0);
-            staff.setId(UUID.randomUUID());
-            return staff;
-        });
-        when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(companySettingsRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        OnboardingRequest request = new OnboardingRequest();
-        request.setCompanyName("Ink & Flow Studio!!!");
-        request.setFirstName("Alex");
-        request.setLastName("Artist");
-        request.setTeamSize("solo");
-
-        onboardingService.completeOnboarding(supabaseUserId, "alex@test.com", request);
-
-        ArgumentCaptor<Tenant> tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
-        verify(tenantRepository).save(tenantCaptor.capture());
-        assertTrue(tenantCaptor.getValue().getSubdomain().startsWith("inkflowstudio-"));
+        assertEquals(AccountType.STUDIO, tenantCaptor.getValue().getAccountType());
     }
 
     @Test
@@ -242,7 +210,7 @@ class OnboardingServiceTest {
             return staff;
         });
         when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(companySettingsRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inkflowProperties.getDefaultLanguage()).thenReturn("uk");
 
         OnboardingRequest request = new OnboardingRequest();
         request.setCompanyName("Ink Studio");
@@ -278,7 +246,7 @@ class OnboardingServiceTest {
             return staff;
         });
         when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(companySettingsRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inkflowProperties.getDefaultLanguage()).thenReturn("uk");
 
         OnboardingRequest request = new OnboardingRequest();
         request.setCompanyName("Ink Studio");
@@ -298,12 +266,13 @@ class OnboardingServiceTest {
     }
 
     @Test
-    void completeOnboarding_createsCompanySettingsWithDefaults() {
+    void completeOnboarding_seedsBuiltInTemplates() {
         UUID supabaseUserId = UUID.randomUUID();
 
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(supabaseUserId.toString()))
                 .thenReturn(Optional.empty());
         when(inkflowProperties.getDefaultTimezone()).thenReturn("Europe/Kyiv");
+        when(inkflowProperties.getDefaultLanguage()).thenReturn("uk");
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(invocation -> {
             Tenant tenant = invocation.getArgument(0);
             tenant.setId(UUID.randomUUID());
@@ -315,7 +284,6 @@ class OnboardingServiceTest {
             return staff;
         });
         when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(companySettingsRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         OnboardingRequest request = new OnboardingRequest();
         request.setCompanyName("Ink Studio");
@@ -325,81 +293,7 @@ class OnboardingServiceTest {
 
         onboardingService.completeOnboarding(supabaseUserId, "alex@test.com", request);
 
-        ArgumentCaptor<CompanySettings> settingsCaptor = ArgumentCaptor.forClass(CompanySettings.class);
-        verify(companySettingsRepository).save(settingsCaptor.capture());
-        CompanySettings settings = settingsCaptor.getValue();
-        assertTrue(settings.getEmailReminders());
-        assertEquals(false, settings.getSmsReminders());
-        assertEquals(24, settings.getReminderHoursBefore());
-        assertEquals(LocalTime.of(10, 0), settings.getWorkingHoursStart());
-        assertEquals(LocalTime.of(20, 0), settings.getWorkingHoursEnd());
-        assertEquals(false, settings.getAllowOnlineBooking());
-    }
-
-    @Test
-    void shouldUseStudioSubdomainFallbackWhenCompanyNameHasNoAlphanumerics() {
-        UUID supabaseUserId = UUID.randomUUID();
-
-        when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(supabaseUserId.toString()))
-                .thenReturn(Optional.empty());
-        when(inkflowProperties.getDefaultTimezone()).thenReturn("Europe/Kyiv");
-        when(tenantRepository.save(any(Tenant.class))).thenAnswer(invocation -> {
-            Tenant tenant = invocation.getArgument(0);
-            tenant.setId(UUID.randomUUID());
-            return tenant;
-        });
-        when(staffRepository.save(any(Staff.class))).thenAnswer(invocation -> {
-            Staff staff = invocation.getArgument(0);
-            staff.setId(UUID.randomUUID());
-            return staff;
-        });
-        when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(companySettingsRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        OnboardingRequest request = new OnboardingRequest();
-        request.setCompanyName("!!! @@@");
-        request.setFirstName("Alex");
-        request.setLastName("Artist");
-        request.setTeamSize("solo");
-
-        onboardingService.completeOnboarding(supabaseUserId, "alex@test.com", request);
-
-        ArgumentCaptor<Tenant> tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
-        verify(tenantRepository).save(tenantCaptor.capture());
-        assertTrue(tenantCaptor.getValue().getSubdomain().startsWith("studio-"));
-    }
-
-    @Test
-    void shouldTruncateSubdomainBaseWhenCompanyNameExceedsTwentyChars() {
-        UUID supabaseUserId = UUID.randomUUID();
-
-        when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(supabaseUserId.toString()))
-                .thenReturn(Optional.empty());
-        when(inkflowProperties.getDefaultTimezone()).thenReturn("Europe/Kyiv");
-        when(tenantRepository.save(any(Tenant.class))).thenAnswer(invocation -> {
-            Tenant tenant = invocation.getArgument(0);
-            tenant.setId(UUID.randomUUID());
-            return tenant;
-        });
-        when(staffRepository.save(any(Staff.class))).thenAnswer(invocation -> {
-            Staff staff = invocation.getArgument(0);
-            staff.setId(UUID.randomUUID());
-            return staff;
-        });
-        when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(companySettingsRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        OnboardingRequest request = new OnboardingRequest();
-        request.setCompanyName("abcdefghijklmnopqrstuvwxyz");
-        request.setFirstName("Alex");
-        request.setLastName("Artist");
-        request.setTeamSize("solo");
-
-        onboardingService.completeOnboarding(supabaseUserId, "alex@test.com", request);
-
-        ArgumentCaptor<Tenant> tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
-        verify(tenantRepository).save(tenantCaptor.capture());
-        assertTrue(tenantCaptor.getValue().getSubdomain().startsWith("abcdefghijklmnopqrst-"));
+        verify(builtInTemplateSeeder).seedDefaultsForTenant(any(UUID.class));
     }
 
     @Test
@@ -420,7 +314,7 @@ class OnboardingServiceTest {
             return staff;
         });
         when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(companySettingsRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inkflowProperties.getDefaultLanguage()).thenReturn("uk");
 
         OnboardingRequest request = new OnboardingRequest();
         request.setCompanyName("Ink Studio");
@@ -432,7 +326,7 @@ class OnboardingServiceTest {
 
         ArgumentCaptor<Tenant> tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
         verify(tenantRepository).save(tenantCaptor.capture());
-        assertEquals("SOLO", tenantCaptor.getValue().getAccountType());
+        assertEquals(AccountType.SOLO, tenantCaptor.getValue().getAccountType());
     }
 
     @Test
@@ -453,7 +347,7 @@ class OnboardingServiceTest {
             return staff;
         });
         when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(companySettingsRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inkflowProperties.getDefaultLanguage()).thenReturn("uk");
 
         OnboardingRequest request = new OnboardingRequest();
         request.setCompanyName("Ink Studio");
@@ -467,9 +361,9 @@ class OnboardingServiceTest {
         verify(tenantRepository).save(tenantCaptor.capture());
         Tenant tenant = tenantCaptor.getValue();
         assertEquals("Ink Studio", tenant.getName());
-        assertEquals("UAH", tenant.getCurrency());
+        assertEquals(SupportedCurrency.UAH, tenant.getCurrency());
         assertEquals("Europe/Kyiv", tenant.getTimezone());
-        assertEquals("ua", tenant.getLanguage());
+        assertEquals(SupportedLocale.UK, tenant.getLanguage());
         assertTrue(tenant.getIsActive());
     }
 
@@ -499,7 +393,7 @@ class OnboardingServiceTest {
 
         verify(staffRepository, never()).save(any());
         verify(locationRepository, never()).save(any());
-        verify(companySettingsRepository, never()).save(any());
+        verify(builtInTemplateSeeder, never()).seedDefaultsForTenant(any());
         verify(subscriptionService, never()).createTrialForTenant(any());
     }
 }

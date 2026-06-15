@@ -25,4 +25,10 @@ public class RequestDto {
     private Instant createdAt;
     private Instant repliedAt;
     private Instant convertedAt;
+    private String sketchUrl;
+    private String idea;
+    private String city;
+    private String tattooSize;
+    private String tattooTiming;
+    private Boolean isCoverUp;
 }

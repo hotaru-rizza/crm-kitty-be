@@ -15,11 +15,13 @@ import java.util.List;
 @ConfigurationProperties(prefix = "inkflow")
 public class InkflowProperties {
 
+    private String appName = "CRM";
     private String defaultTimezone = "Europe/Kyiv";
     private String defaultLanguage = "uk";
     private String defaultStartPage = "/calendar";
     private Cors cors = new Cors();
     private Openapi openapi = new Openapi();
+    private Email email = new Email();
 
     public ZoneId defaultZoneId() {
         return ZoneId.of(defaultTimezone);
@@ -29,6 +31,33 @@ public class InkflowProperties {
     @Setter
     public static class Openapi {
         private boolean enabled = false;
+    }
+
+    @Getter
+    @Setter
+    public static class Email {
+        private Scheduler scheduler = new Scheduler();
+        private Outbox outbox = new Outbox();
+    }
+
+    @Getter
+    @Setter
+    public static class Scheduler {
+        private long fixedRateMs = 900_000;
+        private int catchUpMaxHours = 48;
+    }
+
+    @Getter
+    @Setter
+    public static class Outbox {
+        private long fixedRateMs = 30_000;
+        private int batchSize = 20;
+        private int maxAttempts = 5;
+        private long baseBackoffMs = 60_000;
+
+        public long backoffMsForAttempt(int attempt) {
+            return baseBackoffMs * (1L << Math.min(attempt - 1, 10));
+        }
     }
 
     @Getter

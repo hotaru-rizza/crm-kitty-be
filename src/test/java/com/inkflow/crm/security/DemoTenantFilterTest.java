@@ -86,6 +86,21 @@ class DemoTenantFilterTest {
     }
 
     @Test
+    void shouldAllowEmailPreviewForDemoTenant() throws Exception {
+        UUID demoTenantId = UUID.randomUUID();
+        ReflectionTestUtils.setField(filter, "demoTenantIdStr", demoTenantId.toString());
+        authenticate(demoTenantId);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/emails/preview");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        assertEquals(200, response.getStatus());
+    }
+
+    @Test
     void shouldBlockWriteRequestsForDemoTenant() throws Exception {
         UUID demoTenantId = UUID.randomUUID();
         ReflectionTestUtils.setField(filter, "demoTenantIdStr", demoTenantId.toString());

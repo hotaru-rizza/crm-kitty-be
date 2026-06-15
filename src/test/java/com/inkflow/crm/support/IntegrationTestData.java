@@ -6,9 +6,12 @@ import com.inkflow.crm.domain.entity.Service;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.enums.AccountStatus;
+import com.inkflow.crm.domain.enums.AccountType;
 import com.inkflow.crm.domain.enums.ClientStatus;
 import com.inkflow.crm.domain.enums.PricingType;
 import com.inkflow.crm.domain.enums.StaffStatus;
+import com.inkflow.crm.domain.enums.SupportedCurrency;
+import com.inkflow.crm.domain.enums.SupportedLocale;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
@@ -44,12 +47,11 @@ public final class IntegrationTestData {
 
         Tenant tenant = tenantRepository.save(Tenant.builder()
                 .name("Test Tenant " + suffix)
-                .subdomain("test-" + suffix.toString().substring(0, 8))
-                .currency("UAH")
+                .currency(SupportedCurrency.UAH)
                 .timezone("Europe/Kyiv")
                 .isActive(true)
-                .accountType("STUDIO")
-                .language("ua")
+                .accountType(AccountType.STUDIO)
+                .language(SupportedLocale.UK)
                 .build());
 
         Location location = locationRepository.save(Location.builder()

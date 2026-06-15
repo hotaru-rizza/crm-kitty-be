@@ -2,6 +2,7 @@ package com.inkflow.crm.module.email.service;
 
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.config.ResendConfig;
+import com.inkflow.crm.module.email.service.sending.ResendEmailClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +46,7 @@ class ResendEmailClientTest {
     void setUp() {
         when(resendConfig.getApiKey()).thenReturn("re_test_key");
         when(resendConfig.getFrom()).thenReturn("Ink Studio <noreply@inkat.test>");
+        when(resendConfig.getApiUrl()).thenReturn(RESEND_API_URL);
 
         resendEmailClient = new ResendEmailClient(resendConfig);
         ReflectionTestUtils.setField(resendEmailClient, "restTemplate", restTemplate);
