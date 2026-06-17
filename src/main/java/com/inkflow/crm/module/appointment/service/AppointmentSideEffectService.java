@@ -97,11 +97,7 @@ public class AppointmentSideEffectService {
         UUID tenantId = appointment.getTenantId();
         UUID appointmentId = appointment.getId();
 
-        if (newStatus == AppointmentStatus.CONFIRMED && previousStatus != AppointmentStatus.CONFIRMED) {
-            eventPublisher.publishEvent(new AppointmentConfirmedEvent(appointmentId, tenantId));
-        }
-
-        if (newStatus == AppointmentStatus.DONE && previousStatus != AppointmentStatus.DONE) {
+        if (newStatus == AppointmentStatus.COMPLETED && previousStatus != AppointmentStatus.COMPLETED) {
             eventPublisher.publishEvent(new AppointmentCompletedEvent(appointmentId, tenantId));
         }
 

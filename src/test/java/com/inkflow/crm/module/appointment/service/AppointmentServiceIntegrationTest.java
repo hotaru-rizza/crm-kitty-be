@@ -73,7 +73,7 @@ class AppointmentServiceIntegrationTest {
                 .location(tenantB.location())
                 .startTime(Instant.now().plus(2, ChronoUnit.DAYS))
                 .endTime(Instant.now().plus(2, ChronoUnit.DAYS).plus(1, ChronoUnit.HOURS))
-                .status(AppointmentStatus.NEW)
+                .status(AppointmentStatus.SCHEDULED)
                 .price(BigDecimal.valueOf(1000))
                 .prepayment(BigDecimal.ZERO)
                 .discount(BigDecimal.ZERO)
@@ -110,7 +110,7 @@ class AppointmentServiceIntegrationTest {
 
         Appointment saved = appointmentRepository.findById(created.getId()).orElseThrow();
         assertEquals(tenant.tenant().getId(), saved.getTenantId());
-        assertEquals(AppointmentStatus.NEW, saved.getStatus());
+        assertEquals(AppointmentStatus.SCHEDULED, saved.getStatus());
         assertEquals(tenant.client().getId(), saved.getClient().getId());
         assertEquals(tenant.owner().getId(), saved.getArtist().getId());
         assertEquals(BigDecimal.valueOf(1000), saved.getFinalPrice());

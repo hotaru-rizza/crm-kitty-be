@@ -39,7 +39,7 @@ public class UpdateAppointmentRequest {
     private String notes;
     private String sketchImage;
 
-    @Pattern(regexp = "^(new|confirmed|in_progress|done|cancelled)$", message = "Invalid status")
+    @Pattern(regexp = "^(scheduled|completed|cancelled|no_show)$", message = "Invalid status")
     private String status;
 
     private String cancellationReason;

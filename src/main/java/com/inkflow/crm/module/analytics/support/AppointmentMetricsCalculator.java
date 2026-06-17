@@ -22,7 +22,7 @@ public class AppointmentMetricsCalculator {
     }
 
     public int countCompleted(List<Appointment> appointments) {
-        return countByStatus(appointments, AppointmentStatus.DONE);
+        return countByStatus(appointments, AppointmentStatus.COMPLETED);
     }
 
     public int countCancelled(List<Appointment> appointments) {
@@ -101,7 +101,7 @@ public class AppointmentMetricsCalculator {
     }
 
     public boolean isDone(Appointment appointment) {
-        return appointment.getStatus() == AppointmentStatus.DONE;
+        return appointment.getStatus() == AppointmentStatus.COMPLETED;
     }
 
     public boolean isCancelled(Appointment appointment) {

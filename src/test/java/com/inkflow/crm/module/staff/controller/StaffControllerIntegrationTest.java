@@ -735,8 +735,8 @@ class StaffControllerIntegrationTest {
         TenantBundle bundle = seedTenant();
         Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
 
-        saveFutureAppointment(bundle, artist, AppointmentStatus.NEW);
-        saveFutureAppointment(bundle, artist, AppointmentStatus.CONFIRMED);
+        saveFutureAppointment(bundle, artist, AppointmentStatus.SCHEDULED);
+        saveFutureAppointment(bundle, artist, AppointmentStatus.SCHEDULED);
         saveFutureAppointment(bundle, artist, AppointmentStatus.CANCELLED);
 
         mockMvc.perform(get("/staff/{id}/future-appointments-count", artist.getId())

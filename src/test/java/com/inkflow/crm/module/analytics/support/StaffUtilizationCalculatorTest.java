@@ -71,7 +71,7 @@ class StaffUtilizationCalculatorTest {
     @Test
     void shouldSumBookedHoursForActiveAppointmentsOnly() {
         Appointment active = timedAppointment(
-                AppointmentStatus.CONFIRMED,
+                AppointmentStatus.SCHEDULED,
                 Instant.parse("2024-06-03T10:00:00Z"),
                 Instant.parse("2024-06-03T12:00:00Z"));
         Appointment cancelled = timedAppointment(

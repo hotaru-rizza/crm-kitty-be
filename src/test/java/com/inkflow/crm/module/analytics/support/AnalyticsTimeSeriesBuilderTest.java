@@ -39,7 +39,7 @@ class AnalyticsTimeSeriesBuilderTest {
         Instant to = instantOn("2024-06-04");
 
         Appointment dayOneDone = timedAppointment(
-                AppointmentStatus.DONE,
+                AppointmentStatus.COMPLETED,
                 instantAt("2024-06-03T11:00:00Z"),
                 BigDecimal.valueOf(500));
         Appointment dayOneCancelled = timedAppointment(
@@ -47,7 +47,7 @@ class AnalyticsTimeSeriesBuilderTest {
                 instantAt("2024-06-03T15:00:00Z"),
                 BigDecimal.valueOf(200));
         Appointment dayTwoDone = timedAppointment(
-                AppointmentStatus.DONE,
+                AppointmentStatus.COMPLETED,
                 instantAt("2024-06-04T10:00:00Z"),
                 BigDecimal.valueOf(300));
 
@@ -75,7 +75,7 @@ class AnalyticsTimeSeriesBuilderTest {
         Instant from = instantOn("2024-06-03");
         Instant to = instantOn("2024-06-09");
         Appointment done = timedAppointment(
-                AppointmentStatus.DONE,
+                AppointmentStatus.COMPLETED,
                 instantAt("2024-06-05T12:00:00Z"),
                 BigDecimal.valueOf(750));
 
@@ -96,7 +96,7 @@ class AnalyticsTimeSeriesBuilderTest {
         Instant from = instantOn("2024-06-01");
         Instant to = instantOn("2024-06-30");
         Appointment done = timedAppointment(
-                AppointmentStatus.DONE,
+                AppointmentStatus.COMPLETED,
                 instantAt("2024-06-15T09:00:00Z"),
                 BigDecimal.valueOf(1200));
 
@@ -160,7 +160,7 @@ class AnalyticsTimeSeriesBuilderTest {
     }
 
     private Appointment timedAppointmentWithClient(Instant startTime, Client client) {
-        Appointment appointment = timedAppointment(AppointmentStatus.DONE, startTime, BigDecimal.TEN);
+        Appointment appointment = timedAppointment(AppointmentStatus.COMPLETED, startTime, BigDecimal.TEN);
         appointment.setClient(client);
         return appointment;
     }

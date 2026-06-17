@@ -173,6 +173,10 @@ spring:
     activate:
       on-profile: dev
 
+  devtools:
+    restart:
+      enabled: false
+
   jpa:
     hibernate:
       ddl-auto: validate

@@ -57,7 +57,7 @@ class ServicePopularityAnalyticsServiceTest {
                 .costPrice(BigDecimal.valueOf(50))
                 .build();
         Appointment appointment = Appointment.builder()
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .finalPrice(BigDecimal.valueOf(300))
                 .service(service)
                 .build();
@@ -103,7 +103,7 @@ class ServicePopularityAnalyticsServiceTest {
         Instant to = Instant.parse("2026-06-30T23:59:59Z");
 
         Appointment withoutService = Appointment.builder()
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .finalPrice(BigDecimal.valueOf(150))
                 .build();
 

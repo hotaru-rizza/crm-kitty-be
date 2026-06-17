@@ -347,7 +347,7 @@ class MonobankServiceTest {
         Appointment appointment = Appointment.builder()
                 .id(appointmentId)
                 .tenantId(tenantId)
-                .status(AppointmentStatus.CONFIRMED)
+                .status(AppointmentStatus.SCHEDULED)
                 .build();
         MonobankInvoice oldPending = MonobankInvoice.builder()
                 .tenantId(tenantId)

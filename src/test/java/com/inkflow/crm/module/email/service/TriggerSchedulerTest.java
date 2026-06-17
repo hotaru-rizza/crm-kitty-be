@@ -56,7 +56,7 @@ class TriggerSchedulerTest {
         Appointment appointment = Appointment.builder()
                 .id(UUID.randomUUID())
                 .tenantId(tenantId)
-                .status(AppointmentStatus.CONFIRMED)
+                .status(AppointmentStatus.SCHEDULED)
                 .client(Client.builder().firstName("Anna").email("anna@test.com").build())
                 .startTime(Instant.now().plusSeconds(86400))
                 .build();

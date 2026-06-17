@@ -155,7 +155,7 @@ class StaffLifecycleServiceTest {
                 .accountStatus(AccountStatus.ACTIVE)
                 .build();
         Appointment upcoming = Appointment.builder()
-                .status(AppointmentStatus.CONFIRMED)
+                .status(AppointmentStatus.SCHEDULED)
                 .build();
 
         when(staffLookup.requireStaff(staffId)).thenReturn(staff);

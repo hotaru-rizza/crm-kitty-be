@@ -163,7 +163,7 @@ class PaymentServiceTest {
         return Appointment.builder()
                 .id(id)
                 .tenantId(tenantId)
-                .status(AppointmentStatus.CONFIRMED)
+                .status(AppointmentStatus.SCHEDULED)
                 .price(BigDecimal.valueOf(1000))
                 .discount(BigDecimal.ZERO)
                 .finalPrice(BigDecimal.valueOf(1000))

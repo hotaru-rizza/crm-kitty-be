@@ -305,7 +305,7 @@ class PaymentProcessingServiceTest {
         return Appointment.builder()
                 .id(id)
                 .tenantId(tenantId)
-                .status(AppointmentStatus.CONFIRMED)
+                .status(AppointmentStatus.SCHEDULED)
                 .prepayment(BigDecimal.ZERO)
                 .discount(BigDecimal.ZERO)
                 .finalPrice(BigDecimal.valueOf(1000))

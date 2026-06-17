@@ -240,7 +240,7 @@ public class AppointmentService {
                 .project(project)
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
-                .status(AppointmentStatus.NEW)
+                .status(AppointmentStatus.SCHEDULED)
                 .price(request.getPrice())
                 .prepayment(prepayment)
                 .discount(discount)
@@ -306,8 +306,8 @@ public class AppointmentService {
             appointment.cancel(request.getCancellationReason());
             return;
         }
-        if (newStatus == AppointmentStatus.DONE) {
-            appointment.markAsDone();
+        if (newStatus == AppointmentStatus.COMPLETED) {
+            appointment.markAsCompleted();
             return;
         }
         appointment.setStatus(newStatus);

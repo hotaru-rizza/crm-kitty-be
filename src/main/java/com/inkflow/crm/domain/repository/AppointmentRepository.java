@@ -48,10 +48,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
     @Query("SELECT a FROM Appointment a WHERE a.tenantId = :tenantId AND a.location.id = :locationId AND a.startTime >= :from AND a.startTime < :to AND a.deletedAt IS NULL ORDER BY a.startTime")
     List<Appointment> findByTenantIdAndLocationIdAndDateRange(@Param("tenantId") UUID tenantId, @Param("locationId") UUID locationId, @Param("from") Instant from, @Param("to") Instant to);
 
-    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM Appointment a WHERE a.artist.id = :artistId AND a.status NOT IN (com.inkflow.crm.domain.enums.AppointmentStatus.CANCELLED, com.inkflow.crm.domain.enums.AppointmentStatus.DONE) AND a.deletedAt IS NULL AND ((a.startTime <= :startTime AND a.endTime > :startTime) OR (a.startTime < :endTime AND a.endTime >= :endTime) OR (a.startTime >= :startTime AND a.endTime <= :endTime))")
+    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM Appointment a WHERE a.artist.id = :artistId AND a.status NOT IN (com.inkflow.crm.domain.enums.AppointmentStatus.CANCELLED, com.inkflow.crm.domain.enums.AppointmentStatus.COMPLETED, com.inkflow.crm.domain.enums.AppointmentStatus.NO_SHOW) AND a.deletedAt IS NULL AND ((a.startTime <= :startTime AND a.endTime > :startTime) OR (a.startTime < :endTime AND a.endTime >= :endTime) OR (a.startTime >= :startTime AND a.endTime <= :endTime))")
     boolean existsConflictingAppointment(@Param("artistId") UUID artistId, @Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
 
-    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM Appointment a WHERE a.artist.id = :artistId AND a.id != :excludeId AND a.status NOT IN (com.inkflow.crm.domain.enums.AppointmentStatus.CANCELLED, com.inkflow.crm.domain.enums.AppointmentStatus.DONE) AND a.deletedAt IS NULL AND ((a.startTime <= :startTime AND a.endTime > :startTime) OR (a.startTime < :endTime AND a.endTime >= :endTime) OR (a.startTime >= :startTime AND a.endTime <= :endTime))")
+    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM Appointment a WHERE a.artist.id = :artistId AND a.id != :excludeId AND a.status NOT IN (com.inkflow.crm.domain.enums.AppointmentStatus.CANCELLED, com.inkflow.crm.domain.enums.AppointmentStatus.COMPLETED, com.inkflow.crm.domain.enums.AppointmentStatus.NO_SHOW) AND a.deletedAt IS NULL AND ((a.startTime <= :startTime AND a.endTime > :startTime) OR (a.startTime < :endTime AND a.endTime >= :endTime) OR (a.startTime >= :startTime AND a.endTime <= :endTime))")
     boolean existsConflictingAppointmentExcluding(@Param("artistId") UUID artistId, @Param("startTime") Instant startTime, @Param("endTime") Instant endTime, @Param("excludeId") UUID excludeId);
 
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
@@ -76,6 +76,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
 
     @EntityGraph(attributePaths = {"client", "artist"})
     @Query("SELECT a FROM Appointment a WHERE a.startTime >= :from AND a.startTime < :to " +
-           "AND a.status IN (com.inkflow.crm.domain.enums.AppointmentStatus.NEW, com.inkflow.crm.domain.enums.AppointmentStatus.CONFIRMED) AND a.deletedAt IS NULL")
+           "AND a.status = com.inkflow.crm.domain.enums.AppointmentStatus.SCHEDULED AND a.deletedAt IS NULL")
     List<Appointment> findUpcomingForReminders(@Param("from") Instant from, @Param("to") Instant to);
 }

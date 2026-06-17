@@ -56,7 +56,7 @@ class AppointmentAnalyticsQueryServiceTest {
         UUID clientId = UUID.randomUUID();
         Appointment appointment = Appointment.builder()
                 .tenantId(tenantId)
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .startTime(Instant.parse("2026-06-10T10:00:00Z"))
                 .finalPrice(BigDecimal.valueOf(500))
                 .client(Client.builder().id(clientId).build())
@@ -67,8 +67,7 @@ class AppointmentAnalyticsQueryServiceTest {
         when(metrics.countTotal(appointments)).thenReturn(1);
         when(metrics.countCompleted(appointments)).thenReturn(1);
         when(metrics.countCancelled(appointments)).thenReturn(0);
-        when(metrics.countByStatus(appointments, AppointmentStatus.NEW)).thenReturn(0);
-        when(metrics.countByStatus(appointments, AppointmentStatus.CONFIRMED)).thenReturn(0);
+        when(metrics.countByStatus(appointments, AppointmentStatus.SCHEDULED)).thenReturn(0);
         when(metrics.sumDoneRevenue(appointments)).thenReturn(BigDecimal.valueOf(500));
         when(metrics.calculateAvgCheck(BigDecimal.valueOf(500), 1)).thenReturn(BigDecimal.valueOf(500));
         when(metrics.hasClient(appointment)).thenReturn(true);
@@ -92,7 +91,7 @@ class AppointmentAnalyticsQueryServiceTest {
         Instant to = Instant.parse("2026-06-30T23:59:59Z");
 
         Appointment withoutClient = Appointment.builder()
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .startTime(Instant.parse("2026-06-10T10:00:00Z"))
                 .finalPrice(BigDecimal.valueOf(100))
                 .build();
@@ -102,8 +101,7 @@ class AppointmentAnalyticsQueryServiceTest {
         when(metrics.countTotal(appointments)).thenReturn(1);
         when(metrics.countCompleted(appointments)).thenReturn(1);
         when(metrics.countCancelled(appointments)).thenReturn(0);
-        when(metrics.countByStatus(appointments, AppointmentStatus.NEW)).thenReturn(0);
-        when(metrics.countByStatus(appointments, AppointmentStatus.CONFIRMED)).thenReturn(0);
+        when(metrics.countByStatus(appointments, AppointmentStatus.SCHEDULED)).thenReturn(0);
         when(metrics.sumDoneRevenue(appointments)).thenReturn(BigDecimal.valueOf(100));
         when(metrics.calculateAvgCheck(BigDecimal.valueOf(100), 1)).thenReturn(BigDecimal.valueOf(100));
         when(metrics.hasClient(withoutClient)).thenReturn(false);
@@ -124,13 +122,13 @@ class AppointmentAnalyticsQueryServiceTest {
         UUID clientId = UUID.randomUUID();
 
         Appointment laterVisit = Appointment.builder()
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .startTime(Instant.parse("2026-06-20T10:00:00Z"))
                 .finalPrice(BigDecimal.valueOf(200))
                 .client(Client.builder().id(clientId).build())
                 .build();
         Appointment firstVisit = Appointment.builder()
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .startTime(Instant.parse("2026-06-05T10:00:00Z"))
                 .finalPrice(BigDecimal.valueOf(100))
                 .client(Client.builder().id(clientId).build())
@@ -153,7 +151,7 @@ class AppointmentAnalyticsQueryServiceTest {
         Instant to = Instant.parse("2026-06-30T23:59:59Z");
 
         Appointment priorVisit = Appointment.builder()
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .startTime(Instant.parse("2026-05-15T10:00:00Z"))
                 .finalPrice(BigDecimal.valueOf(150))
                 .client(Client.builder().id(UUID.randomUUID()).build())
@@ -176,7 +174,7 @@ class AppointmentAnalyticsQueryServiceTest {
         Instant to = Instant.parse("2026-06-30T23:59:59Z");
 
         Appointment atRangeEnd = Appointment.builder()
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .startTime(to)
                 .finalPrice(BigDecimal.valueOf(200))
                 .client(Client.builder().id(UUID.randomUUID()).build())
@@ -191,7 +189,7 @@ class AppointmentAnalyticsQueryServiceTest {
     }
 
     @Test
-    void shouldCountPendingAsNewAndConfirmedStatuses() {
+    void shouldCountScheduledAsPendingAppointments() {
         UUID tenantId = UUID.randomUUID();
         authenticate(tenantId);
 
@@ -203,8 +201,7 @@ class AppointmentAnalyticsQueryServiceTest {
         when(metrics.countTotal(appointments)).thenReturn(0);
         when(metrics.countCompleted(appointments)).thenReturn(0);
         when(metrics.countCancelled(appointments)).thenReturn(0);
-        when(metrics.countByStatus(appointments, AppointmentStatus.NEW)).thenReturn(2);
-        when(metrics.countByStatus(appointments, AppointmentStatus.CONFIRMED)).thenReturn(3);
+        when(metrics.countByStatus(appointments, AppointmentStatus.SCHEDULED)).thenReturn(5);
         when(metrics.sumDoneRevenue(appointments)).thenReturn(BigDecimal.ZERO);
         when(metrics.calculateAvgCheck(BigDecimal.ZERO, 0)).thenReturn(BigDecimal.ZERO);
         when(timeSeriesBuilder.buildAppointmentSeries(appointments, from, to, "day")).thenReturn(List.of());
@@ -219,8 +216,7 @@ class AppointmentAnalyticsQueryServiceTest {
         when(metrics.countTotal(appointments)).thenReturn(appointments.size());
         when(metrics.countCompleted(appointments)).thenReturn(0);
         when(metrics.countCancelled(appointments)).thenReturn(0);
-        when(metrics.countByStatus(appointments, AppointmentStatus.NEW)).thenReturn(0);
-        when(metrics.countByStatus(appointments, AppointmentStatus.CONFIRMED)).thenReturn(0);
+        when(metrics.countByStatus(appointments, AppointmentStatus.SCHEDULED)).thenReturn(0);
         when(metrics.sumDoneRevenue(appointments)).thenReturn(BigDecimal.ZERO);
         when(metrics.calculateAvgCheck(BigDecimal.ZERO, 0)).thenReturn(BigDecimal.ZERO);
         when(metrics.hasClient(org.mockito.ArgumentMatchers.any())).thenReturn(true);
