@@ -7,9 +7,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum ProjectStatus {
     IN_PROGRESS("in_progress", "Work in progress"),
-    ON_HOLD("on_hold", "Temporarily paused"),
     COMPLETED("completed", "Project completed"),
-    CANCELLED("cancelled", "Project cancelled");
+    ARCHIVED("archived", "Archived project");
 
     private final String value;
     private final String description;
@@ -24,6 +23,6 @@ public enum ProjectStatus {
     }
 
     public boolean isActive() {
-        return this == IN_PROGRESS || this == ON_HOLD;
+        return this == IN_PROGRESS;
     }
 }

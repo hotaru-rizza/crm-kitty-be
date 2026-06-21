@@ -26,4 +26,8 @@ public class BusinessRuleException extends ApiException {
         return new BusinessRuleException(ErrorCode.INVALID_STATUS_TRANSITION,
                 String.format("Cannot transition from '%s' to '%s'", from, to));
     }
+
+    public static BusinessRuleException projectDeleteRequiresArchive() {
+        return new BusinessRuleException("Only archived projects can be deleted");
+    }
 }

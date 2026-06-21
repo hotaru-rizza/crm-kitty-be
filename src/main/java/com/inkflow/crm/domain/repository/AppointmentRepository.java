@@ -35,6 +35,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     Optional<Appointment> findByIdAndDeletedAtIsNull(UUID id);
 
+    List<Appointment> findByProjectIdAndDeletedAtIsNull(UUID projectId);
+
 
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     @Query("SELECT a FROM Appointment a WHERE a.tenantId = :tenantId AND a.startTime >= :from AND a.startTime < :to AND a.deletedAt IS NULL ORDER BY a.startTime")

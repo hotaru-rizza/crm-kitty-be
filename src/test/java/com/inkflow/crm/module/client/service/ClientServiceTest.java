@@ -22,6 +22,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -145,7 +147,7 @@ class ClientServiceTest {
 
         when(rolePermissionService.hasPermission(tenantId, UserRole.ARTIST, Permission.CLIENTS_VIEW_ALL.getValue()))
                 .thenReturn(false);
-        when(clientRepository.findWithFilters(eq(tenantId), eq(null), eq(null), eq(artistId), any()))
+        when(clientRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         when(clientMapper.toDtoList(any())).thenReturn(List.of());
 
@@ -153,9 +155,9 @@ class ClientServiceTest {
         pageRequest.setPage(0);
         pageRequest.setSize(20);
 
-        clientService.getAllClients(pageRequest, null, null, false, false);
+        clientService.getAllClients(pageRequest, new com.inkflow.crm.module.client.dto.ClientFilterRequest());
 
-        verify(clientRepository).findWithFilters(eq(tenantId), eq(null), eq(null), eq(artistId), any());
+        verify(clientRepository).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test

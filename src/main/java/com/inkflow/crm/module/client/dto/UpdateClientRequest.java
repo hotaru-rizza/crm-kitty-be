@@ -29,6 +29,8 @@ public class UpdateClientRequest {
     private LocalDate birthDate;
     private String instagram;
     private String telegram;
+    private String whatsapp;
+    private String facebook;
     private List<String> tags;
     private List<String> medicalConditions;
     private String notes;

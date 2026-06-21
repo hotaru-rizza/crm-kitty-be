@@ -3,6 +3,7 @@ package com.inkflow.crm.module.project.service;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.GalleryPhoto;
@@ -14,6 +15,7 @@ import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ProjectRepository;
+import com.inkflow.crm.domain.repository.ProjectSpecifications;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.project.dto.*;
 import com.inkflow.crm.module.project.mapper.ProjectMapper;
@@ -22,6 +24,7 @@ import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,15 +46,8 @@ public class ProjectService {
     private final ProjectMapper projectMapper;
 
     @Transactional(readOnly = true)
-    public PageResult<ProjectDto> getAllProjects(
-            PageRequest pageRequest,
-            String status,
-            List<UUID> artistIds,
-            UUID clientId,
-            String search,
-            Boolean onlyMine,
-            UUID locationId) {
-        Page<Project> page = getProjectsPage(pageRequest, status, artistIds, clientId, search, onlyMine, locationId);
+    public PageResult<ProjectDto> getAllProjects(PageRequest pageRequest, ProjectFilterRequest filter, UUID locationId) {
+        Page<Project> page = getProjectsPage(pageRequest, filter, locationId);
         List<ProjectDto> data = page.getContent().stream().map(projectMapper::toListDto).toList();
         return new PageResult<>(data, PaginationDto.from(page));
     }
@@ -111,6 +107,10 @@ public class ProjectService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Project project = requireProject(tenantId, id);
 
+        if (project.getStatus() != ProjectStatus.ARCHIVED) {
+            throw BusinessRuleException.projectDeleteRequiresArchive();
+        }
+
         project.softDelete();
         projectRepository.save(project);
         log.info("Project deleted: tenantId={} projectId={}", tenantId, id);
@@ -147,26 +147,42 @@ public class ProjectService {
         log.info("Project photo deleted: tenantId={} projectId={} photoId={}", tenantId, projectId, photoId);
     }
 
-    private Page<Project> getProjectsPage(
-            PageRequest pageRequest,
-            String status,
-            List<UUID> artistIds,
-            UUID clientId,
-            String search,
-            Boolean onlyMine,
-            UUID locationId) {
+    private Page<Project> getProjectsPage(PageRequest pageRequest, ProjectFilterRequest filter, UUID locationId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        ProjectStatus projectStatus = status != null ? ProjectStatus.fromValue(status) : null;
+        ProjectFilterRequest effectiveFilter = filter != null ? filter : new ProjectFilterRequest();
 
         if (!rolePermissionService.hasPermission(tenantId, SecurityUtils.getCurrentUserRole(), Permission.PROJECTS_VIEW_ALL.getValue())) {
-            onlyMine = true;
+            effectiveFilter.setOnlyMine(true);
         }
 
-        List<UUID> effectiveArtistIds = Boolean.TRUE.equals(onlyMine)
-                ? List.of(SecurityUtils.getCurrentUserId())
-                : artistIds;
+        ProjectStatus projectStatus = effectiveFilter.getStatus() != null
+                ? ProjectStatus.fromValue(effectiveFilter.getStatus())
+                : null;
 
-        return projectRepository.findWithFilters(tenantId, projectStatus, effectiveArtistIds, clientId, search, locationId, pageRequest.toPageable());
+        List<UUID> effectiveArtistIds = Boolean.TRUE.equals(effectiveFilter.getOnlyMine())
+                ? List.of(SecurityUtils.getCurrentUserId())
+                : effectiveFilter.getArtistId();
+
+        Specification<Project> spec = Specification
+                .where(ProjectSpecifications.belongsToTenant(tenantId))
+                .and(ProjectSpecifications.notDeleted())
+                .and(ProjectSpecifications.excludeArchivedWhenNoStatusFilter(effectiveFilter.getStatus()))
+                .and(ProjectSpecifications.statusIs(projectStatus))
+                .and(ProjectSpecifications.artistIn(effectiveArtistIds))
+                .and(ProjectSpecifications.clientIs(effectiveFilter.getClientId()))
+                .and(ProjectSpecifications.searchLike(effectiveFilter.getSearch()))
+                .and(ProjectSpecifications.locationIs(locationId))
+                .and(ProjectSpecifications.budgetBetween(effectiveFilter.getEstimatedCostMin(), effectiveFilter.getEstimatedCostMax()))
+                .and(ProjectSpecifications.paidPercentBetween(effectiveFilter.getPaidPercentMin(), effectiveFilter.getPaidPercentMax()))
+                .and(ProjectSpecifications.totalSessionsBetween(effectiveFilter.getTotalSessionsMin(), effectiveFilter.getTotalSessionsMax()))
+                .and(ProjectSpecifications.completedSessionsBetween(effectiveFilter.getCompletedSessionsMin(), effectiveFilter.getCompletedSessionsMax()))
+                .and(ProjectSpecifications.createdBetween(effectiveFilter.getCreatedAtFrom(), effectiveFilter.getCreatedAtTo()))
+                .and(ProjectSpecifications.updatedBetween(effectiveFilter.getUpdatedAtFrom(), effectiveFilter.getUpdatedAtTo()))
+                .and(ProjectSpecifications.hasSketch(effectiveFilter.getHasSketch()))
+                .and(ProjectSpecifications.hasPhotos(effectiveFilter.getHasPhotos()))
+                .and(ProjectSpecifications.hasDebt(effectiveFilter.getHasDebt()));
+
+        return projectRepository.findAll(spec, pageRequest.toPageable());
     }
 
     private Project requireProject(UUID tenantId, UUID id) {

@@ -15,6 +15,7 @@ import com.inkflow.crm.module.payment.dto.ProcessPaymentRequest;
 import com.inkflow.crm.module.payment.mapper.PaymentMapper;
 import com.inkflow.crm.module.payment.support.AppointmentPaymentSummaryCalculator;
 import com.inkflow.crm.module.payment.support.ReceiptNumberGenerator;
+import com.inkflow.crm.module.project.service.ProjectProgressSyncService;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ public class PaymentProcessingService {
     private final PaymentMapper paymentMapper;
     private final AppointmentPaymentSummaryCalculator summaryCalculator;
     private final ReceiptNumberGenerator receiptNumberGenerator;
+    private final ProjectProgressSyncService projectProgressSyncService;
 
     @Transactional
     public PaymentDto processPayment(ProcessPaymentRequest request) {
@@ -64,6 +66,7 @@ public class PaymentProcessingService {
 
         recordTipIfPresent(request, appointment, paymentMethod, processedBy, tenantId);
         applyDepositIfNeeded(request, appointment, paymentType);
+        syncLinkedProjectProgress(appointment);
 
         return paymentMapper.toDto(transaction);
     }
@@ -201,5 +204,12 @@ public class PaymentProcessingService {
             return String.format("%s: %s - %s", typeLabel, serviceName, request.getDescription());
         }
         return String.format("%s: %s", typeLabel, serviceName);
+    }
+
+    private void syncLinkedProjectProgress(Appointment appointment) {
+        if (appointment.getProject() == null) {
+            return;
+        }
+        projectProgressSyncService.syncProject(appointment.getProject().getId());
     }
 }

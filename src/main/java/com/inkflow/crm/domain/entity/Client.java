@@ -51,6 +51,12 @@ public class Client extends BaseEntity {
     @Column(name = "telegram")
     private String telegram;
 
+    @Column(name = "whatsapp")
+    private String whatsapp;
+
+    @Column(name = "facebook")
+    private String facebook;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "client_tags", joinColumns = @JoinColumn(name = "client_id"))
     @Column(name = "tag")
@@ -71,6 +77,7 @@ public class Client extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
+    @Builder.Default
     private ClientStatus status = ClientStatus.ACTIVE;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -83,13 +90,23 @@ public class Client extends BaseEntity {
     @Column(name = "last_visit")
     private Instant lastVisit;
 
+    @Column(name = "first_visit")
+    private Instant firstVisit;
+
+    @Column(name = "balance", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal balance = BigDecimal.ZERO;
+
     @Column(name = "total_visits", nullable = false)
+    @Builder.Default
     private Integer totalVisits = 0;
 
     @Column(name = "cancelled_visits", nullable = false)
+    @Builder.Default
     private Integer cancelledVisits = 0;
 
     @Column(name = "ltv", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
     private BigDecimal ltv = BigDecimal.ZERO;
 
     @OneToMany(mappedBy = "client")
@@ -119,5 +136,9 @@ public class Client extends BaseEntity {
 
     public void addToLtv(BigDecimal amount) {
         this.ltv = this.ltv.add(amount);
+    }
+
+    public void adjustBalance(BigDecimal amount) {
+        this.balance = this.balance.add(amount);
     }
 }

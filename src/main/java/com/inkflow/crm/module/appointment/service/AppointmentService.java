@@ -24,6 +24,7 @@ import com.inkflow.crm.domain.repository.LeaveRequestRepository;
 import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.module.appointment.dto.*;
 import com.inkflow.crm.module.appointment.mapper.AppointmentMapper;
+import com.inkflow.crm.module.project.service.ProjectProgressSyncService;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +52,7 @@ public class AppointmentService {
     private final AppointmentSideEffectService appointmentSideEffectService;
     private final AppointmentEntityResolver entityResolver;
     private final AppointmentMapper appointmentMapper;
+    private final ProjectProgressSyncService projectProgressSyncService;
 
     @Transactional(readOnly = true)
     public PageResult<AppointmentDto> getAllAppointments(PageRequest pageRequest, AppointmentFilterRequest filter) {
@@ -112,6 +114,7 @@ public class AppointmentService {
     public AppointmentDto updateAppointment(UUID id, UpdateAppointmentRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = entityResolver.requireAppointment(tenantId, id);
+        UUID previousProjectId = appointment.getProject() != null ? appointment.getProject().getId() : null;
 
         applyRelationUpdates(tenantId, appointment, request);
 
@@ -130,6 +133,7 @@ public class AppointmentService {
                 appointment,
                 new AppointmentUpdateContext(previousStatus, request.getStatus(), startTimeChanged)
         );
+        syncLinkedProjects(previousProjectId, appointment.getProject() != null ? appointment.getProject().getId() : null);
         return appointmentMapper.toDto(appointment);
     }
 
@@ -137,10 +141,15 @@ public class AppointmentService {
     public void deleteAppointment(UUID id) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = entityResolver.requireAppointment(tenantId, id);
+        UUID projectId = appointment.getProject() != null ? appointment.getProject().getId() : null;
 
         appointmentSideEffectService.afterDelete(appointment, id);
         appointment.softDelete();
         appointmentRepository.save(appointment);
+
+        if (projectId != null) {
+            projectProgressSyncService.syncProject(projectId);
+        }
 
         log.info("Appointment deleted: tenantId={} appointmentId={}", tenantId, id);
     }
@@ -311,5 +320,14 @@ public class AppointmentService {
             return;
         }
         appointment.setStatus(newStatus);
+    }
+
+    private void syncLinkedProjects(UUID previousProjectId, UUID currentProjectId) {
+        if (previousProjectId != null) {
+            projectProgressSyncService.syncProject(previousProjectId);
+        }
+        if (currentProjectId != null && !currentProjectId.equals(previousProjectId)) {
+            projectProgressSyncService.syncProject(currentProjectId);
+        }
     }
 }

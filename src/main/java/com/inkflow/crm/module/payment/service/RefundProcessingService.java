@@ -16,6 +16,7 @@ import com.inkflow.crm.module.payment.dto.PaymentDto;
 import com.inkflow.crm.module.payment.dto.ProcessRefundRequest;
 import com.inkflow.crm.module.payment.mapper.PaymentMapper;
 import com.inkflow.crm.module.payment.support.ReceiptNumberGenerator;
+import com.inkflow.crm.module.project.service.ProjectProgressSyncService;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ public class RefundProcessingService {
     private final StaffRepository staffRepository;
     private final PaymentMapper paymentMapper;
     private final ReceiptNumberGenerator receiptNumberGenerator;
+    private final ProjectProgressSyncService projectProgressSyncService;
 
     @Transactional
     public PaymentDto processRefund(ProcessRefundRequest request) {
@@ -61,6 +63,7 @@ public class RefundProcessingService {
                 tenantId, refundTransaction.getId(), originalTransaction.getId());
 
         adjustDepositAfterRefund(originalTransaction, request.getAmount());
+        syncLinkedProjectProgress(originalTransaction.getAppointment());
 
         return paymentMapper.toDto(refundTransaction);
     }
@@ -116,5 +119,12 @@ public class RefundProcessingService {
         BigDecimal newPrepayment = appointment.getPrepayment().subtract(refundAmount);
         appointment.setPrepayment(newPrepayment.max(BigDecimal.ZERO));
         appointmentRepository.save(appointment);
+    }
+
+    private void syncLinkedProjectProgress(Appointment appointment) {
+        if (appointment == null || appointment.getProject() == null) {
+            return;
+        }
+        projectProgressSyncService.syncProject(appointment.getProject().getId());
     }
 }

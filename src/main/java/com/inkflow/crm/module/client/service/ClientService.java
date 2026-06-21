@@ -12,6 +12,7 @@ import com.inkflow.crm.domain.enums.ClientStatus;
 import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.domain.enums.ProjectStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
+import com.inkflow.crm.domain.repository.ClientSpecifications;
 import com.inkflow.crm.domain.repository.ProjectRepository;
 import com.inkflow.crm.module.client.dto.*;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
@@ -21,6 +22,7 @@ import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,8 +45,8 @@ public class ClientService {
     private final RolePermissionService rolePermissionService;
 
     @Transactional(readOnly = true)
-    public PageResult<ClientDto> getAllClients(PageRequest pageRequest, String search, String status, Boolean onlyMine, Boolean lost) {
-        Page<Client> page = getClientsPage(pageRequest, search, status, onlyMine, lost);
+    public PageResult<ClientDto> getAllClients(PageRequest pageRequest, ClientFilterRequest filter) {
+        Page<Client> page = getClientsPage(pageRequest, filter);
         return new PageResult<>(clientMapper.toDtoList(page.getContent()), PaginationDto.from(page));
     }
 
@@ -55,7 +57,7 @@ public class ClientService {
                 .orElseThrow(() -> ResourceNotFoundException.client(id.toString()));
 
         List<Project> activeProjects = projectRepository.findByClientIdAndStatusInAndDeletedAtIsNull(
-                id, List.of(ProjectStatus.IN_PROGRESS, ProjectStatus.ON_HOLD));
+                id, List.of(ProjectStatus.IN_PROGRESS));
 
         return buildDetailDto(client, activeProjects);
     }
@@ -119,25 +121,58 @@ public class ClientService {
     public List<ProjectSummaryDto> getClientActiveProjects(UUID clientId) {
         requireClient(SecurityUtils.getCurrentTenantId(), clientId);
         return toProjectSummaries(projectRepository.findByClientIdAndStatusInAndDeletedAtIsNull(
-                clientId, List.of(ProjectStatus.IN_PROGRESS, ProjectStatus.ON_HOLD)));
+                clientId, List.of(ProjectStatus.IN_PROGRESS)));
     }
 
-    private Page<Client> getClientsPage(PageRequest pageRequest, String search, String status, Boolean onlyMine, Boolean lost) {
+    private Page<Client> getClientsPage(PageRequest pageRequest, ClientFilterRequest filter) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        ClientStatus clientStatus = status != null ? ClientStatus.fromValue(status) : null;
+        ClientFilterRequest effectiveFilter = filter != null ? filter : new ClientFilterRequest();
 
         if (!rolePermissionService.hasPermission(tenantId, SecurityUtils.getCurrentUserRole(), Permission.CLIENTS_VIEW_ALL.getValue())) {
-            onlyMine = true;
+            effectiveFilter.setOnlyMine(true);
         }
 
-        UUID artistId = Boolean.TRUE.equals(onlyMine) ? SecurityUtils.getCurrentUserId() : null;
+        UUID artistId = resolveArtistId(effectiveFilter);
+        ClientStatus clientStatus = effectiveFilter.getStatus() != null
+                ? ClientStatus.fromValue(effectiveFilter.getStatus())
+                : null;
 
-        if (Boolean.TRUE.equals(lost)) {
-            Instant cutoff = Instant.now().minus(LOST_CLIENT_DAYS, ChronoUnit.DAYS);
-            return clientRepository.findLostClients(tenantId, cutoff, search, artistId, pageRequest.toPageable());
+        Instant lostCutoff = Boolean.TRUE.equals(effectiveFilter.getLost())
+                ? Instant.now().minus(LOST_CLIENT_DAYS, ChronoUnit.DAYS)
+                : null;
+
+        Specification<Client> spec = Specification
+                .where(ClientSpecifications.belongsToTenant(tenantId))
+                .and(ClientSpecifications.notDeleted())
+                .and(ClientSpecifications.searchLike(effectiveFilter.getSearch()))
+                .and(ClientSpecifications.statusIs(clientStatus))
+                .and(ClientSpecifications.blacklisted(effectiveFilter.getBlacklisted()))
+                .and(ClientSpecifications.totalVisitsBetween(effectiveFilter.getTotalVisitsMin(), effectiveFilter.getTotalVisitsMax()))
+                .and(ClientSpecifications.cancelledVisitsBetween(effectiveFilter.getCancelledVisitsMin(), effectiveFilter.getCancelledVisitsMax()))
+                .and(ClientSpecifications.balanceBetween(effectiveFilter.getBalanceMin(), effectiveFilter.getBalanceMax()))
+                .and(ClientSpecifications.ltvBetween(effectiveFilter.getLtvMin(), effectiveFilter.getLtvMax()))
+                .and(ClientSpecifications.avgCheckBetween(effectiveFilter.getAvgCheckMin(), effectiveFilter.getAvgCheckMax()))
+                .and(ClientSpecifications.createdAtBetween(effectiveFilter.getCreatedAtFrom(), effectiveFilter.getCreatedAtTo()))
+                .and(ClientSpecifications.lastVisitBetween(effectiveFilter.getLastVisitFrom(), effectiveFilter.getLastVisitTo()))
+                .and(ClientSpecifications.firstVisitBetween(effectiveFilter.getFirstVisitFrom(), effectiveFilter.getFirstVisitTo()))
+                .and(ClientSpecifications.birthdayBetween(effectiveFilter.getBirthdayFrom(), effectiveFilter.getBirthdayTo()))
+                .and(ClientSpecifications.hasTags(effectiveFilter.getTags()))
+                .and(ClientSpecifications.workedWithArtist(artistId))
+                .and(ClientSpecifications.visitedServices(effectiveFilter.getServiceIds()))
+                .and(ClientSpecifications.hasActiveAppointments(
+                        effectiveFilter.getHasActiveAppointments(),
+                        effectiveFilter.getActiveAppointmentFrom(),
+                        effectiveFilter.getActiveAppointmentTo()))
+                .and(ClientSpecifications.lostSince(lostCutoff));
+
+        return clientRepository.findAll(spec, pageRequest.toPageable());
+    }
+
+    private UUID resolveArtistId(ClientFilterRequest filter) {
+        if (filter.getArtistId() != null) {
+            return filter.getArtistId();
         }
-
-        return clientRepository.findWithFilters(tenantId, search, clientStatus, artistId, pageRequest.toPageable());
+        return Boolean.TRUE.equals(filter.getOnlyMine()) ? SecurityUtils.getCurrentUserId() : null;
     }
 
     private Client requireClient(UUID tenantId, UUID id) {
@@ -162,15 +197,19 @@ public class ClientService {
                 .birthDate(client.getBirthDate())
                 .instagram(client.getInstagram())
                 .telegram(client.getTelegram())
+                .whatsapp(client.getWhatsapp())
+                .facebook(client.getFacebook())
                 .tags(new ArrayList<>(client.getTags()))
                 .medicalConditions(new ArrayList<>(client.getMedicalConditions()))
                 .source(client.getSource() != null ? client.getSource().getValue() : null)
                 .status(client.getStatus().getValue())
                 .notes(client.getNotes())
                 .lastVisit(client.getLastVisit())
+                .firstVisit(client.getFirstVisit())
                 .totalVisits(client.getTotalVisits())
                 .cancelledVisits(client.getCancelledVisits())
                 .ltv(client.getLtv())
+                .balance(client.getBalance())
                 .activeProjects(toProjectSummaries(activeProjects))
                 .createdAt(client.getCreatedAt())
                 .updatedAt(client.getUpdatedAt())

@@ -707,16 +707,29 @@ VALUES
 ON CONFLICT (receipt_number) DO NOTHING;
 
 -- ============================================================
--- REQUESTS (заявки з різних джерел)
+-- REQUESTS (заявки з різних джерел + поля consumer booking)
+-- requests: ab000000-0000-0000-0000-00000000000{1-8}
 -- ============================================================
-INSERT INTO requests (id, tenant_id, source, client_name, client_nickname, message, phone, instagram, status, location_id, created_at)
+INSERT INTO requests (
+    id, tenant_id, source, client_name, client_nickname, message, phone, instagram,
+    status, location_id, staff_id,
+    tattoo_timing, tattoo_size, body_zones, is_cover_up, idea, reference_urls, sketch_url,
+    city, contact_method, contact_value,
+    replied_at, converted_at, converted_client_id,
+    created_at
+)
 VALUES
     ('ab000000-0000-0000-0000-000000000001',
      'a0000000-0000-0000-0000-000000000001',
      'INSTAGRAM', 'Аліна Пономаренко', '@alina.pono',
      'Привіт! Хочу зробити невелике тату на зап''ясті — мінімалізм, тонкі лінії. Чи є вільні місця на наступний тиждень?',
      NULL, '@alina.pono', 'NEW',
-     'b0000000-0000-0000-0000-000000000001',
+     'b0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000002',
+     'weeks', 'credit-card', 'front:forearm-left', false,
+     'Мінімалістичне тату на зап''ясті, тонкі лінії, можливо маленький символ',
+     NULL, NULL,
+     'kyiv', 'instagram', '@alina.pono',
+     NULL, NULL, NULL,
      NOW() - INTERVAL '2 hours'),
 
     ('ab000000-0000-0000-0000-000000000002',
@@ -724,7 +737,12 @@ VALUES
      'INSTAGRAM', 'Владислав Крот', '@vlad_krot',
      'Добрий день. Цікавить перекриття старого тату на лопатці. Розмір приблизно 10×10 см. Скільки орієнтовно коштує і скільки сеансів потрібно?',
      '+380671234567', '@vlad_krot', 'NEW',
-     'b0000000-0000-0000-0000-000000000001',
+     'b0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000003',
+     'months', 'palm', 'back:upper-back-left,back:upper-back-right', true,
+     'Перекриття старого тату на лопатці, орієнтовно 10×10 см, темніший дизайн',
+     'https://images.unsplash.com/photo-1598371839696-5c5bb00b9cc7?w=400', NULL,
+     'kyiv', 'phone', '+380671234567',
+     NULL, NULL, NULL,
      NOW() - INTERVAL '5 hours'),
 
     ('ab000000-0000-0000-0000-000000000003',
@@ -732,7 +750,13 @@ VALUES
      'TELEGRAM', 'Марта Олійник', NULL,
      'Вітаю! Хочу великий квітковий рукав у стилі blackwork. Є декілька референсів, можна відправити? Також хотіла б знати вільний час майстра Олени.',
      '+380501112233', NULL, 'REPLIED',
-     'b0000000-0000-0000-0000-000000000001',
+     'b0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000002',
+     'flexible', 'half-sleeve', 'front:biceps-left,front:forearm-left,front:biceps-right', false,
+     'Великий квітковий рукав у стилі blackwork, хочу поєднати півонії та листя',
+     'https://images.unsplash.com/photo-1611501275019-9b5ccb8e2768?w=400|https://images.unsplash.com/photo-1565058537862-828ea3848f36?w=400',
+     'https://images.unsplash.com/photo-1611501275019-9b5ccb8e2768?w=600',
+     'lviv', 'telegram', '+380501112233',
+     NOW() - INTERVAL '20 hours', NULL, NULL,
      NOW() - INTERVAL '1 day'),
 
     ('ab000000-0000-0000-0000-000000000004',
@@ -740,7 +764,12 @@ VALUES
      'WEBSITE', 'Ігор Захаренко', NULL,
      'Хочу записатися на консультацію щодо тату в японському стилі. Цікавить карп кої на передпліччі.',
      '+380632223344', NULL, 'NEW',
-     'b0000000-0000-0000-0000-000000000001',
+     'b0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001',
+     'weeks', 'hand', 'front:forearm-right', false,
+     'Карп кої на передпліччі в японському стилі, хочу консультацію перед записом',
+     'https://images.unsplash.com/photo-1590246814883-d179c9b9a7c9?w=400', NULL,
+     'kyiv', 'phone', '+380632223344',
+     NULL, NULL, NULL,
      NOW() - INTERVAL '1 day' - INTERVAL '3 hours'),
 
     ('ab000000-0000-0000-0000-000000000005',
@@ -748,7 +777,12 @@ VALUES
      'REFERRAL', 'Дарина Савченко', '@dasha_sav',
      'Мені порадили вас подруги. Хочу перший тату — невеликий пір''ячко на ребрах. Чи можете надати ціну та час сеансу?',
      '+380951234000', '@dasha_sav', 'NEW',
-     'b0000000-0000-0000-0000-000000000001',
+     'b0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000004',
+     'months', 'credit-card', 'front:obliques-left', false,
+     'Перше тату — невелике пір''ячко на ребрах, тонкий контур',
+     NULL, NULL,
+     'odesa', 'instagram', '@dasha_sav',
+     NULL, NULL, NULL,
      NOW() - INTERVAL '2 days'),
 
     ('ab000000-0000-0000-0000-000000000006',
@@ -756,7 +790,12 @@ VALUES
      'INSTAGRAM', 'Сергій Бойко', '@serhii.boiko',
      'Скільки коштує тату в стилі реалізм? Хочу портрет кота на плечі.',
      NULL, '@serhii.boiko', 'CONVERTED',
-     'b0000000-0000-0000-0000-000000000001',
+     'b0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000003',
+     'asap', 'palm', 'front:front-deltoids-left', false,
+     'Портрет домашнього кота на плечі в стилі реалізм',
+     'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400', NULL,
+     'kharkiv', 'instagram', '@serhii.boiko',
+     NULL, NOW() - INTERVAL '4 days', 'e0000000-0000-0000-0000-000000000006',
      NOW() - INTERVAL '5 days'),
 
     ('ab000000-0000-0000-0000-000000000007',
@@ -764,7 +803,12 @@ VALUES
      'WALK_IN', 'Тетяна Руденко', NULL,
      'Зайшла в студію, цікавиться пірсингом носа та вушної раковини. Просить передзвонити.',
      '+380441234100', NULL, 'REPLIED',
-     'b0000000-0000-0000-0000-000000000001',
+     'b0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001',
+     'asap', 'credit-card', NULL, false,
+     'Пірсинг носа та вушної раковини, хоче дізнатися ціни та вільні слоти',
+     NULL, NULL,
+     'kyiv', 'phone', '+380441234100',
+     NOW() - INTERVAL '2 days', NULL, NULL,
      NOW() - INTERVAL '3 days'),
 
     ('ab000000-0000-0000-0000-000000000008',
@@ -772,10 +816,154 @@ VALUES
      'TELEGRAM', 'Олексій Шевченко', NULL,
      'Привіт, чи є знижки постійним клієнтам? Хочу продовжити рукав.',
      '+380979990001', NULL, 'SPAM',
-     'b0000000-0000-0000-0000-000000000001',
+     'b0000000-0000-0000-0000-000000000001', NULL,
+     'browsing', 'half-sleeve', 'front:forearm-left,front:biceps-left', false,
+     'Продовження рукава, цікавить знижка',
+     NULL, NULL,
+     'dnipro', 'telegram', '+380979990001',
+     NULL, NULL, NULL,
      NOW() - INTERVAL '7 days')
 
 ON CONFLICT (id) DO NOTHING;
+
+-- Оновлення існуючих seed-записів (якщо seed вже був застосований раніше)
+UPDATE requests SET
+    staff_id = 'c0000000-0000-0000-0000-000000000002',
+    tattoo_timing = 'weeks',
+    tattoo_size = 'credit-card',
+    body_zones = 'front:forearm-left',
+    is_cover_up = false,
+    idea = 'Мінімалістичне тату на зап''ясті, тонкі лінії, можливо маленький символ',
+    city = 'kyiv',
+    contact_method = 'instagram',
+    contact_value = '@alina.pono'
+WHERE id = 'ab000000-0000-0000-0000-000000000001';
+
+UPDATE requests SET
+    staff_id = 'c0000000-0000-0000-0000-000000000003',
+    tattoo_timing = 'months',
+    tattoo_size = 'palm',
+    body_zones = 'back:upper-back-left,back:upper-back-right',
+    is_cover_up = true,
+    idea = 'Перекриття старого тату на лопатці, орієнтовно 10×10 см, темніший дизайн',
+    reference_urls = 'https://images.unsplash.com/photo-1598371839696-5c5bb00b9cc7?w=400',
+    city = 'kyiv',
+    contact_method = 'phone',
+    contact_value = '+380671234567'
+WHERE id = 'ab000000-0000-0000-0000-000000000002';
+
+UPDATE requests SET
+    staff_id = 'c0000000-0000-0000-0000-000000000002',
+    tattoo_timing = 'flexible',
+    tattoo_size = 'half-sleeve',
+    body_zones = 'front:biceps-left,front:forearm-left,front:biceps-right',
+    is_cover_up = false,
+    idea = 'Великий квітковий рукав у стилі blackwork, хочу поєднати півонії та листя',
+    reference_urls = 'https://images.unsplash.com/photo-1611501275019-9b5ccb8e2768?w=400|https://images.unsplash.com/photo-1565058537862-828ea3848f36?w=400',
+    sketch_url = 'https://images.unsplash.com/photo-1611501275019-9b5ccb8e2768?w=600',
+    city = 'lviv',
+    contact_method = 'telegram',
+    contact_value = '+380501112233',
+    replied_at = NOW() - INTERVAL '20 hours'
+WHERE id = 'ab000000-0000-0000-0000-000000000003';
+
+UPDATE requests SET
+    staff_id = 'c0000000-0000-0000-0000-000000000001',
+    tattoo_timing = 'weeks',
+    tattoo_size = 'hand',
+    body_zones = 'front:forearm-right',
+    is_cover_up = false,
+    idea = 'Карп кої на передпліччі в японському стилі, хочу консультацію перед записом',
+    reference_urls = 'https://images.unsplash.com/photo-1590246814883-d179c9b9a7c9?w=400',
+    city = 'kyiv',
+    contact_method = 'phone',
+    contact_value = '+380632223344'
+WHERE id = 'ab000000-0000-0000-0000-000000000004';
+
+UPDATE requests SET
+    staff_id = 'c0000000-0000-0000-0000-000000000004',
+    tattoo_timing = 'months',
+    tattoo_size = 'credit-card',
+    body_zones = 'front:obliques-left',
+    is_cover_up = false,
+    idea = 'Перше тату — невелике пір''ячко на ребрах, тонкий контур',
+    city = 'odesa',
+    contact_method = 'instagram',
+    contact_value = '@dasha_sav'
+WHERE id = 'ab000000-0000-0000-0000-000000000005';
+
+UPDATE requests SET
+    staff_id = 'c0000000-0000-0000-0000-000000000003',
+    tattoo_timing = 'asap',
+    tattoo_size = 'palm',
+    body_zones = 'front:front-deltoids-left',
+    is_cover_up = false,
+    idea = 'Портрет домашнього кота на плечі в стилі реалізм',
+    reference_urls = 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400',
+    city = 'kharkiv',
+    contact_method = 'instagram',
+    contact_value = '@serhii.boiko',
+    converted_at = NOW() - INTERVAL '4 days',
+    converted_client_id = 'e0000000-0000-0000-0000-000000000006'
+WHERE id = 'ab000000-0000-0000-0000-000000000006';
+
+UPDATE requests SET
+    staff_id = 'c0000000-0000-0000-0000-000000000001',
+    tattoo_timing = 'asap',
+    tattoo_size = 'credit-card',
+    is_cover_up = false,
+    idea = 'Пірсинг носа та вушної раковини, хоче дізнатися ціни та вільні слоти',
+    city = 'kyiv',
+    contact_method = 'phone',
+    contact_value = '+380441234100',
+    replied_at = NOW() - INTERVAL '2 days'
+WHERE id = 'ab000000-0000-0000-0000-000000000007';
+
+UPDATE requests SET
+    tattoo_timing = 'browsing',
+    tattoo_size = 'half-sleeve',
+    body_zones = 'front:forearm-left,front:biceps-left',
+    is_cover_up = false,
+    idea = 'Продовження рукава, цікавиться знижка',
+    city = 'dnipro',
+    contact_method = 'telegram',
+    contact_value = '+380979990001'
+WHERE id = 'ab000000-0000-0000-0000-000000000008';
+
+-- Backfill tattoo fields for seed requests (safe to re-run: fills NULLs only)
+UPDATE requests AS r SET
+    tattoo_timing = COALESCE(r.tattoo_timing, v.timing),
+    tattoo_size = COALESCE(r.tattoo_size, v.size),
+    city = COALESCE(r.city, v.city)
+FROM (VALUES
+    ('Аліна Пономаренко', 'weeks', 'credit-card', 'kyiv'),
+    ('Владислав Крот', 'months', 'palm', 'kyiv'),
+    ('Марта Олійник', 'flexible', 'half-sleeve', 'lviv'),
+    ('Ігор Захаренко', 'weeks', 'hand', 'kyiv'),
+    ('Дарина Савченко', 'months', 'credit-card', 'odesa'),
+    ('Сергій Бойко', 'asap', 'palm', 'kharkiv'),
+    ('Тетяна Руденко', 'asap', 'credit-card', 'kyiv'),
+    ('Олексій Шевченко', 'browsing', 'half-sleeve', 'dnipro')
+) AS v(client_name, timing, size, city)
+WHERE r.client_name = v.client_name
+  AND r.tenant_id = 'a0000000-0000-0000-0000-000000000001';
+
+-- Fallback: fill consumer fields for any remaining requests in seed tenant (CRM-created, etc.)
+UPDATE requests SET
+    tattoo_timing = COALESCE(
+        tattoo_timing,
+        (ARRAY['asap', 'weeks', 'months', 'flexible', 'browsing'])[1 + (abs(hashtext(id::text)) % 5)]
+    ),
+    tattoo_size = COALESCE(
+        tattoo_size,
+        (ARRAY['credit-card', 'palm', 'hand', 'half-sleeve', 'undecided'])[1 + (abs(hashtext(id::text)) % 5)]
+    ),
+    city = COALESCE(
+        city,
+        (ARRAY['kyiv', 'lviv', 'odesa', 'kharkiv', 'dnipro', 'zaporizhzhia', 'vinnytsia'])[1 + (abs(hashtext(client_name)) % 7)]
+    )
+WHERE tenant_id = 'a0000000-0000-0000-0000-000000000001'
+  AND (tattoo_timing IS NULL OR tattoo_size IS NULL OR city IS NULL);
 
 -- ============================================================
 -- EMAIL LOGS (mock history for Журнал tab)

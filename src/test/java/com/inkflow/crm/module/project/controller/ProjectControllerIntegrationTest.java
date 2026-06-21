@@ -158,8 +158,8 @@ class ProjectControllerIntegrationTest {
                 objectMapper.readTree(createResponse).path("data").path("id").asText());
 
         UpdateProjectRequest updateBody = UpdateProjectRequest.builder()
-                .status("on_hold")
-                .title("Back Piece (Paused)")
+                .status("archived")
+                .title("Back Piece (Archived)")
                 .build();
 
         mockMvc.perform(patch("/projects/{id}", projectId)
@@ -167,12 +167,12 @@ class ProjectControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateBody)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("on_hold"))
-                .andExpect(jsonPath("$.data.title").value("Back Piece (Paused)"));
+                .andExpect(jsonPath("$.data.status").value("archived"))
+                .andExpect(jsonPath("$.data.title").value("Back Piece (Archived)"));
 
         Project persisted = projectRepository.findById(projectId).orElseThrow();
-        assertEquals(ProjectStatus.ON_HOLD, persisted.getStatus());
-        assertEquals("Back Piece (Paused)", persisted.getTitle());
+        assertEquals(ProjectStatus.ARCHIVED, persisted.getStatus());
+        assertEquals("Back Piece (Archived)", persisted.getTitle());
     }
 
     @Test
@@ -191,12 +191,27 @@ class ProjectControllerIntegrationTest {
         TenantBundle bundle = seedTenant();
         UUID projectId = createProjectAndGetId(bundle);
 
+        mockMvc.perform(patch("/projects/{id}", projectId)
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"archived\"}"))
+                .andExpect(status().isOk());
+
         mockMvc.perform(delete("/projects/{id}", projectId).with(crmUser(bundle.owner())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
         Project deleted = projectRepository.findById(projectId).orElseThrow();
         assertNotNull(deleted.getDeletedAt());
+    }
+
+    @Test
+    void deleteProject_whenNotArchived_returnsUnprocessableEntity() throws Exception {
+        TenantBundle bundle = seedTenant();
+        UUID projectId = createProjectAndGetId(bundle);
+
+        mockMvc.perform(delete("/projects/{id}", projectId).with(crmUser(bundle.owner())))
+                .andExpect(status().isUnprocessableEntity());
     }
 
     @Test
@@ -320,7 +335,7 @@ class ProjectControllerIntegrationTest {
         mockMvc.perform(patch("/projects/{id}", projectId)
                         .with(crmUser(bundle.owner()))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\":\"archived\"}"))
+                        .content("{\"status\":\"on_hold\"}"))
                 .andExpect(status().isBadRequest());
     }
 

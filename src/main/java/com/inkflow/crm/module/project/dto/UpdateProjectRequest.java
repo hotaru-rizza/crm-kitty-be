@@ -28,7 +28,7 @@ public class UpdateProjectRequest {
     @Min(value = 1, message = "Total sessions must be at least 1")
     private Integer totalSessions;
 
-    @Pattern(regexp = "^(in_progress|on_hold|completed|cancelled)$", message = "Invalid status")
+    @Pattern(regexp = "^(in_progress|completed|archived)$", message = "Invalid status")
     private String status;
 
     private String sketchImage;

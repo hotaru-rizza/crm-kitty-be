@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.project.service;
 
+import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.domain.entity.Client;
@@ -18,6 +19,7 @@ import com.inkflow.crm.domain.repository.ProjectRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.project.dto.CreateProjectRequest;
 import com.inkflow.crm.module.project.dto.ProjectDto;
+import com.inkflow.crm.module.project.dto.ProjectFilterRequest;
 import com.inkflow.crm.module.project.mapper.ProjectMapper;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.security.UserPrincipal;
@@ -30,6 +32,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -44,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -241,7 +246,7 @@ class ProjectServiceTest {
     }
 
     @Test
-    void shouldTransitionToOnHoldWhenStatusUpdated() {
+    void shouldTransitionToArchivedWhenStatusUpdated() {
         UUID tenantId = UUID.randomUUID();
         UUID projectId = UUID.randomUUID();
         authenticate(tenantId);
@@ -259,13 +264,13 @@ class ProjectServiceTest {
         when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(galleryPhotoRepository.findByProjectId(projectId)).thenReturn(java.util.List.of());
         when(projectMapper.toSessionDtos(project)).thenReturn(java.util.List.of());
-        when(projectMapper.toDto(any(), any(), any())).thenReturn(ProjectDto.builder().status("on_hold").build());
+        when(projectMapper.toDto(any(), any(), any())).thenReturn(ProjectDto.builder().status("archived").build());
 
-        projectService.updateProject(projectId, UpdateProjectRequest.builder().status("on_hold").build());
+        projectService.updateProject(projectId, UpdateProjectRequest.builder().status("archived").build());
 
         ArgumentCaptor<Project> captor = ArgumentCaptor.forClass(Project.class);
         verify(projectRepository).save(captor.capture());
-        assertEquals(ProjectStatus.ON_HOLD, captor.getValue().getStatus());
+        assertEquals(ProjectStatus.ARCHIVED, captor.getValue().getStatus());
     }
 
     @Test
@@ -330,7 +335,7 @@ class ProjectServiceTest {
                 .id(projectId)
                 .tenantId(tenantId)
                 .title("Sleeve")
-                .status(ProjectStatus.IN_PROGRESS)
+                .status(ProjectStatus.ARCHIVED)
                 .estimatedCost(BigDecimal.valueOf(5000))
                 .totalSessions(3)
                 .build();
@@ -343,6 +348,27 @@ class ProjectServiceTest {
         ArgumentCaptor<Project> captor = ArgumentCaptor.forClass(Project.class);
         verify(projectRepository).save(captor.capture());
         assertNotNull(captor.getValue().getDeletedAt());
+    }
+
+    @Test
+    void shouldRejectDeleteWhenProjectIsNotArchived() {
+        UUID tenantId = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        Project project = Project.builder()
+                .id(projectId)
+                .tenantId(tenantId)
+                .title("Sleeve")
+                .status(ProjectStatus.IN_PROGRESS)
+                .estimatedCost(BigDecimal.valueOf(5000))
+                .totalSessions(3)
+                .build();
+
+        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+
+        assertThrows(BusinessRuleException.class, () -> projectService.deleteProject(projectId));
+        verify(projectRepository, never()).save(any());
     }
 
     @Test
@@ -380,18 +406,16 @@ class ProjectServiceTest {
 
         when(rolePermissionService.hasPermission(tenantId, UserRole.ARTIST, Permission.PROJECTS_VIEW_ALL.getValue()))
                 .thenReturn(false);
-        when(projectRepository.findWithFilters(
-                eq(tenantId), eq(null), eq(List.of(artistId)), eq(null), eq(null), eq(null), any()))
+        when(projectRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
         PageRequest pageRequest = new PageRequest();
         pageRequest.setPage(0);
         pageRequest.setSize(20);
 
-        projectService.getAllProjects(pageRequest, null, null, null, null, false, null);
+        projectService.getAllProjects(pageRequest, new ProjectFilterRequest(), null);
 
-        verify(projectRepository).findWithFilters(
-                eq(tenantId), eq(null), eq(List.of(artistId)), eq(null), eq(null), eq(null), any());
+        verify(projectRepository).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
