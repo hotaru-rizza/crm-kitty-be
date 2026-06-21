@@ -109,7 +109,7 @@ class StaffDetailServiceTest {
                 .thenReturn(List.of(monthAppointment, monthAppointment));
         when(appointmentRepository.findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(
                 eq(staffId),
-                eq(List.of(AppointmentStatus.NEW, AppointmentStatus.CONFIRMED)),
+                eq(List.of(AppointmentStatus.SCHEDULED)),
                 any(Instant.class)))
                 .thenReturn(List.of(upcomingAppointment));
 
@@ -195,7 +195,7 @@ class StaffDetailServiceTest {
                 .thenReturn(List.of());
         when(appointmentRepository.findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(
                 eq(staffId),
-                eq(List.of(AppointmentStatus.NEW, AppointmentStatus.CONFIRMED)),
+                eq(List.of(AppointmentStatus.SCHEDULED)),
                 any(Instant.class)))
                 .thenReturn(List.of());
     }

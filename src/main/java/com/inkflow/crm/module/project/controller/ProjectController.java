@@ -31,14 +31,9 @@ public class ProjectController {
     @RequirePermission({Permission.PROJECTS_VIEW_ALL, Permission.PROJECTS_VIEW_OWN})
     public ResponseEntity<ApiResponse<List<ProjectDto>>> getAllProjects(
             @ModelAttribute PageRequest pageRequest,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) List<UUID> artistId,
-            @RequestParam(required = false) UUID clientId,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) Boolean onlyMine,
+            @ModelAttribute ProjectFilterRequest filter,
             @RequestParam(required = false) UUID locationId) {
-        PageResult<ProjectDto> result = projectService.getAllProjects(
-                pageRequest, status, artistId, clientId, search, onlyMine, locationId);
+        PageResult<ProjectDto> result = projectService.getAllProjects(pageRequest, filter, locationId);
         return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 

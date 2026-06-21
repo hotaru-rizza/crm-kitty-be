@@ -36,7 +36,7 @@ public class StaffLifecycleService {
 
         List<Appointment> future = appointmentRepository.findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(
                 staffId,
-                List.of(AppointmentStatus.NEW, AppointmentStatus.CONFIRMED),
+                List.of(AppointmentStatus.SCHEDULED),
                 Instant.now());
         return future.size();
     }
@@ -82,7 +82,7 @@ public class StaffLifecycleService {
     private void cancelFutureAppointments(UUID staffId) {
         List<Appointment> future = appointmentRepository.findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(
                 staffId,
-                List.of(AppointmentStatus.NEW, AppointmentStatus.CONFIRMED),
+                List.of(AppointmentStatus.SCHEDULED),
                 Instant.now());
         future.forEach(appointment -> appointment.setStatus(AppointmentStatus.CANCELLED));
         appointmentRepository.saveAll(future);

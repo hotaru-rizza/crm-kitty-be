@@ -74,7 +74,7 @@ class StaffPerformanceAnalyticsServiceTest {
                 .calendarColor("#6366f1")
                 .build();
         Appointment appointment = Appointment.builder()
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .finalPrice(BigDecimal.valueOf(800))
                 .artist(artist)
                 .build();
@@ -131,7 +131,7 @@ class StaffPerformanceAnalyticsServiceTest {
         Instant to = Instant.parse("2026-06-30T23:59:59Z");
 
         Appointment withoutArtist = Appointment.builder()
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .finalPrice(BigDecimal.valueOf(300))
                 .build();
 
@@ -154,12 +154,12 @@ class StaffPerformanceAnalyticsServiceTest {
         Staff topEarner = Staff.builder().id(UUID.randomUUID()).firstName("Top").lastName("Earner").build();
 
         Appointment low = Appointment.builder()
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .finalPrice(BigDecimal.valueOf(200))
                 .artist(lowEarner)
                 .build();
         Appointment high = Appointment.builder()
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .finalPrice(BigDecimal.valueOf(900))
                 .artist(topEarner)
                 .build();

@@ -89,7 +89,7 @@ public class StaffDetailService {
                 tenantId, staff.getId(), monthStart, monthEnd);
 
         List<Appointment> upcoming = appointmentRepository.findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(
-                staff.getId(), List.of(AppointmentStatus.NEW, AppointmentStatus.CONFIRMED), Instant.now());
+                staff.getId(), List.of(AppointmentStatus.SCHEDULED), Instant.now());
 
         return StaffDetailDto.StaffStatsDto.builder()
                 .appointmentsThisMonth(monthAppointments.size())

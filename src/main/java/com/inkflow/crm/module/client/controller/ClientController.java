@@ -32,11 +32,8 @@ public class ClientController {
     @RequirePermission({Permission.CLIENTS_VIEW_ALL, Permission.CLIENTS_VIEW_OWN})
     public ResponseEntity<ApiResponse<List<ClientDto>>> getAllClients(
             @ModelAttribute PageRequest pageRequest,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) Boolean onlyMine,
-            @RequestParam(required = false) Boolean lost) {
-        PageResult<ClientDto> result = clientService.getAllClients(pageRequest, search, status, onlyMine, lost);
+            @ModelAttribute ClientFilterRequest filter) {
+        PageResult<ClientDto> result = clientService.getAllClients(pageRequest, filter);
         return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 

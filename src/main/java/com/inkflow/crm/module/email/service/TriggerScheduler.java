@@ -89,7 +89,7 @@ public class TriggerScheduler {
 
             for (Appointment appointment : appointmentRepository.findByTenantIdAndDateRange(
                     template.getTenantId(), from, to)) {
-                if (appointment.getStatus() == AppointmentStatus.DONE) {
+                if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
                     enqueueSafely(appointment, TriggerType.AFTER_BOOKING, offsetMinutes);
                 }
             }
@@ -174,7 +174,6 @@ public class TriggerScheduler {
     }
 
     private boolean isEligibleForReminder(Appointment appointment) {
-        return appointment.getStatus() == AppointmentStatus.NEW
-                || appointment.getStatus() == AppointmentStatus.CONFIRMED;
+        return appointment.getStatus() == AppointmentStatus.SCHEDULED;
     }
 }

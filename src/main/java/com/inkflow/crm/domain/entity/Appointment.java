@@ -56,7 +56,7 @@ public class Appointment extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private AppointmentStatus status = AppointmentStatus.NEW;
+    private AppointmentStatus status = AppointmentStatus.SCHEDULED;
 
     @Column(name = "price", nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
@@ -115,8 +115,8 @@ public class Appointment extends BaseEntity {
         this.cancelledAt = Instant.now();
     }
 
-    public void markAsDone() {
-        this.status = AppointmentStatus.DONE;
+    public void markAsCompleted() {
+        this.status = AppointmentStatus.COMPLETED;
     }
 
     public int getDurationMinutes() {

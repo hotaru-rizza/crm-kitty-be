@@ -57,10 +57,10 @@ class AppointmentSideEffectServiceTest {
     @Test
     void afterUpdate_onDone_publishesCompletedEvent() {
         Appointment appointment = appointment(UUID.randomUUID());
-        appointment.setStatus(AppointmentStatus.DONE);
+        appointment.setStatus(AppointmentStatus.COMPLETED);
 
         sideEffectService.afterUpdate(appointment, new AppointmentUpdateContext(
-                AppointmentStatus.CONFIRMED, "done", false));
+                AppointmentStatus.SCHEDULED, "completed", false));
 
         verify(eventPublisher).publishEvent(any(AppointmentCompletedEvent.class));
         verify(googleCalendarSyncService).syncUpdatedAppointment(appointment);
@@ -72,7 +72,7 @@ class AppointmentSideEffectServiceTest {
         appointment.setStatus(AppointmentStatus.CANCELLED);
 
         sideEffectService.afterUpdate(appointment, new AppointmentUpdateContext(
-                AppointmentStatus.CONFIRMED, "cancelled", false));
+                AppointmentStatus.SCHEDULED, "cancelled", false));
 
         verify(eventPublisher).publishEvent(any(AppointmentCanceledEvent.class));
         verify(googleCalendarSyncService).syncDeletedAppointment(appointment);
@@ -83,7 +83,7 @@ class AppointmentSideEffectServiceTest {
         Appointment appointment = appointment(UUID.randomUUID());
 
         sideEffectService.afterUpdate(appointment, new AppointmentUpdateContext(
-                AppointmentStatus.CONFIRMED, null, true));
+                AppointmentStatus.SCHEDULED, null, true));
 
         verify(eventPublisher).publishEvent(any(AppointmentRescheduledEvent.class));
         verify(appointmentNotificationService, never()).sendConfirmation(appointment);
@@ -93,7 +93,7 @@ class AppointmentSideEffectServiceTest {
         return Appointment.builder()
                 .id(UUID.randomUUID())
                 .tenantId(tenantId)
-                .status(AppointmentStatus.NEW)
+                .status(AppointmentStatus.SCHEDULED)
                 .client(Client.builder().firstName("John").lastName("Doe").email("john@test.com").build())
                 .startTime(Instant.parse("2026-06-14T10:00:00Z"))
                 .build();

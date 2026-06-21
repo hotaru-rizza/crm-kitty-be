@@ -3,16 +3,13 @@ package com.inkflow.crm.domain.enums;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-
-// TODO: What is in progress ? How it's being maintained?
 @Getter
 @RequiredArgsConstructor
 public enum AppointmentStatus {
-    NEW("new", "New appointment"),
-    CONFIRMED("confirmed", "Confirmed by client"),
-    IN_PROGRESS("in_progress", "Session in progress"),
-    DONE("done", "Completed"),
-    CANCELLED("cancelled", "Cancelled");
+    SCHEDULED("scheduled", "Scheduled"),
+    COMPLETED("completed", "Completed"),
+    CANCELLED("cancelled", "Cancelled"),
+    NO_SHOW("no_show", "No show");
 
     private final String value;
     private final String description;
@@ -27,15 +24,13 @@ public enum AppointmentStatus {
     }
 
     public boolean isActive() {
-        return this == NEW || this == CONFIRMED || this == IN_PROGRESS;
+        return this == SCHEDULED;
     }
 
     public boolean canTransitionTo(AppointmentStatus newStatus) {
         return switch (this) {
-            case NEW -> newStatus == CONFIRMED || newStatus == CANCELLED;
-            case CONFIRMED -> newStatus == IN_PROGRESS || newStatus == CANCELLED;
-            case IN_PROGRESS -> newStatus == DONE || newStatus == CANCELLED;
-            case DONE, CANCELLED -> false;
+            case SCHEDULED -> newStatus == COMPLETED || newStatus == CANCELLED || newStatus == NO_SHOW;
+            case COMPLETED, NO_SHOW, CANCELLED -> newStatus == SCHEDULED;
         };
     }
 }

@@ -18,7 +18,7 @@ class AppointmentMetricsCalculatorTest {
 
     @Test
     void sumDoneRevenue_countsOnlyCompletedAppointments() {
-        Appointment done = appointment(AppointmentStatus.DONE, BigDecimal.valueOf(1000));
+        Appointment done = appointment(AppointmentStatus.COMPLETED, BigDecimal.valueOf(1000));
         Appointment cancelled = appointment(AppointmentStatus.CANCELLED, BigDecimal.valueOf(500));
 
         BigDecimal revenue = calculator.sumDoneRevenue(List.of(done, cancelled));
@@ -29,7 +29,7 @@ class AppointmentMetricsCalculatorTest {
     @Test
     void sumCostOfSales_sumsServiceCostForDoneAppointments() {
         Service service = Service.builder().costPrice(BigDecimal.valueOf(200)).build();
-        Appointment done = appointment(AppointmentStatus.DONE, BigDecimal.valueOf(1000));
+        Appointment done = appointment(AppointmentStatus.COMPLETED, BigDecimal.valueOf(1000));
         done.setService(service);
 
         BigDecimal cost = calculator.sumCostOfSales(List.of(done));
@@ -51,7 +51,7 @@ class AppointmentMetricsCalculatorTest {
 
     @Test
     void hasArtistAndClient_detectsRelations() {
-        Appointment withRelations = appointment(AppointmentStatus.NEW, BigDecimal.TEN);
+        Appointment withRelations = appointment(AppointmentStatus.SCHEDULED, BigDecimal.TEN);
         withRelations.setArtist(com.inkflow.crm.domain.entity.Staff.builder().id(java.util.UUID.randomUUID()).build());
         withRelations.setClient(com.inkflow.crm.domain.entity.Client.builder().id(java.util.UUID.randomUUID()).build());
 
@@ -63,15 +63,15 @@ class AppointmentMetricsCalculatorTest {
     @Test
     void shouldCountStatusesAcrossMixedAppointments() {
         List<Appointment> appointments = List.of(
-                appointment(AppointmentStatus.DONE, BigDecimal.TEN),
-                appointment(AppointmentStatus.DONE, BigDecimal.TEN),
+                appointment(AppointmentStatus.COMPLETED, BigDecimal.TEN),
+                appointment(AppointmentStatus.COMPLETED, BigDecimal.TEN),
                 appointment(AppointmentStatus.CANCELLED, BigDecimal.TEN),
-                appointment(AppointmentStatus.NEW, BigDecimal.TEN));
+                appointment(AppointmentStatus.SCHEDULED, BigDecimal.TEN));
 
         assertEquals(4, calculator.countTotal(appointments));
         assertEquals(2, calculator.countCompleted(appointments));
         assertEquals(1, calculator.countCancelled(appointments));
-        assertEquals(2, calculator.countByStatus(appointments, AppointmentStatus.DONE));
+        assertEquals(2, calculator.countByStatus(appointments, AppointmentStatus.COMPLETED));
     }
 
     @Test
@@ -129,18 +129,18 @@ class AppointmentMetricsCalculatorTest {
 
     @Test
     void shouldTreatNullFinalPriceAsZeroInRevenue() {
-        Appointment doneWithoutPrice = appointment(AppointmentStatus.DONE, null);
-        Appointment doneWithPrice = appointment(AppointmentStatus.DONE, BigDecimal.valueOf(400));
+        Appointment doneWithoutPrice = appointment(AppointmentStatus.COMPLETED, null);
+        Appointment doneWithPrice = appointment(AppointmentStatus.COMPLETED, BigDecimal.valueOf(400));
 
         assertEquals(BigDecimal.valueOf(400), calculator.sumDoneRevenue(List.of(doneWithoutPrice, doneWithPrice)));
     }
 
     @Test
     void shouldSkipCostWhenServiceOrCostPriceMissing() {
-        Appointment withoutService = appointment(AppointmentStatus.DONE, BigDecimal.TEN);
-        Appointment withoutCost = appointment(AppointmentStatus.DONE, BigDecimal.TEN);
+        Appointment withoutService = appointment(AppointmentStatus.COMPLETED, BigDecimal.TEN);
+        Appointment withoutCost = appointment(AppointmentStatus.COMPLETED, BigDecimal.TEN);
         withoutCost.setService(Service.builder().costPrice(null).build());
-        Appointment withCost = appointment(AppointmentStatus.DONE, BigDecimal.TEN);
+        Appointment withCost = appointment(AppointmentStatus.COMPLETED, BigDecimal.TEN);
         withCost.setService(Service.builder().costPrice(BigDecimal.valueOf(150)).build());
 
         assertEquals(BigDecimal.valueOf(150), calculator.sumCostOfSales(List.of(withoutService, withoutCost, withCost)));
@@ -149,7 +149,7 @@ class AppointmentMetricsCalculatorTest {
     @Test
     void shouldDetectActiveCancelledAndServicePresence() {
         Appointment cancelled = appointment(AppointmentStatus.CANCELLED, BigDecimal.TEN);
-        Appointment active = appointment(AppointmentStatus.CONFIRMED, BigDecimal.TEN);
+        Appointment active = appointment(AppointmentStatus.SCHEDULED, BigDecimal.TEN);
         active.setService(Service.builder().build());
 
         assertTrue(calculator.isCancelled(cancelled));

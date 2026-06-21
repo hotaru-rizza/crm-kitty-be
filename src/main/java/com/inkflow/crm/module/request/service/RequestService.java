@@ -13,6 +13,7 @@ import com.inkflow.crm.domain.enums.RequestSource;
 import com.inkflow.crm.domain.enums.RequestStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.RequestRepository;
+import com.inkflow.crm.domain.repository.RequestSpecifications;
 import com.inkflow.crm.module.client.dto.ClientDto;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
 import com.inkflow.crm.module.request.dto.*;
@@ -20,11 +21,13 @@ import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,14 +41,8 @@ public class RequestService {
     private final ClientMapper clientMapper;
 
     @Transactional(readOnly = true)
-    public PageResult<RequestDto> getAllRequests(
-            PageRequest pageRequest,
-            String status,
-            List<String> sources,
-            Instant from,
-            Instant to,
-            UUID locationId) {
-        Page<Request> page = getRequestsPage(pageRequest, status, sources, from, to, locationId);
+    public PageResult<RequestDto> getAllRequests(PageRequest pageRequest, RequestFilterRequest filter) {
+        Page<Request> page = getRequestsPage(pageRequest, filter);
         List<RequestDto> data = page.getContent().stream().map(this::toDto).toList();
         return new PageResult<>(data, PaginationDto.from(page));
     }
@@ -138,20 +135,34 @@ public class RequestService {
         log.info("Request deleted: tenantId={} requestId={}", tenantId, id);
     }
 
-    private Page<Request> getRequestsPage(
-            PageRequest pageRequest,
-            String status,
-            List<String> sources,
-            Instant from,
-            Instant to,
-            UUID locationId) {
+    private Page<Request> getRequestsPage(PageRequest pageRequest, RequestFilterRequest filter) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        RequestStatus requestStatus = status != null ? RequestStatus.fromValue(status) : null;
-        List<RequestSource> requestSources = sources != null && !sources.isEmpty()
-                ? sources.stream().map(RequestSource::fromValue).toList()
+        RequestFilterRequest effectiveFilter = filter != null ? filter : new RequestFilterRequest();
+
+        RequestStatus requestStatus = effectiveFilter.getStatus() != null
+                ? RequestStatus.fromValue(effectiveFilter.getStatus())
+                : null;
+        List<RequestSource> requestSources = effectiveFilter.getSource() != null && !effectiveFilter.getSource().isEmpty()
+                ? effectiveFilter.getSource().stream().map(RequestSource::fromValue).toList()
                 : null;
 
-        return requestRepository.findWithFilters(tenantId, requestStatus, requestSources, from, to, locationId, pageRequest.toPageable());
+        Specification<Request> spec = Specification
+                .where(RequestSpecifications.belongsToTenant(tenantId))
+                .and(RequestSpecifications.statusIs(requestStatus))
+                .and(RequestSpecifications.sourceIn(requestSources))
+                .and(RequestSpecifications.createdBetween(effectiveFilter.getFrom(), effectiveFilter.getTo()))
+                .and(RequestSpecifications.locationIs(effectiveFilter.getLocationId()))
+                .and(RequestSpecifications.searchLike(effectiveFilter.getSearch()))
+                .and(RequestSpecifications.cityEquals(effectiveFilter.getCity()))
+                .and(RequestSpecifications.tattooSizeEquals(effectiveFilter.getTattooSize()))
+                .and(RequestSpecifications.tattooTimingEquals(effectiveFilter.getTattooTiming()))
+                .and(RequestSpecifications.isCoverUpEquals(effectiveFilter.getIsCoverUp()))
+                .and(RequestSpecifications.hasSketch(effectiveFilter.getHasSketch()))
+                .and(RequestSpecifications.hasReferences(effectiveFilter.getHasReferences()))
+                .and(RequestSpecifications.bodyZoneContains(effectiveFilter.getBodyZone()))
+                .and(RequestSpecifications.assignedStaffIs(effectiveFilter.getStaffId()));
+
+        return requestRepository.findAll(spec, pageRequest.toPageable());
     }
 
     private Request requireRequest(UUID tenantId, UUID id) {
@@ -179,6 +190,32 @@ public class RequestService {
                 .tattooSize(request.getTattooSize())
                 .tattooTiming(request.getTattooTiming())
                 .isCoverUp(request.getIsCoverUp())
+                .bodyZones(parseBodyZones(request.getBodyZones()))
+                .referenceUrls(parseReferenceUrls(request.getReferenceUrls()))
+                .contactMethod(request.getContactMethod())
+                .contactValue(request.getContactValue())
+                .assignedStaffId(request.getAssignedStaff() != null ? request.getAssignedStaff().getId() : null)
+                .assignedStaffName(request.getAssignedStaff() != null ? request.getAssignedStaff().getFullName() : null)
                 .build();
+    }
+
+    private List<String> parseBodyZones(String bodyZones) {
+        if (bodyZones == null || bodyZones.isBlank()) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(bodyZones.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .toList();
+    }
+
+    private List<String> parseReferenceUrls(String referenceUrls) {
+        if (referenceUrls == null || referenceUrls.isBlank()) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(referenceUrls.split("\\|"))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .toList();
     }
 }

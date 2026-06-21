@@ -11,12 +11,10 @@ import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,12 +32,8 @@ public class RequestController {
     @RequirePermission(Permission.REQUESTS_VIEW)
     public ResponseEntity<ApiResponse<List<RequestDto>>> getAllRequests(
             @ModelAttribute PageRequest pageRequest,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) List<String> source,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
-            @RequestParam(required = false) UUID locationId) {
-        PageResult<RequestDto> result = requestService.getAllRequests(pageRequest, status, source, from, to, locationId);
+            @ModelAttribute RequestFilterRequest filter) {
+        PageResult<RequestDto> result = requestService.getAllRequests(pageRequest, filter);
         return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 

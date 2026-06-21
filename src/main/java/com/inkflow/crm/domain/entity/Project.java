@@ -68,17 +68,6 @@ public class Project extends BaseEntity {
     @Builder.Default
     private List<GalleryPhoto> photos = new ArrayList<>();
 
-    public void incrementCompletedSessions() {
-        this.completedSessions++;
-        if (this.completedSessions >= this.totalSessions) {
-            this.status = ProjectStatus.COMPLETED;
-        }
-    }
-
-    public void addPayment(BigDecimal amount) {
-        this.totalPaid = this.totalPaid.add(amount);
-    }
-
     public BigDecimal getRemainingAmount() {
         return estimatedCost.subtract(totalPaid);
     }

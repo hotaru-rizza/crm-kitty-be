@@ -53,8 +53,7 @@ public class AppointmentAnalyticsQueryService {
     }
 
     private int countPendingAppointments(List<Appointment> appointments) {
-        return metrics.countByStatus(appointments, AppointmentStatus.NEW)
-                + metrics.countByStatus(appointments, AppointmentStatus.CONFIRMED);
+        return metrics.countByStatus(appointments, AppointmentStatus.SCHEDULED);
     }
 
     private long countNewClientsInRange(List<Appointment> appointments, Instant from, Instant to) {

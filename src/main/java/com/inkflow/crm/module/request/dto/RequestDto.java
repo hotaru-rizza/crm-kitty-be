@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -31,4 +32,10 @@ public class RequestDto {
     private String tattooSize;
     private String tattooTiming;
     private Boolean isCoverUp;
+    private List<String> bodyZones;
+    private List<String> referenceUrls;
+    private String contactMethod;
+    private String contactValue;
+    private UUID assignedStaffId;
+    private String assignedStaffName;
 }

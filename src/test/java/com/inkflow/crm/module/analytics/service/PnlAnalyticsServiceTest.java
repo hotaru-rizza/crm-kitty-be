@@ -71,7 +71,7 @@ class PnlAnalyticsServiceTest {
         UUID artistId = UUID.randomUUID();
         Appointment done = Appointment.builder()
                 .tenantId(tenantId)
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .finalPrice(BigDecimal.valueOf(1000))
                 .artist(Staff.builder().id(artistId).firstName("Alex").lastName("Ink").build())
                 .build();
@@ -136,7 +136,7 @@ class PnlAnalyticsServiceTest {
 
         Appointment withoutArtist = Appointment.builder()
                 .tenantId(tenantId)
-                .status(AppointmentStatus.DONE)
+                .status(AppointmentStatus.COMPLETED)
                 .finalPrice(BigDecimal.valueOf(500))
                 .build();
 

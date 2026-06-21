@@ -25,12 +25,16 @@ public class ClientDto {
     private LocalDate birthDate;
     private String instagram;
     private String telegram;
+    private String whatsapp;
+    private String facebook;
     private List<String> tags;
     private String status;
     private String notes;
     private Instant lastVisit;
+    private Instant firstVisit;
     private Integer totalVisits;
     private Integer cancelledVisits;
     private BigDecimal ltv;
+    private BigDecimal balance;
     private Instant createdAt;
 }

@@ -114,7 +114,7 @@ class AppointmentServiceTest {
                 .location(location)
                 .startTime(start)
                 .endTime(end)
-                .status(AppointmentStatus.NEW)
+                .status(AppointmentStatus.SCHEDULED)
                 .price(BigDecimal.valueOf(1000))
                 .prepayment(BigDecimal.ZERO)
                 .discount(BigDecimal.ZERO)
@@ -212,7 +212,7 @@ class AppointmentServiceTest {
         authenticate(tenantId);
 
         Staff artist = staff(artistId);
-        Appointment appointment = baseAppointment(appointmentId, tenantId, artist, oldStart, oldEnd, AppointmentStatus.CONFIRMED);
+        Appointment appointment = baseAppointment(appointmentId, tenantId, artist, oldStart, oldEnd, AppointmentStatus.SCHEDULED);
 
         when(entityResolver.requireAppointment(tenantId, appointmentId)).thenReturn(appointment);
         when(appointmentRepository.existsConflictingAppointmentExcluding(artistId, newStart, newEnd, appointmentId))
@@ -248,7 +248,7 @@ class AppointmentServiceTest {
         authenticate(tenantId);
 
         Staff artist = staff(artistId);
-        Appointment appointment = baseAppointment(appointmentId, tenantId, artist, oldStart, oldEnd, AppointmentStatus.CONFIRMED);
+        Appointment appointment = baseAppointment(appointmentId, tenantId, artist, oldStart, oldEnd, AppointmentStatus.SCHEDULED);
 
         when(entityResolver.requireAppointment(tenantId, appointmentId)).thenReturn(appointment);
         when(appointmentRepository.existsConflictingAppointmentExcluding(artistId, newStart, newEnd, appointmentId))
@@ -272,7 +272,7 @@ class AppointmentServiceTest {
 
         authenticate(tenantId);
 
-        Appointment appointment = baseAppointment(appointmentId, tenantId, staff(artistId), start, end, AppointmentStatus.CONFIRMED);
+        Appointment appointment = baseAppointment(appointmentId, tenantId, staff(artistId), start, end, AppointmentStatus.SCHEDULED);
 
         when(entityResolver.requireAppointment(tenantId, appointmentId)).thenReturn(appointment);
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -300,19 +300,19 @@ class AppointmentServiceTest {
         authenticate(tenantId);
 
         Appointment appointment = baseAppointment(
-                appointmentId, tenantId, staff(UUID.randomUUID()), start, end, AppointmentStatus.IN_PROGRESS);
+                appointmentId, tenantId, staff(UUID.randomUUID()), start, end, AppointmentStatus.SCHEDULED);
 
         when(entityResolver.requireAppointment(tenantId, appointmentId)).thenReturn(appointment);
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(appointmentMapper.toDto(appointment)).thenReturn(AppointmentDto.builder().id(appointmentId).build());
 
         UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
-                .status("done")
+                .status("completed")
                 .build();
 
         appointmentService.updateAppointment(appointmentId, request);
 
-        assertEquals(AppointmentStatus.DONE, appointment.getStatus());
+        assertEquals(AppointmentStatus.COMPLETED, appointment.getStatus());
     }
 
     @Test
@@ -325,7 +325,7 @@ class AppointmentServiceTest {
         authenticate(tenantId);
 
         Appointment appointment = baseAppointment(
-                appointmentId, tenantId, staff(UUID.randomUUID()), start, end, AppointmentStatus.CONFIRMED);
+                appointmentId, tenantId, staff(UUID.randomUUID()), start, end, AppointmentStatus.SCHEDULED);
         appointment.setPrice(BigDecimal.valueOf(1000));
         appointment.setDiscount(BigDecimal.ZERO);
         appointment.setFinalPrice(BigDecimal.valueOf(1000));
@@ -355,7 +355,7 @@ class AppointmentServiceTest {
         Appointment appointment = Appointment.builder()
                 .id(appointmentId)
                 .tenantId(tenantId)
-                .status(AppointmentStatus.NEW)
+                .status(AppointmentStatus.SCHEDULED)
                 .prepayment(BigDecimal.ZERO)
                 .discount(BigDecimal.ZERO)
                 .build();
