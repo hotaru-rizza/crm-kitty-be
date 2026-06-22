@@ -1,5 +1,6 @@
 package com.inkflow.crm;
 
+import com.inkflow.crm.config.DevStartupListener;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
@@ -12,6 +13,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 public class InkFlowCrmApplication {
     public static void main(String[] args) {
-        SpringApplication.run(InkFlowCrmApplication.class, args);
+        SpringApplication application = new SpringApplication(InkFlowCrmApplication.class);
+        application.addListeners(new DevStartupListener());
+        application.run(args);
     }
 }

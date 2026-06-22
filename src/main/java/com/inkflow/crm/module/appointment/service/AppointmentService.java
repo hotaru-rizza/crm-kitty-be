@@ -30,6 +30,8 @@ import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,7 +82,18 @@ public class AppointmentService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         List<UUID> artistIds = resolveArtistIds(tenantId, request.getArtistIds());
 
-        return appointmentRepository.findForCalendar(tenantId, request.getFrom(), request.getTo(), artistIds)
+        Specification<Appointment> spec = Specification
+                .where(AppointmentSpecifications.belongsToTenant(tenantId))
+                .and(AppointmentSpecifications.notDeleted())
+                .and(AppointmentSpecifications.startTimeAfter(request.getFrom()))
+                .and(AppointmentSpecifications.startTimeBefore(request.getTo()))
+                .and(AppointmentSpecifications.withArtists(artistIds))
+                .and(AppointmentSpecifications.withLocation(request.getLocationId()))
+                .and(AppointmentSpecifications.withService(request.getServiceId()))
+                .and(AppointmentSpecifications.withStatuses(request.getStatuses()));
+
+        return appointmentRepository.findAll(spec, Pageable.unpaged(Sort.by("startTime")))
+                .getContent()
                 .stream()
                 .map(appointmentMapper::toDto)
                 .toList();
@@ -196,7 +209,9 @@ public class AppointmentService {
                 .and(AppointmentSpecifications.withLocation(filter.locationId()))
                 .and(AppointmentSpecifications.withArtists(artistIds))
                 .and(AppointmentSpecifications.withService(filter.serviceId()))
-                .and(AppointmentSpecifications.withStatus(filter.status()))
+                .and(filter.statuses() != null && !filter.statuses().isEmpty()
+                        ? AppointmentSpecifications.withStatuses(filter.statuses())
+                        : AppointmentSpecifications.withStatus(filter.status()))
                 .and(AppointmentSpecifications.startTimeAfter(from))
                 .and(AppointmentSpecifications.startTimeBefore(to));
 

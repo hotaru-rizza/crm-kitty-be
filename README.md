@@ -13,6 +13,14 @@ Spring Boot API for tattoo studio CRM and B2C consumer apps.
 SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 ```
 
+**Backend hangs on startup?** It is almost always waiting for PostgreSQL. Check:
+
+```bash
+pg_isready -h 127.0.0.1 -p 5432
+```
+
+If `no response` — start Postgres first (local install, Docker, or point `SPRING_DATASOURCE_URL` at Supabase). With the `dev` profile the app fails in ~5s instead of hanging silently.
+
 Swagger UI (dev/staging): [http://localhost:8080/api/swagger-ui.html](http://localhost:8080/api/swagger-ui.html)
 
 ## Environment

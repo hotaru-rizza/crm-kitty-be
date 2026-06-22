@@ -24,4 +24,6 @@ public class CalendarQueryRequest {
 
     private List<UUID> artistIds;
     private UUID locationId;
+    private UUID serviceId;
+    private List<String> statuses;
 }

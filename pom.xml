@@ -94,14 +94,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- DevTools -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-            <scope>runtime</scope>
-            <optional>true</optional>
-        </dependency>
-
         <!-- AWS S3 SDK (for Cloudflare R2) -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>

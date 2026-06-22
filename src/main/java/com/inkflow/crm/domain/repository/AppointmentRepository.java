@@ -56,11 +56,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
     @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM Appointment a WHERE a.artist.id = :artistId AND a.id != :excludeId AND a.status NOT IN (com.inkflow.crm.domain.enums.AppointmentStatus.CANCELLED, com.inkflow.crm.domain.enums.AppointmentStatus.COMPLETED, com.inkflow.crm.domain.enums.AppointmentStatus.NO_SHOW) AND a.deletedAt IS NULL AND ((a.startTime <= :startTime AND a.endTime > :startTime) OR (a.startTime < :endTime AND a.endTime >= :endTime) OR (a.startTime >= :startTime AND a.endTime <= :endTime))")
     boolean existsConflictingAppointmentExcluding(@Param("artistId") UUID artistId, @Param("startTime") Instant startTime, @Param("endTime") Instant endTime, @Param("excludeId") UUID excludeId);
 
-    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
-    @Query("SELECT a FROM Appointment a WHERE a.tenantId = :tenantId AND a.startTime >= :from AND a.startTime < :to AND a.deletedAt IS NULL AND (:artistIds IS NULL OR a.artist.id IN :artistIds) ORDER BY a.startTime")
-    List<Appointment> findForCalendar(@Param("tenantId") UUID tenantId, @Param("from") Instant from, @Param("to") Instant to, @Param("artistIds") List<UUID> artistIds);
-
-
     @Override
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     Page<Appointment> findAll(Specification<Appointment> spec, Pageable pageable);
