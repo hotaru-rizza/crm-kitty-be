@@ -175,10 +175,13 @@ spring:
       on-profile: dev
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5432/postgres?sslmode=disable&connectTimeout=3&socketTimeout=5}
+    # Dev always uses remote Supabase — set SPRING_DATASOURCE_URL in IntelliJ / env (no localhost fallback).
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     hikari:
-      connection-timeout: 5000
-      initialization-fail-timeout: 5000
+      connection-timeout: 10000
+      initialization-fail-timeout: 10000
 
   jpa:
     hibernate:
@@ -189,7 +192,11 @@ spring:
     enabled: true
     baseline-on-migrate: true
     baseline-version: 9
-    lock-retry-count: 10
+    lock-retry-count: 3
+    connect-retries: 2
+    connect-retries-interval: 2s
+    postgresql:
+      transactional-lock: false
 
 r2:
   verify-connection: false

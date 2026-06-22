@@ -55,11 +55,18 @@ public class GoogleCalendarSyncService {
 
     @PostConstruct
     void init() {
+        // Lazy: GoogleNetHttpTransport can block minutes on slow/blocked network — not needed at startup.
+    }
+
+    private synchronized void ensureTransport() {
+        if (httpTransport != null) {
+            return;
+        }
         try {
             httpTransport = GoogleNetHttpTransport.newTrustedTransport();
             jsonFactory = JacksonFactory.getDefaultInstance();
         } catch (Exception e) {
-            log.warn("Failed to init Google HTTP transport: {}", e.getMessage());
+            throw new BusinessRuleException("Google Calendar transport init failed: " + e.getMessage());
         }
     }
 
@@ -182,6 +189,7 @@ public class GoogleCalendarSyncService {
     }
 
     Calendar getCalendarService(Staff artist) throws Exception {
+        ensureTransport();
         String accessToken = refreshTokenIfNeeded(artist);
 
         Credential credential = new Credential(BearerToken.authorizationHeaderAccessMethod())
@@ -272,6 +280,7 @@ public class GoogleCalendarSyncService {
 
     private String fetchCalendarEmail(String accessToken) {
         try {
+            ensureTransport();
             Credential credential = new Credential(BearerToken.authorizationHeaderAccessMethod())
                     .setAccessToken(accessToken);
             Calendar calendarService = new Calendar.Builder(httpTransport, jsonFactory, credential)
@@ -285,6 +294,7 @@ public class GoogleCalendarSyncService {
     }
 
     GoogleTokenResponse exchangeAuthorizationCode(String code) throws IOException {
+        ensureTransport();
         return new GoogleAuthorizationCodeTokenRequest(
                 httpTransport, jsonFactory,
                 properties.getClientId(), properties.getClientSecret(),
@@ -293,6 +303,7 @@ public class GoogleCalendarSyncService {
     }
 
     GoogleTokenResponse refreshAccessToken(String refreshToken) throws IOException {
+        ensureTransport();
         return new com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest(
                 httpTransport, jsonFactory,
                 refreshToken,
@@ -302,6 +313,7 @@ public class GoogleCalendarSyncService {
     }
 
     private GoogleAuthorizationCodeFlow buildFlow() {
+        ensureTransport();
         try {
             return new GoogleAuthorizationCodeFlow.Builder(
                     httpTransport, jsonFactory,

@@ -94,6 +94,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- .env for local dev (loaded in InkFlowCrmApplication before Spring starts) -->
+        <dependency>
+            <groupId>io.github.cdimascio</groupId>
+            <artifactId>dotenv-java</artifactId>
+            <version>3.2.0</version>
+        </dependency>
+
         <!-- AWS S3 SDK (for Cloudflare R2) -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
