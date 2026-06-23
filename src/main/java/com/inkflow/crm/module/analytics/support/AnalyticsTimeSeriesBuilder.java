@@ -59,6 +59,7 @@ public class AnalyticsTimeSeriesBuilder {
         int total = metrics.countTotal(bucket);
         int completed = metrics.countCompleted(bucket);
         int cancelled = metrics.countCancelled(bucket);
+        int noShow = metrics.countNoShow(bucket);
         BigDecimal revenue = metrics.sumDoneRevenue(bucket);
 
         return AppointmentAnalyticsDto.DataPoint.builder()
@@ -66,6 +67,7 @@ public class AnalyticsTimeSeriesBuilder {
                 .total(total)
                 .completed(completed)
                 .cancelled(cancelled)
+                .noShow(noShow)
                 .revenue(revenue)
                 .build();
     }

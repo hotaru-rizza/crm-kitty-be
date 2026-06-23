@@ -6818,6 +6818,9 @@ components:
         cancelledAppointments:
           type: integer
           format: int32
+        noShowAppointments:
+          type: integer
+          format: int32
         revenue:
           type: number
         avgCheck:
@@ -7008,6 +7011,9 @@ components:
           type: integer
           format: int32
         cancelledAppointments:
+          type: integer
+          format: int32
+        noShowAppointments:
           type: integer
           format: int32
         newAppointments:

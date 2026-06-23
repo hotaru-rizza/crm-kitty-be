@@ -62,6 +62,7 @@ class AnalyticsTimeSeriesBuilderTest {
         assertEquals(2, series.get(0).getTotal());
         assertEquals(1, series.get(0).getCompleted());
         assertEquals(1, series.get(0).getCancelled());
+        assertEquals(0, series.get(0).getNoShow());
         assertEquals(BigDecimal.valueOf(500), series.get(0).getRevenue());
         assertEquals("2024-06-04", series.get(1).getDate());
         assertEquals(1, series.get(1).getTotal());
@@ -110,6 +111,33 @@ class AnalyticsTimeSeriesBuilderTest {
         assertEquals("2024-06", series.getFirst().getDate());
         assertEquals(1, series.getFirst().getTotal());
         assertEquals(BigDecimal.valueOf(1200), series.getFirst().getRevenue());
+    }
+
+    @Test
+    void shouldCountNoShowSeparatelyFromCancelledInDailySeries() {
+        Instant from = instantOn("2024-06-03");
+        Instant to = instantOn("2024-06-03");
+
+        Appointment noShow = timedAppointment(
+                AppointmentStatus.NO_SHOW,
+                instantAt("2024-06-03T12:00:00Z"),
+                BigDecimal.valueOf(400));
+        Appointment cancelled = timedAppointment(
+                AppointmentStatus.CANCELLED,
+                instantAt("2024-06-03T14:00:00Z"),
+                BigDecimal.valueOf(200));
+
+        List<AppointmentAnalyticsDto.DataPoint> series = builder.buildAppointmentSeries(
+                List.of(noShow, cancelled),
+                from,
+                to,
+                "day");
+
+        assertEquals(1, series.size());
+        assertEquals(2, series.getFirst().getTotal());
+        assertEquals(1, series.getFirst().getCancelled());
+        assertEquals(1, series.getFirst().getNoShow());
+        assertEquals(BigDecimal.ZERO, series.getFirst().getRevenue());
     }
 
     @Test

@@ -71,6 +71,7 @@ public class StaffPerformanceAnalyticsService {
         int total = metrics.countTotal(artistAppointments);
         int completed = metrics.countCompleted(artistAppointments);
         int cancelled = metrics.countCancelled(artistAppointments);
+        int noShow = metrics.countNoShow(artistAppointments);
         BigDecimal revenue = metrics.sumDoneRevenue(artistAppointments);
         BigDecimal avgCheck = metrics.calculateAvgCheck(revenue, completed);
 
@@ -90,6 +91,7 @@ public class StaffPerformanceAnalyticsService {
                 .totalAppointments(total)
                 .completedAppointments(completed)
                 .cancelledAppointments(cancelled)
+                .noShowAppointments(noShow)
                 .revenue(revenue)
                 .avgCheck(avgCheck)
                 .salaryType(salaryType.getValue())

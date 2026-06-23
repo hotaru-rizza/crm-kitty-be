@@ -29,6 +29,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -198,13 +200,11 @@ class TransactionServiceTest {
         PageRequest pageRequest = new PageRequest();
         Page<Transaction> emptyPage = new PageImpl<>(List.of());
 
-        when(transactionRepository.findByTenantIdAndStaffIdAndDeletedAtIsNull(
-                tenantId, staffId, pageRequest.toPageable())).thenReturn(emptyPage);
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPage);
 
-        transactionService.getAllTransactions(pageRequest, null, null, null, null, staffId);
+        transactionService.getAllTransactions(pageRequest, null, null, null, null, List.of(staffId), null, null, null);
 
-        verify(transactionRepository).findByTenantIdAndStaffIdAndDeletedAtIsNull(
-                tenantId, staffId, pageRequest.toPageable());
+        verify(transactionRepository).findAll(any(Specification.class), eq(pageRequest.toPageable()));
     }
 
     @Test
@@ -218,13 +218,11 @@ class TransactionServiceTest {
         PageRequest pageRequest = new PageRequest();
         Page<Transaction> emptyPage = new PageImpl<>(List.of());
 
-        when(transactionRepository.findByTenantIdAndStaffIdAndDateRangeAndDeletedAtIsNull(
-                tenantId, staffId, from, to, pageRequest.toPageable())).thenReturn(emptyPage);
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPage);
 
-        transactionService.getAllTransactions(pageRequest, null, null, from, to, staffId);
+        transactionService.getAllTransactions(pageRequest, null, null, from, to, List.of(staffId), null, null, null);
 
-        verify(transactionRepository).findByTenantIdAndStaffIdAndDateRangeAndDeletedAtIsNull(
-                tenantId, staffId, from, to, pageRequest.toPageable());
+        verify(transactionRepository).findAll(any(Specification.class), eq(pageRequest.toPageable()));
     }
 
     @Test
@@ -237,13 +235,11 @@ class TransactionServiceTest {
         PageRequest pageRequest = new PageRequest();
         Page<Transaction> emptyPage = new PageImpl<>(List.of());
 
-        when(transactionRepository.findByTenantIdAndDateRangeAndDeletedAtIsNull(
-                tenantId, from, to, pageRequest.toPageable())).thenReturn(emptyPage);
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPage);
 
-        transactionService.getAllTransactions(pageRequest, null, null, from, to, null);
+        transactionService.getAllTransactions(pageRequest, null, null, from, to, null, null, null, null);
 
-        verify(transactionRepository).findByTenantIdAndDateRangeAndDeletedAtIsNull(
-                tenantId, from, to, pageRequest.toPageable());
+        verify(transactionRepository).findAll(any(Specification.class), eq(pageRequest.toPageable()));
     }
 
     @Test
@@ -290,13 +286,11 @@ class TransactionServiceTest {
         PageRequest pageRequest = new PageRequest();
         Page<Transaction> emptyPage = new PageImpl<>(List.of());
 
-        when(transactionRepository.findByTenantIdAndTypeAndDeletedAtIsNull(
-                tenantId, TransactionType.EXPENSE, pageRequest.toPageable())).thenReturn(emptyPage);
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPage);
 
-        transactionService.getAllTransactions(pageRequest, "expense", null, null, null, null);
+        transactionService.getAllTransactions(pageRequest, "expense", null, null, null, null, null, null, null);
 
-        verify(transactionRepository).findByTenantIdAndTypeAndDeletedAtIsNull(
-                tenantId, TransactionType.EXPENSE, pageRequest.toPageable());
+        verify(transactionRepository).findAll(any(Specification.class), eq(pageRequest.toPageable()));
     }
 
     @Test
@@ -309,13 +303,11 @@ class TransactionServiceTest {
         PageRequest pageRequest = new PageRequest();
         Page<Transaction> emptyPage = new PageImpl<>(List.of());
 
-        when(transactionRepository.findByTenantIdAndTypeAndDateRangeAndDeletedAtIsNull(
-                tenantId, TransactionType.INCOME, from, to, pageRequest.toPageable())).thenReturn(emptyPage);
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPage);
 
-        transactionService.getAllTransactions(pageRequest, "income", null, from, to, null);
+        transactionService.getAllTransactions(pageRequest, "income", null, from, to, null, null, null, null);
 
-        verify(transactionRepository).findByTenantIdAndTypeAndDateRangeAndDeletedAtIsNull(
-                tenantId, TransactionType.INCOME, from, to, pageRequest.toPageable());
+        verify(transactionRepository).findAll(any(Specification.class), eq(pageRequest.toPageable()));
     }
 
     @Test
@@ -326,13 +318,11 @@ class TransactionServiceTest {
         PageRequest pageRequest = new PageRequest();
         Page<Transaction> emptyPage = new PageImpl<>(List.of());
 
-        when(transactionRepository.findByTenantIdAndCategoryAndDeletedAtIsNull(
-                tenantId, TransactionCategory.RENT, pageRequest.toPageable())).thenReturn(emptyPage);
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPage);
 
-        transactionService.getAllTransactions(pageRequest, null, "rent", null, null, null);
+        transactionService.getAllTransactions(pageRequest, null, "rent", null, null, null, null, null, null);
 
-        verify(transactionRepository).findByTenantIdAndCategoryAndDeletedAtIsNull(
-                tenantId, TransactionCategory.RENT, pageRequest.toPageable());
+        verify(transactionRepository).findAll(any(Specification.class), eq(pageRequest.toPageable()));
     }
 
     @Test
@@ -343,12 +333,12 @@ class TransactionServiceTest {
         PageRequest pageRequest = new PageRequest();
         Page<Transaction> emptyPage = new PageImpl<>(List.of());
 
-        when(transactionRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable()))
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(emptyPage);
 
-        transactionService.getAllTransactions(pageRequest, null, null, null, null, null);
+        transactionService.getAllTransactions(pageRequest, null, null, null, null, null, null, null, null);
 
-        verify(transactionRepository).findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
+        verify(transactionRepository).findAll(any(Specification.class), eq(pageRequest.toPageable()));
     }
 
     @Test
@@ -362,12 +352,12 @@ class TransactionServiceTest {
         PageRequest pageRequest = new PageRequest();
         Page<Transaction> page = new PageImpl<>(List.of(transaction));
 
-        when(transactionRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable()))
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
         when(transactionMapper.toDto(transaction)).thenReturn(dto);
 
         PageResult<TransactionDto> result = transactionService.getAllTransactions(
-                pageRequest, null, null, null, null, null);
+                pageRequest, null, null, null, null, null, null, null, null);
 
         assertEquals(1, result.getData().size());
         assertEquals(transactionId, result.getData().getFirst().getId());
@@ -600,7 +590,7 @@ class TransactionServiceTest {
     }
 
     @Test
-    void shouldPreferStaffFilterOverTypeWhenBothProvided() {
+    void shouldCombineAllFiltersWhenListing() {
         UUID tenantId = UUID.randomUUID();
         UUID staffId = UUID.randomUUID();
         authenticate(tenantId);
@@ -610,15 +600,12 @@ class TransactionServiceTest {
         PageRequest pageRequest = new PageRequest();
         Page<Transaction> emptyPage = new PageImpl<>(List.of());
 
-        when(transactionRepository.findByTenantIdAndStaffIdAndDateRangeAndDeletedAtIsNull(
-                tenantId, staffId, from, to, pageRequest.toPageable())).thenReturn(emptyPage);
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPage);
 
-        transactionService.getAllTransactions(pageRequest, "income", "service", from, to, staffId);
+        transactionService.getAllTransactions(
+                pageRequest, "income", "service", from, to, List.of(staffId), "card", BigDecimal.TEN, BigDecimal.valueOf(100));
 
-        verify(transactionRepository).findByTenantIdAndStaffIdAndDateRangeAndDeletedAtIsNull(
-                tenantId, staffId, from, to, pageRequest.toPageable());
-        verify(transactionRepository, never()).findByTenantIdAndTypeAndDateRangeAndDeletedAtIsNull(
-                eq(tenantId), any(), eq(from), eq(to), any());
+        verify(transactionRepository).findAll(any(Specification.class), eq(pageRequest.toPageable()));
     }
 
     private CreateTransactionRequest.CreateTransactionRequestBuilder baseCreateRequest(UUID locationId) {

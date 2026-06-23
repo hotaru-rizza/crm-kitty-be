@@ -40,6 +40,17 @@ public final class AppointmentSpecifications {
         return (root, query, cb) -> cb.equal(cb.lower(root.get("status").as(String.class)), status.toLowerCase());
     }
 
+    public static Specification<Appointment> withStatuses(List<String> statuses) {
+        if (statuses == null || statuses.isEmpty()) return null;
+        if (statuses.size() == 1) return withStatus(statuses.getFirst());
+        List<String> normalized = statuses.stream()
+                .filter(status -> status != null && !status.isBlank())
+                .map(String::toLowerCase)
+                .toList();
+        if (normalized.isEmpty()) return null;
+        return (root, query, cb) -> cb.lower(root.get("status").as(String.class)).in(normalized);
+    }
+
     public static Specification<Appointment> startTimeAfter(Instant from) {
         if (from == null) return null;
         return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("startTime"), from);

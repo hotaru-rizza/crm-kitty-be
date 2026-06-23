@@ -8,6 +8,7 @@ public record AppointmentFilterRequest(
         List<UUID> artistIds,
         UUID serviceId,
         String status,
+        List<String> statuses,
         String from,
         String to
 ) {

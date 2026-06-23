@@ -204,9 +204,12 @@ public class ProjectService {
             project.setTotalSessions(request.getTotalSessions());
         }
         if (request.getArtistId() != null) {
-            var artist = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getArtistId(), tenantId)
-                    .orElseThrow(() -> ResourceNotFoundException.staff(request.getArtistId().toString()));
-            project.setArtist(artist);
+            UUID currentArtistId = project.getArtist() != null ? project.getArtist().getId() : null;
+            if (!request.getArtistId().equals(currentArtistId)) {
+                var artist = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getArtistId(), tenantId)
+                        .orElseThrow(() -> ResourceNotFoundException.staff(request.getArtistId().toString()));
+                project.setArtist(artist);
+            }
         }
         if (request.getStatus() != null) {
             project.setStatus(ProjectStatus.fromValue(request.getStatus()));

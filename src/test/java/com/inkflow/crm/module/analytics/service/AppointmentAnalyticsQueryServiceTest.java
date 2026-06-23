@@ -67,6 +67,7 @@ class AppointmentAnalyticsQueryServiceTest {
         when(metrics.countTotal(appointments)).thenReturn(1);
         when(metrics.countCompleted(appointments)).thenReturn(1);
         when(metrics.countCancelled(appointments)).thenReturn(0);
+        when(metrics.countNoShow(appointments)).thenReturn(0);
         when(metrics.countByStatus(appointments, AppointmentStatus.SCHEDULED)).thenReturn(0);
         when(metrics.sumDoneRevenue(appointments)).thenReturn(BigDecimal.valueOf(500));
         when(metrics.calculateAvgCheck(BigDecimal.valueOf(500), 1)).thenReturn(BigDecimal.valueOf(500));
@@ -101,6 +102,7 @@ class AppointmentAnalyticsQueryServiceTest {
         when(metrics.countTotal(appointments)).thenReturn(1);
         when(metrics.countCompleted(appointments)).thenReturn(1);
         when(metrics.countCancelled(appointments)).thenReturn(0);
+        when(metrics.countNoShow(appointments)).thenReturn(0);
         when(metrics.countByStatus(appointments, AppointmentStatus.SCHEDULED)).thenReturn(0);
         when(metrics.sumDoneRevenue(appointments)).thenReturn(BigDecimal.valueOf(100));
         when(metrics.calculateAvgCheck(BigDecimal.valueOf(100), 1)).thenReturn(BigDecimal.valueOf(100));
@@ -201,6 +203,7 @@ class AppointmentAnalyticsQueryServiceTest {
         when(metrics.countTotal(appointments)).thenReturn(0);
         when(metrics.countCompleted(appointments)).thenReturn(0);
         when(metrics.countCancelled(appointments)).thenReturn(0);
+        when(metrics.countNoShow(appointments)).thenReturn(0);
         when(metrics.countByStatus(appointments, AppointmentStatus.SCHEDULED)).thenReturn(5);
         when(metrics.sumDoneRevenue(appointments)).thenReturn(BigDecimal.ZERO);
         when(metrics.calculateAvgCheck(BigDecimal.ZERO, 0)).thenReturn(BigDecimal.ZERO);
@@ -216,6 +219,7 @@ class AppointmentAnalyticsQueryServiceTest {
         when(metrics.countTotal(appointments)).thenReturn(appointments.size());
         when(metrics.countCompleted(appointments)).thenReturn(0);
         when(metrics.countCancelled(appointments)).thenReturn(0);
+        when(metrics.countNoShow(appointments)).thenReturn(0);
         when(metrics.countByStatus(appointments, AppointmentStatus.SCHEDULED)).thenReturn(0);
         when(metrics.sumDoneRevenue(appointments)).thenReturn(BigDecimal.ZERO);
         when(metrics.calculateAvgCheck(BigDecimal.ZERO, 0)).thenReturn(BigDecimal.ZERO);

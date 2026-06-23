@@ -39,8 +39,12 @@ public class TransactionController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
-            @RequestParam(required = false) UUID staffId) {
-        PageResult<TransactionDto> result = transactionService.getAllTransactions(pageRequest, type, category, from, to, staffId);
+            @RequestParam(required = false) List<UUID> staffIds,
+            @RequestParam(required = false) String paymentMethod,
+            @RequestParam(required = false) java.math.BigDecimal amountMin,
+            @RequestParam(required = false) java.math.BigDecimal amountMax) {
+        PageResult<TransactionDto> result = transactionService.getAllTransactions(
+                pageRequest, type, category, from, to, staffIds, paymentMethod, amountMin, amountMax);
         return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
