@@ -10,5 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CompanySettingsDto {
+    private String name;
+    private String logoUrl;
     private String accountType;
 }

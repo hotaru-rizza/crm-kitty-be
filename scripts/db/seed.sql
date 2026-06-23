@@ -1012,6 +1012,9 @@ VALUES
 
 ON CONFLICT (id) DO NOTHING;
 
+
+-- Dashboard preview dates (re-run anytime): see scripts/db/dashboard-preview-dates.sql
+
 -- ============================================================
 -- DONE — підсумок
 -- ============================================================

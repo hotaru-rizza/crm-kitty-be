@@ -3,7 +3,6 @@ package com.inkflow.crm.module.analytics.service;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.TransactionCategoryConfig;
-import com.inkflow.crm.domain.enums.TransactionCategory;
 import com.inkflow.crm.domain.enums.TransactionType;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.TransactionCategoryConfigRepository;
@@ -140,9 +139,8 @@ public class PnlAnalyticsService {
     }
 
     private PnlDto.CategoryLine toCategoryLine(Object[] row, Map<String, TransactionCategoryConfig> configByKey) {
-        TransactionCategory category = (TransactionCategory) row[0];
+        String categoryKey = row[0] != null ? row[0].toString() : "";
         BigDecimal amount = row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
-        String categoryKey = category.getValue();
         TransactionCategoryConfig config = configByKey.get(categoryKey);
         String plType = config != null ? config.getPlType() : "NEUTRAL";
 

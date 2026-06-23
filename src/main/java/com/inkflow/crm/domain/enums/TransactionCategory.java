@@ -7,9 +7,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum TransactionCategory {
     SERVICE("service", "Service payment"),
+    TIP("tip", "Tip"),
     RENT("rent", "Rent payment"),
     SUPPLIES("supplies", "Supplies purchase"),
     SALARY("salary", "Salary payment"),
+    MARKETING("marketing", "Marketing"),
+    EQUIPMENT("equipment", "Equipment"),
     MERCH("merch", "Merchandise"),
     OTHER("other", "Other");
 

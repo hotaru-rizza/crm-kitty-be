@@ -10,7 +10,10 @@ import java.util.UUID;
 
 @Repository
 public interface TransactionCategoryConfigRepository extends JpaRepository<TransactionCategoryConfig, UUID> {
+
     List<TransactionCategoryConfig> findByTenantIdAndDeletedAtIsNullOrderByIsDefaultDescLabelAsc(UUID tenantId);
+
     Optional<TransactionCategoryConfig> findByTenantIdAndCategoryKeyAndDeletedAtIsNull(UUID tenantId, String categoryKey);
+
     boolean existsByTenantIdAndDeletedAtIsNull(UUID tenantId);
 }

@@ -2,13 +2,13 @@ package com.inkflow.crm.domain.repository;
 
 import com.inkflow.crm.domain.entity.Transaction;
 import com.inkflow.crm.domain.enums.PaymentMethod;
-import com.inkflow.crm.domain.enums.TransactionCategory;
 import com.inkflow.crm.domain.enums.TransactionType;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 public final class TransactionSpecifications {
@@ -30,11 +30,12 @@ public final class TransactionSpecifications {
         return (root, query, cb) -> cb.equal(root.get("type"), type);
     }
 
-    public static Specification<Transaction> categoryIs(TransactionCategory category) {
-        if (category == null) {
+    public static Specification<Transaction> categoryIs(String category) {
+        if (category == null || category.isBlank()) {
             return null;
         }
-        return (root, query, cb) -> cb.equal(root.get("category"), category);
+        String normalized = category.trim().toLowerCase(Locale.ROOT);
+        return (root, query, cb) -> cb.equal(root.get("category"), normalized);
     }
 
     public static Specification<Transaction> paymentMethodIs(PaymentMethod paymentMethod) {
@@ -94,8 +95,8 @@ public final class TransactionSpecifications {
         TransactionType transactionType = type != null && !type.isBlank()
                 ? TransactionType.fromValue(type)
                 : null;
-        TransactionCategory transactionCategory = category != null && !category.isBlank()
-                ? TransactionCategory.fromValue(category)
+        String transactionCategory = category != null && !category.isBlank()
+                ? category.trim().toLowerCase(Locale.ROOT)
                 : null;
         PaymentMethod method = paymentMethod != null && !paymentMethod.isBlank()
                 ? PaymentMethod.fromValue(paymentMethod)

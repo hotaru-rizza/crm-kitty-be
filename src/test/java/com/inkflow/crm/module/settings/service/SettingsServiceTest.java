@@ -5,6 +5,7 @@ import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.enums.AccountType;
 import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.module.settings.dto.CompanySettingsDto;
+import com.inkflow.crm.module.settings.dto.UpdateCompanySettingsRequest;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -37,12 +38,14 @@ class SettingsServiceTest {
     }
 
     @Test
-    void getCompanySettings_returnsAccountTypeFromTenant() {
+    void getCompanySettings_returnsTenantProfile() {
         UUID tenantId = UUID.randomUUID();
         authenticateOwner(tenantId);
 
         Tenant tenant = Tenant.builder()
                 .id(tenantId)
+                .name("Ink Studio")
+                .logoUrl("https://cdn.example.com/logo.png")
                 .accountType(AccountType.STUDIO)
                 .build();
 
@@ -51,6 +54,31 @@ class SettingsServiceTest {
         CompanySettingsDto dto = settingsService.getCompanySettings();
 
         assertEquals("STUDIO", dto.getAccountType());
+        assertEquals("Ink Studio", dto.getName());
+        assertEquals("https://cdn.example.com/logo.png", dto.getLogoUrl());
+    }
+
+    @Test
+    void updateCompanySettings_updatesLogoUrl() {
+        UUID tenantId = UUID.randomUUID();
+        authenticateOwner(tenantId);
+
+        Tenant tenant = Tenant.builder()
+                .id(tenantId)
+                .name("Ink Studio")
+                .accountType(AccountType.STUDIO)
+                .build();
+
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(tenantRepository.save(tenant)).thenReturn(tenant);
+
+        UpdateCompanySettingsRequest request = new UpdateCompanySettingsRequest();
+        request.setLogoUrl("https://cdn.example.com/new-logo.png");
+
+        CompanySettingsDto dto = settingsService.updateCompanySettings(request);
+
+        assertEquals("https://cdn.example.com/new-logo.png", dto.getLogoUrl());
+        assertEquals("https://cdn.example.com/new-logo.png", tenant.getLogoUrl());
     }
 
     @Test

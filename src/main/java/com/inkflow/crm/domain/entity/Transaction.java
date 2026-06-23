@@ -31,9 +31,8 @@ public class Transaction extends BaseEntity {
     @Column(name = "type", nullable = false)
     private TransactionType type;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false)
-    private TransactionCategory category;
+    private String category;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_type")
@@ -105,7 +104,7 @@ public class Transaction extends BaseEntity {
     }
 
     public boolean isServicePayment() {
-        return category == TransactionCategory.SERVICE;
+        return TransactionCategory.SERVICE.getValue().equals(category);
     }
 
     public boolean isRefund() {

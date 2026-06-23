@@ -61,7 +61,7 @@ public class TransactionController {
             @RequestParam(required = false) String period,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
-            @RequestParam(required = false) UUID staffId) {
+            @RequestParam(required = false) List<UUID> staffIds) {
 
         LocalDate now = LocalDate.now();
         ZoneId zone = ZoneId.systemDefault();
@@ -90,7 +90,7 @@ public class TransactionController {
             to = now.plusMonths(1).withDayOfMonth(1).atStartOfDay(zone).toInstant();
         }
 
-        FinanceStatsDto stats = transactionService.getFinanceStats(from, to, staffId);
+        FinanceStatsDto stats = transactionService.getFinanceStats(from, to, staffIds);
         return ResponseEntity.ok(ApiResponse.success(stats));
     }
 

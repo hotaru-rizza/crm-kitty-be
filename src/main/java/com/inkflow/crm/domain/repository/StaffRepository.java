@@ -18,6 +18,7 @@ import java.util.UUID;
 
 @Repository
 public interface StaffRepository extends JpaRepository<Staff, UUID> {
+
     @EntityGraph(attributePaths = {"locations"})
     Page<Staff> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
 
@@ -29,34 +30,69 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
 
     Optional<Staff> findByEmailAndTenantIdAndDeletedAtIsNull(String email, UUID tenantId);
 
-    @Query("SELECT s FROM Staff s WHERE s.id IN :ids AND s.tenantId = :tenantId AND s.deletedAt IS NULL")
-    List<Staff> findByIdInAndTenantIdAndDeletedAtIsNull(@Param("ids") List<UUID> ids, @Param("tenantId") UUID tenantId);
+    Optional<Staff> findByAuthUserIdAndDeletedAtIsNull(String authUserId);
+
+    boolean existsByEmailAndTenantIdAndDeletedAtIsNull(String email, UUID tenantId);
+
+    List<Staff> findByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, StaffStatus status);
+
+    long countByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, StaffStatus status);
+
+    long countByTenantIdAndDeletedAtIsNull(UUID tenantId);
 
     @EntityGraph(attributePaths = {"locations"})
     Page<Staff> findByTenantIdAndRoleAndDeletedAtIsNull(UUID tenantId, UserRole role, Pageable pageable);
-    boolean existsByEmailAndTenantIdAndDeletedAtIsNull(String email, UUID tenantId);
 
-    @Query("SELECT s FROM Staff s JOIN s.locations l WHERE l.id = :locationId AND s.deletedAt IS NULL")
+    @Query("""
+            SELECT s FROM Staff s
+            WHERE s.id IN :ids
+              AND s.tenantId = :tenantId
+              AND s.deletedAt IS NULL
+            """)
+    List<Staff> findByIdInAndTenantIdAndDeletedAtIsNull(
+            @Param("ids") List<UUID> ids,
+            @Param("tenantId") UUID tenantId);
+
+    @Query("""
+            SELECT s FROM Staff s
+            JOIN s.locations l
+            WHERE l.id = :locationId
+              AND s.deletedAt IS NULL
+            """)
     List<Staff> findByLocationId(@Param("locationId") UUID locationId);
 
-    @Query("SELECT s FROM Staff s JOIN s.locations l WHERE l.id = :locationId AND s.isServiceProvider = true AND s.deletedAt IS NULL")
+    @Query("""
+            SELECT s FROM Staff s
+            JOIN s.locations l
+            WHERE l.id = :locationId
+              AND s.isServiceProvider = true
+              AND s.deletedAt IS NULL
+            """)
     List<Staff> findServiceProvidersByLocationId(@Param("locationId") UUID locationId);
 
     @EntityGraph(attributePaths = {"locations"})
-    @Query("SELECT s FROM Staff s WHERE s.tenantId = :tenantId AND s.role = 'ARTIST' AND s.deletedAt IS NULL")
+    @Query("""
+            SELECT s FROM Staff s
+            WHERE s.tenantId = :tenantId
+              AND s.role = 'ARTIST'
+              AND s.deletedAt IS NULL
+            """)
     List<Staff> findArtistsByTenantId(@Param("tenantId") UUID tenantId);
 
     @EntityGraph(attributePaths = {"locations"})
-    @Query("SELECT DISTINCT s FROM Staff s " +
-           "LEFT JOIN s.locations l " +
-           "WHERE s.tenantId = :tenantId AND s.deletedAt IS NULL " +
-           "AND (COALESCE(:search, '') = '' OR " +
-           "     LOWER(s.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "     LOWER(s.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "     LOWER(s.email) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-           "AND (:role IS NULL OR s.role = :role) " +
-           "AND (:locationId IS NULL OR l.id = :locationId) " +
-           "AND (:accountStatus IS NULL OR s.accountStatus = :accountStatus)")
+    @Query("""
+            SELECT DISTINCT s FROM Staff s
+            LEFT JOIN s.locations l
+            WHERE s.tenantId = :tenantId
+              AND s.deletedAt IS NULL
+              AND (COALESCE(:search, '') = ''
+                   OR LOWER(s.firstName) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(s.lastName)  LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(s.email)     LIKE LOWER(CONCAT('%', :search, '%')))
+              AND (:role          IS NULL OR s.role           = :role)
+              AND (:locationId    IS NULL OR l.id             = :locationId)
+              AND (:accountStatus IS NULL OR s.accountStatus  = :accountStatus)
+            """)
     Page<Staff> findWithFilters(
             @Param("tenantId") UUID tenantId,
             @Param("search") String search,
@@ -65,19 +101,24 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
             @Param("accountStatus") AccountStatus accountStatus,
             Pageable pageable);
 
-    Optional<Staff> findByAuthUserIdAndDeletedAtIsNull(String authUserId);
-
-    List<Staff> findByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, StaffStatus status);
-
-    long countByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, StaffStatus status);
-
-    long countByTenantIdAndDeletedAtIsNull(UUID tenantId);
-
     @EntityGraph(attributePaths = {"locations", "schedules", "specialization", "portfolioImages", "dontDoList"})
-    @Query("SELECT DISTINCT s FROM Staff s WHERE s.isPublic = true AND s.isServiceProvider = true AND s.deletedAt IS NULL AND s.status = com.inkflow.crm.domain.enums.StaffStatus.WORKING")
+    @Query("""
+            SELECT DISTINCT s FROM Staff s
+            WHERE s.isPublic = true
+              AND s.isServiceProvider = true
+              AND s.deletedAt IS NULL
+              AND s.status = com.inkflow.crm.domain.enums.StaffStatus.WORKING
+            """)
     List<Staff> findAllPublicArtists();
 
     @EntityGraph(attributePaths = {"locations", "schedules", "specialization", "portfolioImages", "dontDoList"})
-    @Query("SELECT DISTINCT s FROM Staff s WHERE s.isPublic = true AND s.isServiceProvider = true AND s.deletedAt IS NULL AND s.status = com.inkflow.crm.domain.enums.StaffStatus.WORKING AND s.id = :id")
+    @Query("""
+            SELECT DISTINCT s FROM Staff s
+            WHERE s.isPublic = true
+              AND s.isServiceProvider = true
+              AND s.deletedAt IS NULL
+              AND s.status = com.inkflow.crm.domain.enums.StaffStatus.WORKING
+              AND s.id = :id
+            """)
     Optional<Staff> findPublicArtistById(@Param("id") UUID id);
 }

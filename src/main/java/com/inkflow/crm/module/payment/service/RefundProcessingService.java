@@ -88,7 +88,7 @@ public class RefundProcessingService {
         return Transaction.builder()
                 .tenantId(tenantId)
                 .type(TransactionType.EXPENSE)
-                .category(TransactionCategory.SERVICE)
+                .category(TransactionCategory.SERVICE.getValue())
                 .paymentType(PaymentType.REFUND)
                 .amount(request.getAmount())
                 .paymentMethod(PaymentMethod.fromValue(request.getPaymentMethod()))

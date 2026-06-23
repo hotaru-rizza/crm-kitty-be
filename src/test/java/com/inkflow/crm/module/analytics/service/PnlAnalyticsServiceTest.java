@@ -189,8 +189,8 @@ class PnlAnalyticsServiceTest {
                                 .build()
                 ));
         when(transactionRepository.sumByCategoryAndDateRange(tenantId, from, to)).thenReturn(List.of(
-                new Object[]{TransactionCategory.RENT, BigDecimal.valueOf(120)},
-                new Object[]{TransactionCategory.SERVICE, BigDecimal.valueOf(900)}
+                new Object[]{"rent", BigDecimal.valueOf(120)},
+                new Object[]{"service", BigDecimal.valueOf(900)}
         ));
 
         PnlDto pnl = pnlAnalyticsService.getPnl(from, to);

@@ -40,7 +40,7 @@ class CategoryConfigServiceTest {
     }
 
     @Test
-    void ensureDefaults_seedsSixCategoriesForNewTenant() {
+    void ensureDefaults_seedsDefaultCategoriesForNewTenant() {
         UUID tenantId = UUID.randomUUID();
         when(repo.existsByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(false);
         when(repo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -51,7 +51,7 @@ class CategoryConfigServiceTest {
         verify(repo, atLeastOnce()).save(captor.capture());
 
         List<TransactionCategoryConfig> saved = captor.getAllValues();
-        assertEquals(6, saved.size());
+        assertEquals(8, saved.size());
         assertEquals(tenantId, saved.getFirst().getTenantId());
     }
 
