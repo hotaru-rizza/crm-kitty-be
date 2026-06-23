@@ -29,6 +29,10 @@ public class AppointmentMetricsCalculator {
         return countByStatus(appointments, AppointmentStatus.CANCELLED);
     }
 
+    public int countNoShow(List<Appointment> appointments) {
+        return countByStatus(appointments, AppointmentStatus.NO_SHOW);
+    }
+
     public BigDecimal sumDoneRevenue(List<Appointment> appointments) {
         return appointments.stream()
                 .filter(this::isDone)
@@ -106,6 +110,10 @@ public class AppointmentMetricsCalculator {
 
     public boolean isCancelled(Appointment appointment) {
         return appointment.getStatus() == AppointmentStatus.CANCELLED;
+    }
+
+    public boolean isNoShow(Appointment appointment) {
+        return appointment.getStatus() == AppointmentStatus.NO_SHOW;
     }
 
     public boolean isActive(Appointment appointment) {

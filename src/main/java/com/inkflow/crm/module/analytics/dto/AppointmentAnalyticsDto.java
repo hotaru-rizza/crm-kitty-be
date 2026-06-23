@@ -18,6 +18,7 @@ public class AppointmentAnalyticsDto {
     private int totalAppointments;
     private int completedAppointments;
     private int cancelledAppointments;
+    private int noShowAppointments;
     private int newAppointments;
     private BigDecimal totalRevenue;
     private BigDecimal avgCheck;
@@ -32,6 +33,7 @@ public class AppointmentAnalyticsDto {
         private int total;
         private int completed;
         private int cancelled;
+        private int noShow;
         private BigDecimal revenue;
     }
 }

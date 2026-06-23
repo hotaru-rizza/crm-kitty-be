@@ -20,6 +20,7 @@ public class StaffPerformanceDto {
     private int totalAppointments;
     private int completedAppointments;
     private int cancelledAppointments;
+    private int noShowAppointments;
     private BigDecimal revenue;
     private BigDecimal avgCheck;
     private String salaryType;

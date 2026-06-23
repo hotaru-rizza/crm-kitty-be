@@ -34,6 +34,7 @@ public class AppointmentAnalyticsQueryService {
         int total = metrics.countTotal(appointments);
         int completed = metrics.countCompleted(appointments);
         int cancelled = metrics.countCancelled(appointments);
+        int noShow = metrics.countNoShow(appointments);
         int pending = countPendingAppointments(appointments);
 
         BigDecimal totalRevenue = metrics.sumDoneRevenue(appointments);
@@ -45,6 +46,7 @@ public class AppointmentAnalyticsQueryService {
                 .totalAppointments(total)
                 .completedAppointments(completed)
                 .cancelledAppointments(cancelled)
+                .noShowAppointments(noShow)
                 .newAppointments(pending)
                 .totalRevenue(totalRevenue)
                 .avgCheck(avgCheck)

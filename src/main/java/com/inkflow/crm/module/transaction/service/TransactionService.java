@@ -13,6 +13,7 @@ import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,36 +33,23 @@ public class TransactionService {
     private final TransactionMapper transactionMapper;
 
     @Transactional(readOnly = true)
-    public PageResult<TransactionDto> getAllTransactions(PageRequest pageRequest, String type, String category, Instant from, Instant to, UUID staffId) {
+    public PageResult<TransactionDto> getAllTransactions(
+            PageRequest pageRequest,
+            String type,
+            String category,
+            Instant from,
+            Instant to,
+            List<UUID> staffIds,
+            String paymentMethod,
+            BigDecimal amountMin,
+            BigDecimal amountMax
+    ) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Transaction> page = resolveTransactionPage(pageRequest, type, category, from, to, staffId, tenantId);
+        Specification<Transaction> spec = TransactionSpecifications.filtered(
+                tenantId, type, category, from, to, staffIds, paymentMethod, amountMin, amountMax);
+        Page<Transaction> page = transactionRepository.findAll(spec, pageRequest.toPageable());
         List<TransactionDto> data = page.getContent().stream().map(transactionMapper::toDto).toList();
         return new PageResult<>(data, PaginationDto.from(page));
-    }
-
-    private Page<Transaction> resolveTransactionPage(PageRequest pageRequest, String type, String category, Instant from, Instant to, UUID staffId, UUID tenantId) {
-        boolean hasDateRange = from != null && to != null;
-        if (staffId != null && hasDateRange) {
-            return transactionRepository.findByTenantIdAndStaffIdAndDateRangeAndDeletedAtIsNull(
-                    tenantId, staffId, from, to, pageRequest.toPageable());
-        } else if (staffId != null) {
-            return transactionRepository.findByTenantIdAndStaffIdAndDeletedAtIsNull(
-                    tenantId, staffId, pageRequest.toPageable());
-        } else if (type != null && hasDateRange) {
-            return transactionRepository.findByTenantIdAndTypeAndDateRangeAndDeletedAtIsNull(
-                    tenantId, TransactionType.fromValue(type), from, to, pageRequest.toPageable());
-        } else if (type != null) {
-            return transactionRepository.findByTenantIdAndTypeAndDeletedAtIsNull(
-                    tenantId, TransactionType.fromValue(type), pageRequest.toPageable());
-        } else if (category != null) {
-            return transactionRepository.findByTenantIdAndCategoryAndDeletedAtIsNull(
-                    tenantId, TransactionCategory.fromValue(category), pageRequest.toPageable());
-        } else if (hasDateRange) {
-            return transactionRepository.findByTenantIdAndDateRangeAndDeletedAtIsNull(
-                    tenantId, from, to, pageRequest.toPageable());
-        } else {
-            return transactionRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
-        }
     }
 
     @Transactional(readOnly = true)

@@ -86,6 +86,7 @@ class StaffPerformanceAnalyticsServiceTest {
         when(metrics.countTotal(appointments)).thenReturn(1);
         when(metrics.countCompleted(appointments)).thenReturn(1);
         when(metrics.countCancelled(appointments)).thenReturn(0);
+        when(metrics.countNoShow(appointments)).thenReturn(0);
         when(metrics.sumDoneRevenue(appointments)).thenReturn(BigDecimal.valueOf(800));
         when(metrics.calculateAvgCheck(BigDecimal.valueOf(800), 1)).thenReturn(BigDecimal.valueOf(800));
         when(commissionCalculator.resolveSalaryType(artist)).thenReturn(SalaryType.PERCENT);
@@ -171,6 +172,7 @@ class StaffPerformanceAnalyticsServiceTest {
         when(metrics.countTotal(any())).thenReturn(1);
         when(metrics.countCompleted(any())).thenReturn(1);
         when(metrics.countCancelled(any())).thenReturn(0);
+        when(metrics.countNoShow(any())).thenReturn(0);
         when(metrics.sumDoneRevenue(List.of(low))).thenReturn(BigDecimal.valueOf(200));
         when(metrics.sumDoneRevenue(List.of(high))).thenReturn(BigDecimal.valueOf(900));
         when(metrics.calculateAvgCheck(BigDecimal.valueOf(200), 1)).thenReturn(BigDecimal.valueOf(200));
