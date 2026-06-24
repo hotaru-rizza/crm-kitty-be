@@ -9,7 +9,10 @@ import java.util.UUID;
 
 @Repository
 public interface GalleryPhotoRepository extends JpaRepository<GalleryPhoto, UUID> {
+
     List<GalleryPhoto> findByAppointmentId(UUID appointmentId);
+
     List<GalleryPhoto> findByProjectId(UUID projectId);
+
     List<GalleryPhoto> findByTenantId(UUID tenantId);
 }

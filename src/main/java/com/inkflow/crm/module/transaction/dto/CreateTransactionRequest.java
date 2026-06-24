@@ -21,7 +21,6 @@ public class CreateTransactionRequest {
     private String type;
 
     @NotBlank(message = "Category is required")
-    @Pattern(regexp = "^(service|rent|supplies|salary|merch|other)$", message = "Invalid category")
     private String category;
 
     @NotNull(message = "Amount is required")

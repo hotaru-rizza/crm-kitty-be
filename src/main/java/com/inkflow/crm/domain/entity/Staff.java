@@ -165,6 +165,12 @@ public class Staff extends BaseEntity {
     @Column(name = "start_page")
     private String startPage;
 
+    @Column(name = "accent_theme")
+    private String accentTheme;
+
+    @Column(name = "color_scheme")
+    private String colorScheme;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "staff_dont_do", joinColumns = @JoinColumn(name = "staff_id"))
     @Column(name = "item")

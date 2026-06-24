@@ -11,7 +11,7 @@ public class TransactionMapper {
         return TransactionDto.builder()
                 .id(transaction.getId())
                 .type(transaction.getType().getValue())
-                .category(transaction.getCategory().getValue())
+                .category(transaction.getCategory())
                 .amount(transaction.getAmount())
                 .paymentMethod(transaction.getPaymentMethod().getValue())
                 .description(transaction.getDescription())

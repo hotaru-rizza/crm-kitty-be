@@ -1,6 +1,8 @@
 package com.inkflow.crm.module.finance.service;
 
+import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.domain.entity.TransactionCategoryConfig;
+import com.inkflow.crm.domain.enums.TransactionType;
 import com.inkflow.crm.domain.repository.TransactionCategoryConfigRepository;
 import com.inkflow.crm.module.finance.dto.CategoryConfigDto;
 import com.inkflow.crm.security.SecurityUtils;
@@ -17,14 +19,21 @@ public class CategoryConfigService {
 
     private final TransactionCategoryConfigRepository repo;
 
-    private static final List<Object[]> DEFAULTS = List.of(
-        new Object[]{"service",  "Послуга",     "#6366f1", "INCOME"},
-        new Object[]{"merch",    "Мерч",         "#22c55e", "INCOME"},
-        new Object[]{"rent",     "Оренда",       "#f59e0b", "EXPENSE"},
-        new Object[]{"supplies", "Витратні матеріали", "#fb923c", "EXPENSE"},
-        new Object[]{"salary",   "Зарплата",     "#ec4899", "EXPENSE"},
-        new Object[]{"other",    "Інше",         "#94a3b8", "NEUTRAL"}
+    private static final List<DefaultCategory> SYSTEM_DEFAULTS = List.of(
+        new DefaultCategory("service",  "Послуга",             "#6366f1", "INCOME"),
+        new DefaultCategory("tip",      "Чайові",              "#14b8a6", "INCOME"),
+        new DefaultCategory("rent",     "Оренда",              "#f59e0b", "EXPENSE"),
+        new DefaultCategory("supplies", "Витратні матеріали",  "#fb923c", "EXPENSE"),
+        new DefaultCategory("salary",   "Зарплата",            "#ec4899", "EXPENSE"),
+        new DefaultCategory("other",    "Інше",                "#94a3b8", "NEUTRAL")
     );
+
+    private static final List<DefaultCategory> OPTIONAL_DEFAULTS = List.of(
+        new DefaultCategory("marketing", "Маркетинг",   "#a855f7", "EXPENSE"),
+        new DefaultCategory("equipment", "Обладнання",  "#06b6d4", "EXPENSE")
+    );
+
+    private record DefaultCategory(String key, String label, String color, String plType) {}
 
     @Transactional(readOnly = true)
     public List<CategoryConfigDto> getAll() {
@@ -83,21 +92,56 @@ public class CategoryConfigService {
         });
     }
 
+    @Transactional(readOnly = true)
+    public TransactionCategoryConfig requireActiveCategoryForTransaction(
+            UUID tenantId,
+            String categoryKey,
+            TransactionType transactionType
+    ) {
+        ensureDefaults(tenantId);
+
+        TransactionCategoryConfig config = repo
+                .findByTenantIdAndCategoryKeyAndDeletedAtIsNull(tenantId, categoryKey)
+                .orElseThrow(() -> new BusinessRuleException("Invalid transaction category"));
+
+        if (!Boolean.TRUE.equals(config.getIsActive())) {
+            throw new BusinessRuleException("Transaction category is inactive");
+        }
+
+        if (!matchesTransactionType(config.getPlType(), transactionType)) {
+            throw new BusinessRuleException("Transaction category does not match transaction type");
+        }
+
+        return config;
+    }
+
+    private boolean matchesTransactionType(String plType, TransactionType transactionType) {
+        if ("NEUTRAL".equals(plType)) {
+            return true;
+        }
+        if (transactionType == TransactionType.INCOME && "INCOME".equals(plType)) {
+            return true;
+        }
+        return transactionType == TransactionType.EXPENSE && "EXPENSE".equals(plType);
+    }
+
     @Transactional
     public void ensureDefaults(UUID tenantId) {
         if (repo.existsByTenantIdAndDeletedAtIsNull(tenantId)) return;
-        for (Object[] row : DEFAULTS) {
-            TransactionCategoryConfig cfg = TransactionCategoryConfig.builder()
-                    .tenantId(tenantId)
-                    .categoryKey((String) row[0])
-                    .label((String) row[1])
-                    .color((String) row[2])
-                    .plType((String) row[3])
-                    .isDefault(true)
-                    .isActive(true)
-                    .build();
-            repo.save(cfg);
-        }
+        SYSTEM_DEFAULTS.forEach(d -> repo.save(buildConfig(tenantId, d, true)));
+        OPTIONAL_DEFAULTS.forEach(d -> repo.save(buildConfig(tenantId, d, false)));
+    }
+
+    private TransactionCategoryConfig buildConfig(UUID tenantId, DefaultCategory d, boolean isDefault) {
+        return TransactionCategoryConfig.builder()
+                .tenantId(tenantId)
+                .categoryKey(d.key())
+                .label(d.label())
+                .color(d.color())
+                .plType(d.plType())
+                .isDefault(isDefault)
+                .isActive(true)
+                .build();
     }
 
     private CategoryConfigDto toDto(TransactionCategoryConfig c) {

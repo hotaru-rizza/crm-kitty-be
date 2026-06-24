@@ -13,13 +13,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID>, JpaSpecificationExecutor<Appointment> {
+
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     Page<Appointment> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
 
@@ -37,34 +37,106 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
 
     List<Appointment> findByProjectIdAndDeletedAtIsNull(UUID projectId);
 
+    List<Appointment> findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(UUID artistId, List<AppointmentStatus> statuses, Instant after);
 
-    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
-    @Query("SELECT a FROM Appointment a WHERE a.tenantId = :tenantId AND a.startTime >= :from AND a.startTime < :to AND a.deletedAt IS NULL ORDER BY a.startTime")
-    List<Appointment> findByTenantIdAndDateRange(@Param("tenantId") UUID tenantId, @Param("from") Instant from, @Param("to") Instant to);
-
-    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
-    @Query("SELECT a FROM Appointment a WHERE a.tenantId = :tenantId AND a.artist.id = :artistId AND a.startTime >= :from AND a.startTime < :to AND a.deletedAt IS NULL ORDER BY a.startTime")
-    List<Appointment> findByTenantIdAndArtistIdAndDateRange(@Param("tenantId") UUID tenantId, @Param("artistId") UUID artistId, @Param("from") Instant from, @Param("to") Instant to);
-
-    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
-    @Query("SELECT a FROM Appointment a WHERE a.tenantId = :tenantId AND a.location.id = :locationId AND a.startTime >= :from AND a.startTime < :to AND a.deletedAt IS NULL ORDER BY a.startTime")
-    List<Appointment> findByTenantIdAndLocationIdAndDateRange(@Param("tenantId") UUID tenantId, @Param("locationId") UUID locationId, @Param("from") Instant from, @Param("to") Instant to);
-
-    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM Appointment a WHERE a.artist.id = :artistId AND a.status NOT IN (com.inkflow.crm.domain.enums.AppointmentStatus.CANCELLED, com.inkflow.crm.domain.enums.AppointmentStatus.COMPLETED, com.inkflow.crm.domain.enums.AppointmentStatus.NO_SHOW) AND a.deletedAt IS NULL AND ((a.startTime <= :startTime AND a.endTime > :startTime) OR (a.startTime < :endTime AND a.endTime >= :endTime) OR (a.startTime >= :startTime AND a.endTime <= :endTime))")
-    boolean existsConflictingAppointment(@Param("artistId") UUID artistId, @Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
-
-    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM Appointment a WHERE a.artist.id = :artistId AND a.id != :excludeId AND a.status NOT IN (com.inkflow.crm.domain.enums.AppointmentStatus.CANCELLED, com.inkflow.crm.domain.enums.AppointmentStatus.COMPLETED, com.inkflow.crm.domain.enums.AppointmentStatus.NO_SHOW) AND a.deletedAt IS NULL AND ((a.startTime <= :startTime AND a.endTime > :startTime) OR (a.startTime < :endTime AND a.endTime >= :endTime) OR (a.startTime >= :startTime AND a.endTime <= :endTime))")
-    boolean existsConflictingAppointmentExcluding(@Param("artistId") UUID artistId, @Param("startTime") Instant startTime, @Param("endTime") Instant endTime, @Param("excludeId") UUID excludeId);
+    long countByTenantIdAndLocationIdAndStartTimeBetweenAndDeletedAtIsNull(UUID tenantId, UUID locationId, Instant from, Instant to);
 
     @Override
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     Page<Appointment> findAll(Specification<Appointment> spec, Pageable pageable);
 
-    List<Appointment> findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(UUID artistId, List<AppointmentStatus> statuses, Instant after);
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
+    @Query("""
+            SELECT a FROM Appointment a
+            WHERE a.tenantId = :tenantId
+              AND a.startTime >= :from
+              AND a.startTime < :to
+              AND a.deletedAt IS NULL
+            ORDER BY a.startTime
+            """)
+    List<Appointment> findByTenantIdAndDateRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("from") Instant from,
+            @Param("to") Instant to);
 
-    long countByTenantIdAndLocationIdAndStartTimeBetweenAndDeletedAtIsNull(UUID tenantId, UUID locationId, Instant from, Instant to);
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
+    @Query("""
+            SELECT a FROM Appointment a
+            WHERE a.tenantId = :tenantId
+              AND a.artist.id = :artistId
+              AND a.startTime >= :from
+              AND a.startTime < :to
+              AND a.deletedAt IS NULL
+            ORDER BY a.startTime
+            """)
+    List<Appointment> findByTenantIdAndArtistIdAndDateRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("artistId") UUID artistId,
+            @Param("from") Instant from,
+            @Param("to") Instant to);
 
-    @Query("SELECT a FROM Appointment a WHERE a.artist.id = :artistId AND a.startTime >= :from AND a.startTime < :to AND a.status != :excludeStatus AND a.deletedAt IS NULL")
+    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
+    @Query("""
+            SELECT a FROM Appointment a
+            WHERE a.tenantId = :tenantId
+              AND a.location.id = :locationId
+              AND a.startTime >= :from
+              AND a.startTime < :to
+              AND a.deletedAt IS NULL
+            ORDER BY a.startTime
+            """)
+    List<Appointment> findByTenantIdAndLocationIdAndDateRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("locationId") UUID locationId,
+            @Param("from") Instant from,
+            @Param("to") Instant to);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END
+            FROM Appointment a
+            WHERE a.artist.id = :artistId
+              AND a.status NOT IN (
+                  com.inkflow.crm.domain.enums.AppointmentStatus.CANCELLED,
+                  com.inkflow.crm.domain.enums.AppointmentStatus.COMPLETED,
+                  com.inkflow.crm.domain.enums.AppointmentStatus.NO_SHOW)
+              AND a.deletedAt IS NULL
+              AND (   (a.startTime <= :startTime AND a.endTime > :startTime)
+                   OR (a.startTime < :endTime   AND a.endTime >= :endTime)
+                   OR (a.startTime >= :startTime AND a.endTime <= :endTime))
+            """)
+    boolean existsConflictingAppointment(
+            @Param("artistId") UUID artistId,
+            @Param("startTime") Instant startTime,
+            @Param("endTime") Instant endTime);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END
+            FROM Appointment a
+            WHERE a.artist.id = :artistId
+              AND a.id != :excludeId
+              AND a.status NOT IN (
+                  com.inkflow.crm.domain.enums.AppointmentStatus.CANCELLED,
+                  com.inkflow.crm.domain.enums.AppointmentStatus.COMPLETED,
+                  com.inkflow.crm.domain.enums.AppointmentStatus.NO_SHOW)
+              AND a.deletedAt IS NULL
+              AND (   (a.startTime <= :startTime AND a.endTime > :startTime)
+                   OR (a.startTime < :endTime   AND a.endTime >= :endTime)
+                   OR (a.startTime >= :startTime AND a.endTime <= :endTime))
+            """)
+    boolean existsConflictingAppointmentExcluding(
+            @Param("artistId") UUID artistId,
+            @Param("startTime") Instant startTime,
+            @Param("endTime") Instant endTime,
+            @Param("excludeId") UUID excludeId);
+
+    @Query("""
+            SELECT a FROM Appointment a
+            WHERE a.artist.id = :artistId
+              AND a.startTime >= :from
+              AND a.startTime < :to
+              AND a.status != :excludeStatus
+              AND a.deletedAt IS NULL
+            """)
     List<Appointment> findByArtistIdAndStartTimeBetweenAndStatusNotAndDeletedAtIsNull(
             @Param("artistId") UUID artistId,
             @Param("from") Instant from,
@@ -72,7 +144,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
             @Param("excludeStatus") AppointmentStatus excludeStatus);
 
     @EntityGraph(attributePaths = {"client", "artist"})
-    @Query("SELECT a FROM Appointment a WHERE a.startTime >= :from AND a.startTime < :to " +
-           "AND a.status = com.inkflow.crm.domain.enums.AppointmentStatus.SCHEDULED AND a.deletedAt IS NULL")
-    List<Appointment> findUpcomingForReminders(@Param("from") Instant from, @Param("to") Instant to);
+    @Query("""
+            SELECT a FROM Appointment a
+            WHERE a.startTime >= :from
+              AND a.startTime < :to
+              AND a.status = com.inkflow.crm.domain.enums.AppointmentStatus.SCHEDULED
+              AND a.deletedAt IS NULL
+            """)
+    List<Appointment> findUpcomingForReminders(
+            @Param("from") Instant from,
+            @Param("to") Instant to);
 }

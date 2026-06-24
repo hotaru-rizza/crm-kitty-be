@@ -31,12 +31,17 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
     Page<Project> findByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, ProjectStatus status, Pageable pageable);
 
     @EntityGraph(attributePaths = {"client", "artist"})
-    @Query("SELECT p FROM Project p WHERE p.tenantId = :tenantId AND p.deletedAt IS NULL " +
-           "AND (:status IS NULL OR p.status = :status) " +
-           "AND (:artistIds IS NULL OR p.artist.id IN :artistIds) " +
-           "AND (:clientId IS NULL OR p.client.id = :clientId) " +
-           "AND (COALESCE(:search, '') = '' OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-           "AND (:locationId IS NULL OR p.location IS NULL OR p.location.id = :locationId)")
+    @Query("""
+            SELECT p FROM Project p
+            WHERE p.tenantId = :tenantId
+              AND p.deletedAt IS NULL
+              AND (:status     IS NULL OR p.status       = :status)
+              AND (:artistIds  IS NULL OR p.artist.id    IN :artistIds)
+              AND (:clientId   IS NULL OR p.client.id    = :clientId)
+              AND (COALESCE(:search, '') = ''
+                   OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')))
+              AND (:locationId IS NULL OR p.location IS NULL OR p.location.id = :locationId)
+            """)
     Page<Project> findWithFilters(
             @Param("tenantId") UUID tenantId,
             @Param("status") ProjectStatus status,

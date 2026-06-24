@@ -206,7 +206,7 @@ public class MonobankService {
         Transaction transaction = Transaction.builder()
                 .tenantId(invoice.getTenantId())
                 .type(TransactionType.INCOME)
-                .category(TransactionCategory.SERVICE)
+                .category(TransactionCategory.SERVICE.getValue())
                 .paymentType(paymentType)
                 .amount(invoice.getAmount())
                 .paymentMethod(PaymentMethod.MONOBANK)

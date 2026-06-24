@@ -2,6 +2,7 @@ package com.inkflow.crm.module.settings.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
@@ -10,6 +11,7 @@ import com.inkflow.crm.domain.repository.ServiceRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.module.settings.dto.UpdateRolePermissionsRequest;
+import com.inkflow.crm.module.settings.dto.UpdateCompanySettingsRequest;
 import com.inkflow.crm.module.settings.dto.UpdateUserSettingsRequest;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
@@ -81,6 +83,53 @@ class SettingsControllerIntegrationTest {
     }
 
     @Test
+    void getCompanySettings_withOwnerAuth_returnsTenantProfile() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        mockMvc.perform(get("/settings/company").with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.accountType").exists())
+                .andExpect(jsonPath("$.data.name").exists());
+    }
+
+    @Test
+    void patchCompanySettings_withOwnerAuth_persistsLogoUrl() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        UpdateCompanySettingsRequest body = new UpdateCompanySettingsRequest();
+        body.setLogoUrl("https://cdn.example.com/studio-logo.png");
+
+        mockMvc.perform(patch("/settings/company")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.logoUrl").value("https://cdn.example.com/studio-logo.png"));
+
+        Tenant updated = tenantRepository.findById(bundle.tenant().getId()).orElseThrow();
+        assertEquals("https://cdn.example.com/studio-logo.png", updated.getLogoUrl());
+    }
+
+    @Test
+    void patchCompanySettings_withArtistAuth_returnsForbidden() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        UpdateCompanySettingsRequest body = new UpdateCompanySettingsRequest();
+        body.setLogoUrl("https://cdn.example.com/studio-logo.png");
+
+        mockMvc.perform(patch("/settings/company")
+                        .with(crmUser(artist))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void getUserSettings_withOwnerAuth_returnsDefaults() throws Exception {
         TenantBundle bundle = IntegrationTestData.seedTenant(
                 tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
@@ -89,7 +138,9 @@ class SettingsControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.language").exists())
-                .andExpect(jsonPath("$.data.startPage").exists());
+                .andExpect(jsonPath("$.data.startPage").exists())
+                .andExpect(jsonPath("$.data.accentTheme").exists())
+                .andExpect(jsonPath("$.data.colorScheme").exists());
     }
 
     @Test

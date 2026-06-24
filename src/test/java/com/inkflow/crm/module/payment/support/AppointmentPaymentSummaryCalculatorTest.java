@@ -210,7 +210,7 @@ class AppointmentPaymentSummaryCalculatorTest {
         return Transaction.builder()
                 .id(UUID.randomUUID())
                 .type(TransactionType.INCOME)
-                .category(TransactionCategory.SERVICE)
+                .category(TransactionCategory.SERVICE.getValue())
                 .paymentType(paymentType)
                 .paymentMethod(PaymentMethod.CASH)
                 .amount(amount)

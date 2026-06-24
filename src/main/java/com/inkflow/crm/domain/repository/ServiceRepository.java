@@ -12,9 +12,13 @@ import java.util.UUID;
 
 @Repository
 public interface ServiceRepository extends JpaRepository<Service, UUID> {
+
     Page<Service> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
+
     List<Service> findByTenantIdAndDeletedAtIsNull(UUID tenantId);
+
     Optional<Service> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+
     List<Service> findByTenantIdAndIsActiveAndDeletedAtIsNull(UUID tenantId, Boolean isActive);
 
     List<Service> findByTenantIdAndIsActiveTrueAndDeletedAtIsNull(UUID tenantId);

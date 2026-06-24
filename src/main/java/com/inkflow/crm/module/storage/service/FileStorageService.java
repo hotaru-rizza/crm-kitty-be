@@ -25,7 +25,7 @@ import java.util.UUID;
 public class FileStorageService {
 
     public static final Set<String> ALLOWED_FOLDERS = Set.of(
-            "avatars", "gallery", "sketches", "portfolio", "locations"
+            "avatars", "gallery", "sketches", "portfolio", "locations", "studio"
     );
 
     private final S3Client s3Client;

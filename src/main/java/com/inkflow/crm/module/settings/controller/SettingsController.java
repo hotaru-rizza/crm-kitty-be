@@ -33,6 +33,16 @@ public class SettingsController {
         return ResponseEntity.ok(ApiResponse.success(settingsService.getCompanySettings()));
     }
 
+    @PatchMapping("/company")
+    @RequirePermission(Permission.SETTINGS_ACCESS)
+    public ResponseEntity<ApiResponse<CompanySettingsDto>> updateCompanySettings(
+            @RequestBody UpdateCompanySettingsRequest request) {
+        CompanySettingsDto settings = settingsService.updateCompanySettings(request);
+        log.info("Company settings updated via API");
+
+        return ResponseEntity.ok(ApiResponse.success(settings));
+    }
+
     @GetMapping("/user")
     public ResponseEntity<ApiResponse<UserSettingsDto>> getUserSettings() {
         return ResponseEntity.ok(ApiResponse.success(userSettingsService.getCurrentUserSettings()));

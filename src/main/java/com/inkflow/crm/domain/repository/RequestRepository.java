@@ -16,10 +16,15 @@ import java.util.UUID;
 
 @Repository
 public interface RequestRepository extends JpaRepository<Request, UUID>, JpaSpecificationExecutor<Request> {
+
     Page<Request> findByTenantId(UUID tenantId, Pageable pageable);
+
     Optional<Request> findByIdAndTenantId(UUID id, UUID tenantId);
+
     Page<Request> findByTenantIdAndStatus(UUID tenantId, RequestStatus status, Pageable pageable);
+
     Page<Request> findByTenantIdAndSource(UUID tenantId, RequestSource source, Pageable pageable);
+
     long countByTenantIdAndStatus(UUID tenantId, RequestStatus status);
 
     @EntityGraph(attributePaths = {"assignedStaff"})

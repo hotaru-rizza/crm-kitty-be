@@ -8,6 +8,7 @@ import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.Transaction;
+import com.inkflow.crm.domain.entity.TransactionCategoryConfig;
 import com.inkflow.crm.domain.enums.PaymentMethod;
 import com.inkflow.crm.domain.enums.TransactionCategory;
 import com.inkflow.crm.domain.enums.TransactionType;
@@ -15,12 +16,14 @@ import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TransactionRepository;
+import com.inkflow.crm.module.finance.service.CategoryConfigService;
 import com.inkflow.crm.module.transaction.dto.CreateTransactionRequest;
 import com.inkflow.crm.module.transaction.dto.FinanceStatsDto;
 import com.inkflow.crm.module.transaction.dto.TransactionDto;
 import com.inkflow.crm.module.transaction.mapper.TransactionMapper;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -46,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -68,8 +72,17 @@ class TransactionServiceTest {
     @Mock
     private TransactionMapper transactionMapper;
 
+    @Mock
+    private CategoryConfigService categoryConfigService;
+
     @InjectMocks
     private TransactionService transactionService;
+
+    @BeforeEach
+    void stubCategoryValidation() {
+        lenient().when(categoryConfigService.requireActiveCategoryForTransaction(any(), any(), any()))
+                .thenReturn(TransactionCategoryConfig.builder().categoryKey("service").plType("INCOME").build());
+    }
 
     @AfterEach
     void clearSecurityContext() {
@@ -87,7 +100,7 @@ class TransactionServiceTest {
                 .id(UUID.randomUUID())
                 .tenantId(tenantId)
                 .type(TransactionType.INCOME)
-                .category(TransactionCategory.SERVICE)
+                .category(TransactionCategory.SERVICE.getValue())
                 .amount(BigDecimal.valueOf(1500))
                 .location(location)
                 .build();
@@ -402,7 +415,7 @@ class TransactionServiceTest {
         when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to))
                 .thenReturn(BigDecimal.valueOf(500));
         when(transactionRepository.sumByCategoryAndDateRange(tenantId, from, to))
-                .thenReturn(List.<Object[]>of(new Object[]{TransactionCategory.SERVICE, BigDecimal.valueOf(2800)}));
+                .thenReturn(List.<Object[]>of(new Object[]{"service", BigDecimal.valueOf(2800)}));
         when(transactionRepository.sumByPaymentMethodAndDateRange(tenantId, from, to))
                 .thenReturn(List.<Object[]>of(new Object[]{PaymentMethod.CARD, BigDecimal.valueOf(2000)}));
         when(transactionRepository.sumByArtistAndDateRange(tenantId, from, to))
@@ -434,28 +447,31 @@ class TransactionServiceTest {
 
         Instant from = Instant.parse("2025-01-01T00:00:00Z");
         Instant to = Instant.parse("2025-01-31T23:59:59Z");
+        List<UUID> staffFilter = List.of(staffId);
 
-        when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to))
+        when(transactionRepository.sumByTypeAndDateRangeForStaffs(tenantId, TransactionType.INCOME, from, to, staffFilter))
                 .thenReturn(BigDecimal.valueOf(1000));
-        when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to))
+        when(transactionRepository.sumByTypeAndDateRangeForStaffs(tenantId, TransactionType.EXPENSE, from, to, staffFilter))
                 .thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.sumByCategoryAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByPaymentMethodAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByArtistAndDateRangeForStaff(tenantId, staffId, from, to))
+        when(transactionRepository.sumByCategoryAndDateRangeForStaffs(tenantId, from, to, staffFilter))
+                .thenReturn(Collections.emptyList());
+        when(transactionRepository.sumByPaymentMethodAndDateRangeForStaffs(tenantId, from, to, staffFilter))
+                .thenReturn(Collections.emptyList());
+        when(transactionRepository.sumByArtistAndDateRangeForStaffs(tenantId, from, to, staffFilter))
                 .thenReturn(List.<Object[]>of(new Object[]{
                         staffId, "Alex", "Smith", BigDecimal.valueOf(1000), 2L, "#112233"
                 }));
-        when(transactionRepository.sumIncomeByDayAndDateRangeForStaff(tenantId, staffId, from, to))
+        when(transactionRepository.sumIncomeByDayAndDateRangeForStaffs(tenantId, staffFilter, from, to))
                 .thenReturn(List.<Object[]>of(new Object[]{"2025-01-05", BigDecimal.valueOf(600)}));
 
-        FinanceStatsDto stats = transactionService.getFinanceStats(from, to, staffId);
+        FinanceStatsDto stats = transactionService.getFinanceStats(from, to, staffFilter);
 
         assertEquals(BigDecimal.valueOf(1000), stats.getTotalIncome());
         assertEquals(staffId.toString(), stats.getByArtist().getFirst().getArtistId());
         assertEquals(BigDecimal.valueOf(600), stats.getByDate().get("2025-01-05"));
-        verify(transactionRepository).sumByArtistAndDateRangeForStaff(tenantId, staffId, from, to);
+        verify(transactionRepository).sumByArtistAndDateRangeForStaffs(tenantId, from, to, staffFilter);
         verify(transactionRepository, never()).sumByArtistAndDateRange(tenantId, from, to);
-        verify(transactionRepository).sumIncomeByDayAndDateRangeForStaff(tenantId, staffId, from, to);
+        verify(transactionRepository).sumIncomeByDayAndDateRangeForStaffs(tenantId, staffFilter, from, to);
         verify(transactionRepository, never()).sumIncomeByDayAndDateRange(tenantId, from, to);
     }
 

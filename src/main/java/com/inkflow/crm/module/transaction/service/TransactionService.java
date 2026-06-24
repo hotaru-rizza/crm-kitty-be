@@ -7,6 +7,7 @@ import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.*;
 import com.inkflow.crm.domain.enums.*;
 import com.inkflow.crm.domain.repository.*;
+import com.inkflow.crm.module.finance.service.CategoryConfigService;
 import com.inkflow.crm.module.transaction.dto.*;
 import com.inkflow.crm.module.transaction.mapper.TransactionMapper;
 import com.inkflow.crm.security.SecurityUtils;
@@ -31,6 +32,7 @@ public class TransactionService {
     private final StaffRepository staffRepository;
     private final LocationRepository locationRepository;
     private final TransactionMapper transactionMapper;
+    private final CategoryConfigService categoryConfigService;
 
     @Transactional(readOnly = true)
     public PageResult<TransactionDto> getAllTransactions(
@@ -79,10 +81,14 @@ public class TransactionService {
                     .orElseThrow(() -> ResourceNotFoundException.staff(request.getStaffId().toString()));
         }
 
+        TransactionType transactionType = TransactionType.fromValue(request.getType());
+        String categoryKey = request.getCategory().trim().toLowerCase(Locale.ROOT);
+        categoryConfigService.requireActiveCategoryForTransaction(tenantId, categoryKey, transactionType);
+
         Transaction transaction = Transaction.builder()
                 .tenantId(tenantId)
-                .type(TransactionType.fromValue(request.getType()))
-                .category(TransactionCategory.fromValue(request.getCategory()))
+                .type(transactionType)
+                .category(categoryKey)
                 .amount(request.getAmount())
                 .paymentMethod(PaymentMethod.fromValue(request.getPaymentMethod()))
                 .description(request.getDescription())
@@ -112,60 +118,51 @@ public class TransactionService {
     }
 
     @Transactional(readOnly = true)
-    public FinanceStatsDto getFinanceStats(Instant from, Instant to, UUID staffId) {
+    public FinanceStatsDto getFinanceStats(Instant from, Instant to, List<UUID> staffIds) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
+        List<UUID> staffFilter = staffIds != null ? staffIds : List.of();
+        boolean filterByStaff = !staffFilter.isEmpty();
 
-        BigDecimal totalIncome = transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to);
-        BigDecimal totalExpenses = transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to);
-
-        if (totalIncome == null) totalIncome = BigDecimal.ZERO;
-        if (totalExpenses == null) totalExpenses = BigDecimal.ZERO;
+        BigDecimal totalIncome = nullToZero(filterByStaff
+                ? transactionRepository.sumByTypeAndDateRangeForStaffs(tenantId, TransactionType.INCOME, from, to, staffFilter)
+                : transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to));
+        BigDecimal totalExpenses = nullToZero(filterByStaff
+                ? transactionRepository.sumByTypeAndDateRangeForStaffs(tenantId, TransactionType.EXPENSE, from, to, staffFilter)
+                : transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to));
 
         Map<String, BigDecimal> byCategory = new HashMap<>();
-        List<Object[]> categoryResults = transactionRepository.sumByCategoryAndDateRange(tenantId, from, to);
-        for (Object[] row : categoryResults) {
-            TransactionCategory category = (TransactionCategory) row[0];
-            BigDecimal amount = (BigDecimal) row[1];
-            byCategory.put(category.getValue(), amount);
+        for (Object[] row : filterByStaff
+                ? transactionRepository.sumByCategoryAndDateRangeForStaffs(tenantId, from, to, staffFilter)
+                : transactionRepository.sumByCategoryAndDateRange(tenantId, from, to)) {
+            byCategory.put((String) row[0], (BigDecimal) row[1]);
         }
 
         Map<String, BigDecimal> byPaymentMethod = new HashMap<>();
-        List<Object[]> paymentResults = transactionRepository.sumByPaymentMethodAndDateRange(tenantId, from, to);
-        for (Object[] row : paymentResults) {
-            PaymentMethod method = (PaymentMethod) row[0];
-            BigDecimal amount = (BigDecimal) row[1];
-            byPaymentMethod.put(method.getValue(), amount);
+        for (Object[] row : filterByStaff
+                ? transactionRepository.sumByPaymentMethodAndDateRangeForStaffs(tenantId, from, to, staffFilter)
+                : transactionRepository.sumByPaymentMethodAndDateRange(tenantId, from, to)) {
+            byPaymentMethod.put(((PaymentMethod) row[0]).getValue(), (BigDecimal) row[1]);
         }
 
         List<FinanceStatsDto.ArtistRevenueDto> byArtist = new ArrayList<>();
-        List<Object[]> artistResults = staffId != null
-                ? transactionRepository.sumByArtistAndDateRangeForStaff(tenantId, staffId, from, to)
-                : transactionRepository.sumByArtistAndDateRange(tenantId, from, to);
-        for (Object[] row : artistResults) {
-            UUID artistId = (UUID) row[0];
-            String firstName = (String) row[1];
-            String lastName = (String) row[2];
-            BigDecimal revenue = (BigDecimal) row[3];
-            Long count = (Long) row[4];
-            String calendarColor = (String) row[5];
-
+        for (Object[] row : filterByStaff
+                ? transactionRepository.sumByArtistAndDateRangeForStaffs(tenantId, from, to, staffFilter)
+                : transactionRepository.sumByArtistAndDateRange(tenantId, from, to)) {
             byArtist.add(FinanceStatsDto.ArtistRevenueDto.builder()
-                    .artistId(artistId.toString())
-                    .artistName(firstName + " " + lastName)
-                    .revenue(revenue)
-                    .appointmentsCount(count.intValue())
-                    .calendarColor(calendarColor)
+                    .artistId(((UUID) row[0]).toString())
+                    .artistName(row[1] + " " + row[2])
+                    .revenue((BigDecimal) row[3])
+                    .appointmentsCount(((Long) row[4]).intValue())
+                    .calendarColor((String) row[5])
                     .build());
         }
 
-        List<Object[]> dateResults = staffId != null
-                ? transactionRepository.sumIncomeByDayAndDateRangeForStaff(tenantId, staffId, from, to)
+        List<Object[]> dateRows = filterByStaff
+                ? transactionRepository.sumIncomeByDayAndDateRangeForStaffs(tenantId, staffFilter, from, to)
                 : transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to);
         Map<String, BigDecimal> byDate = new java.util.LinkedHashMap<>();
-        for (Object[] row : dateResults) {
-            String day = row[0].toString();
-            BigDecimal amount = new BigDecimal(row[1].toString());
-            byDate.put(day, amount);
+        for (Object[] row : dateRows) {
+            byDate.put(row[0].toString(), new BigDecimal(row[1].toString()));
         }
 
         return FinanceStatsDto.builder()
@@ -177,5 +174,9 @@ public class TransactionService {
                 .byArtist(byArtist)
                 .byDate(byDate)
                 .build();
+    }
+
+    private static BigDecimal nullToZero(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
     }
 }

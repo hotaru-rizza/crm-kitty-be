@@ -12,8 +12,10 @@ import java.util.UUID;
 
 @Repository
 public interface ArtistServicePricingRepository extends JpaRepository<ArtistServicePricing, UUID> {
+
     @EntityGraph(attributePaths = {"service"})
     List<ArtistServicePricing> findByStaffId(UUID staffId);
+
     Optional<ArtistServicePricing> findByStaffIdAndServiceId(UUID staffId, UUID serviceId);
 
     @Modifying

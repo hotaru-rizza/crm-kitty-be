@@ -9,7 +9,10 @@ import java.util.UUID;
 
 @Repository
 public interface StaffInviteRepository extends JpaRepository<StaffInvite, UUID> {
+
     Optional<StaffInvite> findByToken(String token);
+
     Optional<StaffInvite> findByEmailAndTenantIdAndAcceptedAtIsNull(String email, UUID tenantId);
+
     boolean existsByEmailAndTenantIdAndAcceptedAtIsNull(String email, UUID tenantId);
 }
