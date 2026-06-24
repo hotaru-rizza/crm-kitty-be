@@ -82,10 +82,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.type = :type
               AND t.date >= :from
               AND t.date < :to
-              AND (:staffIds IS EMPTY OR t.staff.id IN :staffIds)
               AND t.deletedAt IS NULL
             """)
     BigDecimal sumByTypeAndDateRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("type") TransactionType type,
+            @Param("from") Instant from,
+            @Param("to") Instant to);
+
+    @Query("""
+            SELECT SUM(t.amount) FROM Transaction t
+            WHERE t.tenantId = :tenantId
+              AND t.type = :type
+              AND t.date >= :from
+              AND t.date < :to
+              AND t.staff.id IN :staffIds
+              AND t.deletedAt IS NULL
+            """)
+    BigDecimal sumByTypeAndDateRangeForStaffs(
             @Param("tenantId") UUID tenantId,
             @Param("type") TransactionType type,
             @Param("from") Instant from,
@@ -97,11 +111,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             WHERE t.tenantId = :tenantId
               AND t.date >= :from
               AND t.date < :to
-              AND (:staffIds IS EMPTY OR t.staff.id IN :staffIds)
               AND t.deletedAt IS NULL
             GROUP BY t.category
             """)
     List<Object[]> sumByCategoryAndDateRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("from") Instant from,
+            @Param("to") Instant to);
+
+    @Query("""
+            SELECT t.category, SUM(t.amount) FROM Transaction t
+            WHERE t.tenantId = :tenantId
+              AND t.date >= :from
+              AND t.date < :to
+              AND t.staff.id IN :staffIds
+              AND t.deletedAt IS NULL
+            GROUP BY t.category
+            """)
+    List<Object[]> sumByCategoryAndDateRangeForStaffs(
             @Param("tenantId") UUID tenantId,
             @Param("from") Instant from,
             @Param("to") Instant to,
@@ -113,11 +140,25 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.type = 'INCOME'
               AND t.date >= :from
               AND t.date < :to
-              AND (:staffIds IS EMPTY OR t.staff.id IN :staffIds)
               AND t.deletedAt IS NULL
             GROUP BY t.paymentMethod
             """)
     List<Object[]> sumByPaymentMethodAndDateRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("from") Instant from,
+            @Param("to") Instant to);
+
+    @Query("""
+            SELECT t.paymentMethod, SUM(t.amount) FROM Transaction t
+            WHERE t.tenantId = :tenantId
+              AND t.type = 'INCOME'
+              AND t.date >= :from
+              AND t.date < :to
+              AND t.staff.id IN :staffIds
+              AND t.deletedAt IS NULL
+            GROUP BY t.paymentMethod
+            """)
+    List<Object[]> sumByPaymentMethodAndDateRangeForStaffs(
             @Param("tenantId") UUID tenantId,
             @Param("from") Instant from,
             @Param("to") Instant to,
@@ -132,12 +173,30 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.category = 'service'
               AND t.date >= :from
               AND t.date < :to
-              AND (:staffIds IS EMPTY OR t.staff.id IN :staffIds)
               AND t.staff IS NOT NULL
               AND t.deletedAt IS NULL
             GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName, t.staff.calendarColor
             """)
     List<Object[]> sumByArtistAndDateRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("from") Instant from,
+            @Param("to") Instant to);
+
+    @Query("""
+            SELECT t.staff.id, t.staff.firstName, t.staff.lastName,
+                   SUM(t.amount), COUNT(t), t.staff.calendarColor
+            FROM Transaction t
+            WHERE t.tenantId = :tenantId
+              AND t.type = 'INCOME'
+              AND t.category = 'service'
+              AND t.date >= :from
+              AND t.date < :to
+              AND t.staff.id IN :staffIds
+              AND t.staff IS NOT NULL
+              AND t.deletedAt IS NULL
+            GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName, t.staff.calendarColor
+            """)
+    List<Object[]> sumByArtistAndDateRangeForStaffs(
             @Param("tenantId") UUID tenantId,
             @Param("from") Instant from,
             @Param("to") Instant to,

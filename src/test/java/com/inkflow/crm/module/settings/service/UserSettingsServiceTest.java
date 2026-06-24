@@ -51,6 +51,8 @@ class UserSettingsServiceTest {
                 .id(staffId)
                 .uiLanguage("en")
                 .startPage("calendar")
+                .accentTheme("aurora")
+                .colorScheme("dark")
                 .build();
 
         when(staffLookup.requireStaff(staffId)).thenReturn(staff);
@@ -59,6 +61,8 @@ class UserSettingsServiceTest {
 
         assertEquals("en", dto.language());
         assertEquals("calendar", dto.startPage());
+        assertEquals("aurora", dto.accentTheme());
+        assertEquals("dark", dto.colorScheme());
     }
 
     @Test
@@ -70,6 +74,8 @@ class UserSettingsServiceTest {
         UpdateUserSettingsRequest request = new UpdateUserSettingsRequest();
         request.setLanguage("ua");
         request.setStartPage("clients");
+        request.setAccentTheme("ocean");
+        request.setColorScheme("light");
 
         when(staffLookup.requireStaff(staffId)).thenReturn(staff);
         when(staffRepository.save(staff)).thenReturn(staff);
@@ -78,6 +84,8 @@ class UserSettingsServiceTest {
 
         assertEquals("ua", staff.getUiLanguage());
         assertEquals("clients", staff.getStartPage());
+        assertEquals("ocean", staff.getAccentTheme());
+        assertEquals("light", staff.getColorScheme());
         assertEquals("ua", dto.language());
         verify(staffRepository).save(staff);
     }

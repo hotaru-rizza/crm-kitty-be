@@ -1,0 +1,3 @@
+ALTER TABLE staff
+    ADD COLUMN IF NOT EXISTS accent_theme VARCHAR(32),
+    ADD COLUMN IF NOT EXISTS color_scheme VARCHAR(16);

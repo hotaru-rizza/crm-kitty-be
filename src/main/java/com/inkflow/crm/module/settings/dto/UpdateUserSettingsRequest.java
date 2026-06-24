@@ -6,4 +6,6 @@ import lombok.Data;
 public class UpdateUserSettingsRequest {
     private String language;
     private String startPage;
+    private String accentTheme;
+    private String colorScheme;
 }

@@ -138,7 +138,9 @@ class SettingsControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.language").exists())
-                .andExpect(jsonPath("$.data.startPage").exists());
+                .andExpect(jsonPath("$.data.startPage").exists())
+                .andExpect(jsonPath("$.data.accentTheme").exists())
+                .andExpect(jsonPath("$.data.colorScheme").exists());
     }
 
     @Test

@@ -40,6 +40,12 @@ public class UserSettingsService {
         if (request.getStartPage() != null) {
             staff.setStartPage(request.getStartPage());
         }
+        if (request.getAccentTheme() != null) {
+            staff.setAccentTheme(request.getAccentTheme());
+        }
+        if (request.getColorScheme() != null) {
+            staff.setColorScheme(request.getColorScheme());
+        }
 
         staff = staffRepository.save(staff);
         log.info("User settings updated: staffId={}", staffId);
@@ -54,6 +60,12 @@ public class UserSettingsService {
         String startPage = staff.getStartPage() != null
                 ? staff.getStartPage()
                 : inkflowProperties.getDefaultStartPage();
-        return new UserSettingsDto(language, startPage);
+        String accentTheme = staff.getAccentTheme() != null
+                ? staff.getAccentTheme()
+                : inkflowProperties.getDefaultAccentTheme();
+        String colorScheme = staff.getColorScheme() != null
+                ? staff.getColorScheme()
+                : inkflowProperties.getDefaultColorScheme();
+        return new UserSettingsDto(language, startPage, accentTheme, colorScheme);
     }
 }

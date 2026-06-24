@@ -121,22 +121,33 @@ public class TransactionService {
     public FinanceStatsDto getFinanceStats(Instant from, Instant to, List<UUID> staffIds) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         List<UUID> staffFilter = staffIds != null ? staffIds : List.of();
+        boolean filterByStaff = !staffFilter.isEmpty();
 
-        BigDecimal totalIncome = nullToZero(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to, staffFilter));
-        BigDecimal totalExpenses = nullToZero(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to, staffFilter));
+        BigDecimal totalIncome = nullToZero(filterByStaff
+                ? transactionRepository.sumByTypeAndDateRangeForStaffs(tenantId, TransactionType.INCOME, from, to, staffFilter)
+                : transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to));
+        BigDecimal totalExpenses = nullToZero(filterByStaff
+                ? transactionRepository.sumByTypeAndDateRangeForStaffs(tenantId, TransactionType.EXPENSE, from, to, staffFilter)
+                : transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to));
 
         Map<String, BigDecimal> byCategory = new HashMap<>();
-        for (Object[] row : transactionRepository.sumByCategoryAndDateRange(tenantId, from, to, staffFilter)) {
+        for (Object[] row : filterByStaff
+                ? transactionRepository.sumByCategoryAndDateRangeForStaffs(tenantId, from, to, staffFilter)
+                : transactionRepository.sumByCategoryAndDateRange(tenantId, from, to)) {
             byCategory.put((String) row[0], (BigDecimal) row[1]);
         }
 
         Map<String, BigDecimal> byPaymentMethod = new HashMap<>();
-        for (Object[] row : transactionRepository.sumByPaymentMethodAndDateRange(tenantId, from, to, staffFilter)) {
+        for (Object[] row : filterByStaff
+                ? transactionRepository.sumByPaymentMethodAndDateRangeForStaffs(tenantId, from, to, staffFilter)
+                : transactionRepository.sumByPaymentMethodAndDateRange(tenantId, from, to)) {
             byPaymentMethod.put(((PaymentMethod) row[0]).getValue(), (BigDecimal) row[1]);
         }
 
         List<FinanceStatsDto.ArtistRevenueDto> byArtist = new ArrayList<>();
-        for (Object[] row : transactionRepository.sumByArtistAndDateRange(tenantId, from, to, staffFilter)) {
+        for (Object[] row : filterByStaff
+                ? transactionRepository.sumByArtistAndDateRangeForStaffs(tenantId, from, to, staffFilter)
+                : transactionRepository.sumByArtistAndDateRange(tenantId, from, to)) {
             byArtist.add(FinanceStatsDto.ArtistRevenueDto.builder()
                     .artistId(((UUID) row[0]).toString())
                     .artistName(row[1] + " " + row[2])
@@ -146,9 +157,9 @@ public class TransactionService {
                     .build());
         }
 
-        List<Object[]> dateRows = staffFilter.isEmpty()
-                ? transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to)
-                : transactionRepository.sumIncomeByDayAndDateRangeForStaffs(tenantId, staffFilter, from, to);
+        List<Object[]> dateRows = filterByStaff
+                ? transactionRepository.sumIncomeByDayAndDateRangeForStaffs(tenantId, staffFilter, from, to)
+                : transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to);
         Map<String, BigDecimal> byDate = new java.util.LinkedHashMap<>();
         for (Object[] row : dateRows) {
             byDate.put(row[0].toString(), new BigDecimal(row[1].toString()));

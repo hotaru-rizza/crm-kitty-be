@@ -19,6 +19,8 @@ public class InkflowProperties {
     private String defaultTimezone = "Europe/Kyiv";
     private String defaultLanguage = "uk";
     private String defaultStartPage = "/calendar";
+    private String defaultAccentTheme = "orange";
+    private String defaultColorScheme = "dark";
     private Cors cors = new Cors();
     private Openapi openapi = new Openapi();
     private Email email = new Email();
