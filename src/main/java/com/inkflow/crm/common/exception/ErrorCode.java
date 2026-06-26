@@ -35,12 +35,14 @@ public enum ErrorCode {
     PHONE_ALREADY_EXISTS("PHONE_ALREADY_EXISTS", "Phone number already exists", HttpStatus.CONFLICT),
     EMAIL_ALREADY_EXISTS("EMAIL_ALREADY_EXISTS", "Email already exists", HttpStatus.CONFLICT),
     TIME_SLOT_CONFLICT("TIME_SLOT_CONFLICT", "Time slot is already booked", HttpStatus.CONFLICT),
+    ARTIST_ON_LEAVE("ARTIST_ON_LEAVE", "Artist is on leave on the selected day", HttpStatus.UNPROCESSABLE_ENTITY),
 
 
     INVALID_STATUS_TRANSITION("INVALID_STATUS_TRANSITION", "Invalid status transition", HttpStatus.UNPROCESSABLE_ENTITY),
 
 
-    STAFF_ALREADY_DEACTIVATED("STAFF_ALREADY_DEACTIVATED", "Staff member is already deactivated", HttpStatus.CONFLICT);
+    STAFF_ALREADY_DEACTIVATED("STAFF_ALREADY_DEACTIVATED", "Staff member is already deactivated", HttpStatus.CONFLICT),
+    CLIENT_BLACKLISTED("CLIENT_BLACKLISTED", "Client is blacklisted", HttpStatus.UNPROCESSABLE_ENTITY);
 
     private final String code;
     private final String defaultMessage;

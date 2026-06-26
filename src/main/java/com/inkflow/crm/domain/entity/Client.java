@@ -1,6 +1,5 @@
 package com.inkflow.crm.domain.entity;
 
-import com.inkflow.crm.domain.enums.ClientStatus;
 import com.inkflow.crm.domain.enums.RequestSource;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,10 +32,10 @@ public class Client extends BaseEntity {
     @Column(name = "last_name", nullable = false)
     private String lastName;
 
-    @Column(name = "phone", nullable = false)
+    @Column(name = "phone")
     private String phone;
 
-    @Column(name = "email")
+    @Column(name = "email", nullable = false)
     private String email;
 
     @Column(name = "avatar")
@@ -75,10 +74,13 @@ public class Client extends BaseEntity {
     @Column(name = "source")
     private RequestSource source;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "dormant", nullable = false)
     @Builder.Default
-    private ClientStatus status = ClientStatus.ACTIVE;
+    private boolean dormant = false;
+
+    @Column(name = "blacklisted", nullable = false)
+    @Builder.Default
+    private boolean blacklisted = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "location_id")

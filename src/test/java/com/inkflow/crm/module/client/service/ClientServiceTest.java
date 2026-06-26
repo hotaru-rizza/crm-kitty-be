@@ -3,7 +3,7 @@ package com.inkflow.crm.module.client.service;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Client;
-import com.inkflow.crm.domain.enums.ClientStatus;
+import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.ProjectRepository;
 import com.inkflow.crm.module.client.dto.ClientDto;
@@ -45,6 +45,9 @@ class ClientServiceTest {
     private ClientRepository clientRepository;
 
     @Mock
+    private AppointmentRepository appointmentRepository;
+
+    @Mock
     private ProjectRepository projectRepository;
 
     @Mock
@@ -69,23 +72,25 @@ class ClientServiceTest {
         CreateClientRequest request = CreateClientRequest.builder()
                 .firstName("Anna")
                 .lastName("Koval")
+                .email("anna.koval@test.com")
                 .phone("+38 (099) 123-45-67")
                 .build();
 
         Client entity = Client.builder()
                 .firstName("Anna")
                 .lastName("Koval")
-                .status(ClientStatus.ACTIVE)
+                .email("anna.koval@test.com")
                 .build();
         Client saved = Client.builder()
                 .id(UUID.randomUUID())
                 .tenantId(tenantId)
                 .firstName("Anna")
                 .lastName("Koval")
+                .email("anna.koval@test.com")
                 .phone("+380991234567")
-                .status(ClientStatus.ACTIVE)
                 .build();
 
+        when(clientRepository.existsByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull("anna.koval@test.com", tenantId)).thenReturn(false);
         when(clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull("+380991234567", tenantId)).thenReturn(false);
         when(clientMapper.toEntity(request)).thenReturn(entity);
         when(clientRepository.save(entity)).thenReturn(saved);
@@ -106,6 +111,7 @@ class ClientServiceTest {
         CreateClientRequest request = CreateClientRequest.builder()
                 .firstName("Anna")
                 .lastName("Koval")
+                .email("anna.koval@test.com")
                 .phone("+380991234567")
                 .build();
 
@@ -123,8 +129,8 @@ class ClientServiceTest {
         Client client = Client.builder()
                 .id(clientId)
                 .tenantId(tenantId)
+                .email("existing@test.com")
                 .phone("+380991234567")
-                .status(ClientStatus.ACTIVE)
                 .build();
 
         when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))
@@ -169,8 +175,8 @@ class ClientServiceTest {
         Client client = Client.builder()
                 .id(clientId)
                 .tenantId(tenantId)
+                .email("existing@test.com")
                 .phone("+380991234567")
-                .status(ClientStatus.ACTIVE)
                 .build();
 
         when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))

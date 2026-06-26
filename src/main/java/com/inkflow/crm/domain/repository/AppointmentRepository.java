@@ -154,4 +154,19 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
     List<Appointment> findUpcomingForReminders(
             @Param("from") Instant from,
             @Param("to") Instant to);
+
+    @Query("""
+            SELECT a.client.id FROM Appointment a
+            WHERE a.tenantId = :tenantId
+              AND a.deletedAt IS NULL
+              AND a.client.deletedAt IS NULL
+              AND a.client.blacklisted = false
+              AND (:artistId IS NULL OR a.artist.id = :artistId)
+            GROUP BY a.client.id
+            ORDER BY MAX(a.startTime) DESC
+            """)
+    List<UUID> findRecentClientIds(
+            @Param("tenantId") UUID tenantId,
+            @Param("artistId") UUID artistId,
+            Pageable pageable);
 }

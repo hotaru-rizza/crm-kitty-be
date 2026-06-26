@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.*;
 
@@ -165,10 +166,16 @@ public class TransactionService {
             byDate.put(row[0].toString(), new BigDecimal(row[1].toString()));
         }
 
+        long incomeCount = filterByStaff
+                ? transactionRepository.countByTypeAndDateRangeForStaffs(tenantId, TransactionType.INCOME, from, to, staffFilter)
+                : transactionRepository.countByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to);
+
         return FinanceStatsDto.builder()
                 .totalIncome(totalIncome)
                 .totalExpenses(totalExpenses)
                 .netProfit(totalIncome.subtract(totalExpenses))
+                .avgCheck(calculateAvgCheck(totalIncome, incomeCount))
+                .incomeCount(incomeCount > 0 ? incomeCount : null)
                 .byCategory(byCategory)
                 .byPaymentMethod(byPaymentMethod)
                 .byArtist(byArtist)
@@ -178,5 +185,13 @@ public class TransactionService {
 
     private static BigDecimal nullToZero(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
+    }
+
+    private static BigDecimal calculateAvgCheck(BigDecimal totalIncome, long incomeCount) {
+        if (incomeCount <= 0 || totalIncome == null || totalIncome.signum() <= 0) {
+            return null;
+        }
+
+        return totalIncome.divide(BigDecimal.valueOf(incomeCount), 2, RoundingMode.HALF_UP);
     }
 }

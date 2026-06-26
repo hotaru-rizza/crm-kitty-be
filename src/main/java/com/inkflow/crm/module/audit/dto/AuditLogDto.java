@@ -20,6 +20,7 @@ public class AuditLogDto {
     private String entityType;
     private String entityId;
     private String entityLabel;
+    private UUID subjectClientId;
     private String details;
     private Instant createdAt;
 }

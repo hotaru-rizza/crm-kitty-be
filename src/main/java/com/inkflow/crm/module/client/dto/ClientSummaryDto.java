@@ -17,5 +17,6 @@ public class ClientSummaryDto {
     private String lastName;
     private String phone;
     private String avatar;
+    private boolean blacklisted;
     private boolean hasMedicalConditions;
 }

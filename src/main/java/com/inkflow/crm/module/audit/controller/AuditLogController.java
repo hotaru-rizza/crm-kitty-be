@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +30,9 @@ public class AuditLogController {
     @RequirePermission(Permission.CALENDAR_VIEW_ALL)
     public ResponseEntity<ApiResponse<List<AuditLogDto>>> getLog(
             @RequestParam(required = false) UUID actorId,
+            @RequestParam(required = false) List<UUID> actorIds,
+            @RequestParam(required = false) UUID clientId,
+            @RequestParam(required = false) List<String> actions,
             @RequestParam(required = false) String entityType,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
@@ -35,7 +40,27 @@ public class AuditLogController {
             @RequestParam(defaultValue = "50") int size
     ) {
         return ApiResponses.page(
-                service.getLog(actorId, entityType, from, to, page, Math.min(size, 100))
+                service.getLog(
+                        mergeActorIds(actorId, actorIds),
+                        clientId,
+                        actions,
+                        entityType,
+                        from,
+                        to,
+                        page,
+                        Math.min(size, 100)
+                )
         );
+    }
+
+    private List<UUID> mergeActorIds(UUID actorId, List<UUID> actorIds) {
+        LinkedHashSet<UUID> merged = new LinkedHashSet<>();
+        if (actorIds != null) {
+            merged.addAll(actorIds);
+        }
+        if (actorId != null) {
+            merged.add(actorId);
+        }
+        return merged.isEmpty() ? List.of() : new ArrayList<>(merged);
     }
 }

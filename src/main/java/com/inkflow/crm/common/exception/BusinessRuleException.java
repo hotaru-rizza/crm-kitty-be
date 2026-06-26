@@ -18,8 +18,16 @@ public class BusinessRuleException extends ApiException {
         return new BusinessRuleException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email already exists: " + email);
     }
 
+    public static BusinessRuleException emailRequired() {
+        return new BusinessRuleException("Email is required");
+    }
+
     public static BusinessRuleException timeSlotConflict() {
         return new BusinessRuleException(ErrorCode.TIME_SLOT_CONFLICT, "The selected time slot is already booked");
+    }
+
+    public static BusinessRuleException artistOnLeave() {
+        return new BusinessRuleException(ErrorCode.ARTIST_ON_LEAVE, "Artist is on leave on the selected day");
     }
 
     public static BusinessRuleException invalidStatusTransition(String from, String to) {
@@ -29,5 +37,9 @@ public class BusinessRuleException extends ApiException {
 
     public static BusinessRuleException projectDeleteRequiresArchive() {
         return new BusinessRuleException("Only archived projects can be deleted");
+    }
+
+    public static BusinessRuleException clientBlacklisted() {
+        return new BusinessRuleException(ErrorCode.CLIENT_BLACKLISTED, "Client is blacklisted");
     }
 }

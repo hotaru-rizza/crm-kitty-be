@@ -16,6 +16,7 @@ public class SummaryMapper {
                 .lastName(client.getLastName())
                 .phone(client.getPhone())
                 .avatar(client.getAvatar())
+                .blacklisted(client.isBlacklisted())
                 .hasMedicalConditions(client.hasMedicalConditions())
                 .build();
     }

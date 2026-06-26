@@ -20,9 +20,13 @@ public class RequestDto {
     private String clientNickname;
     private String message;
     private String phone;
+    private String email;
     private String instagram;
     private String status;
     private UUID convertedClientId;
+    private UUID matchedClientId;
+    private String matchedClientName;
+    private Boolean matchedClientBlacklisted;
     private Instant createdAt;
     private Instant repliedAt;
     private Instant convertedAt;

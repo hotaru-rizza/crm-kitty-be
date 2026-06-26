@@ -107,6 +107,36 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             @Param("staffIds") List<UUID> staffIds);
 
     @Query("""
+            SELECT COUNT(t) FROM Transaction t
+            WHERE t.tenantId = :tenantId
+              AND t.type = :type
+              AND t.date >= :from
+              AND t.date < :to
+              AND t.deletedAt IS NULL
+            """)
+    long countByTypeAndDateRange(
+            @Param("tenantId") UUID tenantId,
+            @Param("type") TransactionType type,
+            @Param("from") Instant from,
+            @Param("to") Instant to);
+
+    @Query("""
+            SELECT COUNT(t) FROM Transaction t
+            WHERE t.tenantId = :tenantId
+              AND t.type = :type
+              AND t.date >= :from
+              AND t.date < :to
+              AND t.staff.id IN :staffIds
+              AND t.deletedAt IS NULL
+            """)
+    long countByTypeAndDateRangeForStaffs(
+            @Param("tenantId") UUID tenantId,
+            @Param("type") TransactionType type,
+            @Param("from") Instant from,
+            @Param("to") Instant to,
+            @Param("staffIds") List<UUID> staffIds);
+
+    @Query("""
             SELECT t.category, SUM(t.amount) FROM Transaction t
             WHERE t.tenantId = :tenantId
               AND t.date >= :from

@@ -31,7 +31,8 @@ public class ClientDetailDto {
     private List<String> tags;
     private List<String> medicalConditions;
     private String source;
-    private String status;
+    private boolean dormant;
+    private boolean blacklisted;
     private String notes;
     private Instant lastVisit;
     private Instant firstVisit;

@@ -4,14 +4,11 @@ import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.module.client.dto.*;
 import org.mapstruct.*;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface ClientMapper {
 
-    @Mapping(target = "status", expression = "java(client.getStatus().getValue())")
-    @Mapping(target = "tags", expression = "java(new java.util.ArrayList<>(client.getTags()))")
     ClientDto toDto(Client client);
 
     List<ClientDto> toDtoList(List<Client> clients);
@@ -33,7 +30,8 @@ public interface ClientMapper {
     @Mapping(target = "ltv", expression = "java(java.math.BigDecimal.ZERO)")
     @Mapping(target = "projects", ignore = true)
     @Mapping(target = "appointments", ignore = true)
-    @Mapping(target = "status", expression = "java(com.inkflow.crm.domain.enums.ClientStatus.ACTIVE)")
+    @Mapping(target = "dormant", constant = "false")
+    @Mapping(target = "blacklisted", constant = "false")
     @Mapping(target = "source", expression = "java(request.getSource() != null ? com.inkflow.crm.domain.enums.RequestSource.fromValue(request.getSource()) : null)")
     Client toEntity(CreateClientRequest request);
 
@@ -56,7 +54,7 @@ public interface ClientMapper {
     @Mapping(target = "projects", ignore = true)
     @Mapping(target = "appointments", ignore = true)
     @Mapping(target = "source", ignore = true)
-    @Mapping(target = "status", expression = "java(request.getStatus() != null ? com.inkflow.crm.domain.enums.ClientStatus.fromValue(request.getStatus()) : client.getStatus())")
+    @Mapping(target = "dormant", ignore = true)
     void updateEntity(UpdateClientRequest request, @MappingTarget Client client);
 
     default ClientSummaryDto toSummaryDto(Client client) {
@@ -66,6 +64,7 @@ public interface ClientMapper {
                 .lastName(client.getLastName())
                 .phone(client.getPhone())
                 .avatar(client.getAvatar())
+                .blacklisted(client.isBlacklisted())
                 .hasMedicalConditions(client.hasMedicalConditions())
                 .build();
     }

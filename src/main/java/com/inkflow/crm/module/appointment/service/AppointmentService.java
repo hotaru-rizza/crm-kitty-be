@@ -128,6 +128,8 @@ public class AppointmentService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = entityResolver.requireAppointment(tenantId, id);
         UUID previousProjectId = appointment.getProject() != null ? appointment.getProject().getId() : null;
+        UUID previousArtistId = appointment.getArtist().getId();
+        Instant previousStartTime = appointment.getStartTime();
 
         applyRelationUpdates(tenantId, appointment, request);
 
@@ -135,9 +137,11 @@ public class AppointmentService {
         boolean startTimeChanged = request.getStartTime() != null
                 && !request.getStartTime().equals(appointment.getStartTime());
 
-        applyScheduleUpdate(appointment, request, id);
+        applyScheduleUpdate(appointment, request);
         applyPricingUpdate(appointment, request);
         applyStatusUpdate(appointment, request);
+
+        revalidateSlotIfNeeded(tenantId, appointment, previousArtistId, previousStartTime, id);
 
         appointment = appointmentRepository.save(appointment);
 
@@ -235,12 +239,16 @@ public class AppointmentService {
         }
     }
 
+    /**
+     * Hard availability rules enforced on the server: an artist on leave cannot take an appointment.
+     * Working-hours (schedule) are intentionally NOT enforced here — they are a soft, front-end-only
+     * warning so that overtime / out-of-schedule bookings remain possible.
+     */
     private void validateArtistAvailable(UUID tenantId, UUID artistId, Instant startTime) {
         LocalDate date = startTime.atZone(inkflowProperties.defaultZoneId()).toLocalDate();
         List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate(tenantId, artistId, date);
-
         if (!activeLeaves.isEmpty()) {
-            throw new BusinessRuleException("Майстер відсутній у цей день (відпустка/вихідний)");
+            throw BusinessRuleException.artistOnLeave();
         }
     }
 
@@ -291,14 +299,33 @@ public class AppointmentService {
         }
     }
 
-    private void applyScheduleUpdate(Appointment appointment, UpdateAppointmentRequest request, UUID appointmentId) {
+    private void applyScheduleUpdate(Appointment appointment, UpdateAppointmentRequest request) {
         if (request.getStartTime() == null || request.getEndTime() == null) {
             return;
         }
 
-        validateTimeSlot(appointment.getArtist().getId(), request.getStartTime(), request.getEndTime(), appointmentId);
         appointment.setStartTime(request.getStartTime());
         appointment.setEndTime(request.getEndTime());
+    }
+
+    private void revalidateSlotIfNeeded(
+            UUID tenantId,
+            Appointment appointment,
+            UUID previousArtistId,
+            Instant previousStartTime,
+            UUID appointmentId) {
+        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
+            return;
+        }
+
+        boolean artistChanged = !appointment.getArtist().getId().equals(previousArtistId);
+        boolean timeChanged = !appointment.getStartTime().equals(previousStartTime);
+        if (!artistChanged && !timeChanged) {
+            return;
+        }
+
+        validateTimeSlot(appointment.getArtist().getId(), appointment.getStartTime(), appointment.getEndTime(), appointmentId);
+        validateArtistAvailable(tenantId, appointment.getArtist().getId(), appointment.getStartTime());
     }
 
     private void applyPricingUpdate(Appointment appointment, UpdateAppointmentRequest request) {

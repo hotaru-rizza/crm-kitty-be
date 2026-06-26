@@ -43,6 +43,21 @@ public class SettingsController {
         return ResponseEntity.ok(ApiResponse.success(settings));
     }
 
+    @GetMapping("/client-dormancy")
+    @RequirePermission(Permission.SETTINGS_ACCESS)
+    public ResponseEntity<ApiResponse<ClientDormancySettingsDto>> getClientDormancySettings() {
+        return ResponseEntity.ok(ApiResponse.success(settingsService.getClientDormancySettings()));
+    }
+
+    @PutMapping("/client-dormancy")
+    @RequirePermission(Permission.SETTINGS_ACCESS)
+    public ResponseEntity<ApiResponse<ClientDormancySettingsDto>> updateClientDormancySettings(
+            @Valid @RequestBody UpdateClientDormancySettingsRequest request) {
+        ClientDormancySettingsDto settings = settingsService.updateClientDormancySettings(request);
+        log.info("Client dormancy settings updated via API");
+        return ResponseEntity.ok(ApiResponse.success(settings));
+    }
+
     @GetMapping("/user")
     public ResponseEntity<ApiResponse<UserSettingsDto>> getUserSettings() {
         return ResponseEntity.ok(ApiResponse.success(userSettingsService.getCurrentUserSettings()));

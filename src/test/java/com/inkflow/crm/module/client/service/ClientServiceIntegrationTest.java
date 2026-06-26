@@ -2,7 +2,6 @@ package com.inkflow.crm.module.client.service;
 
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
-import com.inkflow.crm.domain.enums.ClientStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
@@ -59,6 +58,7 @@ class ClientServiceIntegrationTest {
         var created = clientService.createClient(CreateClientRequest.builder()
                 .firstName("New")
                 .lastName("Client")
+                .email("new.client@test.com")
                 .phone("+38 (050) 111-22-33")
                 .build());
 
@@ -67,7 +67,7 @@ class ClientServiceIntegrationTest {
         var persisted = clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(
                 created.getId(), bundle.tenant().getId()).orElseThrow();
         assertEquals("+380501112233", persisted.getPhone());
-        assertEquals(ClientStatus.ACTIVE, persisted.getStatus());
+        assertEquals(false, persisted.isBlacklisted());
         assertEquals(bundle.tenant().getId(), persisted.getTenantId());
 
         assertEquals(2, clientRepository.findAll().stream()
@@ -84,12 +84,14 @@ class ClientServiceIntegrationTest {
         clientService.createClient(CreateClientRequest.builder()
                 .firstName("First")
                 .lastName("Client")
+                .email("first.client@test.com")
                 .phone(phone)
                 .build());
 
         assertThrows(BusinessRuleException.class, () -> clientService.createClient(CreateClientRequest.builder()
                 .firstName("Second")
                 .lastName("Client")
+                .email("second.client@test.com")
                 .phone(phone)
                 .build()));
 

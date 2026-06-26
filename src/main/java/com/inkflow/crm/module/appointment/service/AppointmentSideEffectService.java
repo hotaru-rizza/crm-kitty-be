@@ -2,6 +2,8 @@ package com.inkflow.crm.module.appointment.service;
 
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.module.appointment.dto.AppointmentUpdateContext;
 import com.inkflow.crm.module.appointment.event.AppointmentCanceledEvent;
 import com.inkflow.crm.module.appointment.event.AppointmentCompletedEvent;
@@ -151,13 +153,27 @@ public class AppointmentSideEffectService {
     private void auditCreated(Appointment appointment) {
         String label = appointment.getClient().getFirstName() + " " + appointment.getClient().getLastName()
                 + " @ " + appointment.getStartTime();
-        auditLogService.logCurrent("CREATE", "APPOINTMENT", appointment.getId().toString(), label);
+        UUID clientId = appointment.getClient() != null ? appointment.getClient().getId() : null;
+        auditLogService.logCurrent(
+                AuditAction.CREATE,
+                AuditEntityType.APPOINTMENT,
+                appointment.getId().toString(),
+                label,
+                clientId
+        );
     }
 
     private void auditDeleted(Appointment appointment, UUID appointmentId) {
         String label = appointment.getClient() != null
                 ? appointment.getClient().getFirstName() + " " + appointment.getClient().getLastName()
                 : appointmentId.toString();
-        auditLogService.logCurrent("DELETE", "APPOINTMENT", appointmentId.toString(), label);
+        UUID clientId = appointment.getClient() != null ? appointment.getClient().getId() : null;
+        auditLogService.logCurrent(
+                AuditAction.DELETE,
+                AuditEntityType.APPOINTMENT,
+                appointmentId.toString(),
+                label,
+                clientId
+        );
     }
 }

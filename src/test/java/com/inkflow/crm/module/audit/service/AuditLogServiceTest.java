@@ -1,6 +1,8 @@
 package com.inkflow.crm.module.audit.service;
 
 import com.inkflow.crm.domain.entity.AuditLogEntry;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.repository.AuditLogRepository;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.module.audit.dto.AuditLogDto;
@@ -49,10 +51,21 @@ class AuditLogServiceTest {
     void shouldPersistAuditEntryWhenLoggingExplicitActor() {
         UUID tenantId = UUID.randomUUID();
         UUID actorId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
 
         when(repo.save(any(AuditLogEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        auditLogService.log(tenantId, actorId, "owner@test.com", "CREATE", "Client", "client-1", "John Doe", null);
+        auditLogService.log(
+                tenantId,
+                actorId,
+                "owner@test.com",
+                AuditAction.CREATE,
+                AuditEntityType.CLIENT,
+                "client-1",
+                "John Doe",
+                clientId,
+                null
+        );
 
         ArgumentCaptor<AuditLogEntry> captor = ArgumentCaptor.forClass(AuditLogEntry.class);
         verify(repo).save(captor.capture());
@@ -62,9 +75,10 @@ class AuditLogServiceTest {
         assertEquals(actorId, saved.getActorId());
         assertEquals("owner@test.com", saved.getActorName());
         assertEquals("CREATE", saved.getAction());
-        assertEquals("Client", saved.getEntityType());
+        assertEquals("CLIENT", saved.getEntityType());
         assertEquals("client-1", saved.getEntityId());
         assertEquals("John Doe", saved.getEntityLabel());
+        assertEquals(clientId, saved.getSubjectClientId());
     }
 
     @Test
@@ -74,7 +88,17 @@ class AuditLogServiceTest {
 
         when(repo.save(any(AuditLogEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        auditLogService.log(tenantId, actorId, "owner@test.com", "UPDATE", "Client", "client-1", "John Doe", "phone changed");
+        auditLogService.log(
+                tenantId,
+                actorId,
+                "owner@test.com",
+                AuditAction.UPDATE,
+                AuditEntityType.CLIENT,
+                "client-1",
+                "John Doe",
+                null,
+                "phone changed"
+        );
 
         ArgumentCaptor<AuditLogEntry> captor = ArgumentCaptor.forClass(AuditLogEntry.class);
         verify(repo).save(captor.capture());
@@ -89,13 +113,21 @@ class AuditLogServiceTest {
         doThrow(new RuntimeException("db down")).when(repo).save(any(AuditLogEntry.class));
 
         assertDoesNotThrow(() -> auditLogService.log(
-                tenantId, actorId, "owner@test.com", "DELETE", "Client", "client-1", "John Doe", null
+                tenantId,
+                actorId,
+                "owner@test.com",
+                AuditAction.DELETE,
+                AuditEntityType.CLIENT,
+                "client-1",
+                "John Doe",
+                null,
+                null
         ));
     }
 
     @Test
     void shouldSkipLoggingWhenNoAuthenticatedUser() {
-        auditLogService.logCurrent("CREATE", "Client", "client-1", "John Doe");
+        auditLogService.logCurrent(AuditAction.CREATE, AuditEntityType.CLIENT, "client-1", "John Doe");
 
         verify(repo, never()).save(any());
     }
@@ -108,7 +140,7 @@ class AuditLogServiceTest {
 
         when(repo.save(any(AuditLogEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        auditLogService.logCurrent("UPDATE", "Appointment", "appt-1", "Session #1");
+        auditLogService.logCurrent(AuditAction.UPDATE, AuditEntityType.APPOINTMENT, "appt-1", "Session #1");
 
         ArgumentCaptor<AuditLogEntry> captor = ArgumentCaptor.forClass(AuditLogEntry.class);
         verify(repo).save(captor.capture());
@@ -118,7 +150,7 @@ class AuditLogServiceTest {
         assertEquals(actorId, saved.getActorId());
         assertEquals("owner@test.com", saved.getActorName());
         assertEquals("UPDATE", saved.getAction());
-        assertEquals("Appointment", saved.getEntityType());
+        assertEquals("APPOINTMENT", saved.getEntityType());
     }
 
     @Test
@@ -126,7 +158,12 @@ class AuditLogServiceTest {
         authenticate(UUID.randomUUID(), UUID.randomUUID(), "owner@test.com");
         doThrow(new RuntimeException("db down")).when(repo).save(any(AuditLogEntry.class));
 
-        assertDoesNotThrow(() -> auditLogService.logCurrent("DELETE", "Client", "client-1", "John Doe"));
+        assertDoesNotThrow(() -> auditLogService.logCurrent(
+                AuditAction.DELETE,
+                AuditEntityType.CLIENT,
+                "client-1",
+                "John Doe"
+        ));
     }
 
     @Test
@@ -142,7 +179,7 @@ class AuditLogServiceTest {
                 .actorId(UUID.randomUUID())
                 .actorName("owner@test.com")
                 .action("UPDATE")
-                .entityType("Client")
+                .entityType("CLIENT")
                 .entityId("client-1")
                 .entityLabel("John Doe")
                 .details("email updated")
@@ -152,13 +189,22 @@ class AuditLogServiceTest {
         when(repo.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(entry)));
 
-        Page<AuditLogDto> result = auditLogService.getLog(null, null, null, null, 0, 20);
+        Page<AuditLogDto> result = auditLogService.getLog(
+                List.of(),
+                null,
+                List.of(),
+                null,
+                null,
+                null,
+                0,
+                20
+        );
 
         assertEquals(1, result.getTotalElements());
         AuditLogDto dto = result.getContent().getFirst();
         assertEquals(entryId, dto.getId());
         assertEquals("UPDATE", dto.getAction());
-        assertEquals("Client", dto.getEntityType());
+        assertEquals("CLIENT", dto.getEntityType());
         assertEquals("email updated", dto.getDetails());
         assertEquals(createdAt, dto.getCreatedAt());
         verify(repo).findAll(any(Specification.class), any(Pageable.class));
@@ -168,6 +214,7 @@ class AuditLogServiceTest {
     void shouldQueryAuditLogsWithFilters() {
         UUID tenantId = UUID.randomUUID();
         UUID actorId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
         authenticate(tenantId, actorId, "owner@test.com");
 
         Instant from = Instant.parse("2026-06-01T00:00:00Z");
@@ -176,7 +223,16 @@ class AuditLogServiceTest {
         when(repo.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
-        auditLogService.getLog(actorId, "Client", from, to, 1, 10);
+        auditLogService.getLog(
+                List.of(actorId),
+                clientId,
+                List.of("CREATE", "DELETE"),
+                "CLIENT",
+                from,
+                to,
+                1,
+                10
+        );
 
         verify(repo).findAll(any(Specification.class), any(Pageable.class));
     }
