@@ -8,6 +8,8 @@ import com.inkflow.crm.module.appointment.event.AppointmentCanceledEvent;
 import com.inkflow.crm.module.appointment.event.AppointmentCompletedEvent;
 import com.inkflow.crm.module.appointment.event.AppointmentConfirmedEvent;
 import com.inkflow.crm.module.appointment.event.AppointmentRescheduledEvent;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.module.audit.service.AuditLogService;
 import com.inkflow.crm.module.email.service.sending.AppointmentNotificationService;
 import com.inkflow.crm.module.google.service.GoogleCalendarSyncService;
@@ -50,8 +52,13 @@ class AppointmentSideEffectServiceTest {
 
         verify(eventPublisher).publishEvent(any(AppointmentConfirmedEvent.class));
         verify(googleCalendarSyncService).syncNewAppointment(appointment);
-        verify(auditLogService).logCurrent("CREATE", "APPOINTMENT", appointment.getId().toString(),
-                "John Doe @ " + appointment.getStartTime());
+        verify(auditLogService).logCurrent(
+                AuditAction.CREATE,
+                AuditEntityType.APPOINTMENT,
+                appointment.getId().toString(),
+                "John Doe @ " + appointment.getStartTime(),
+                appointment.getClient().getId()
+        );
     }
 
     @Test

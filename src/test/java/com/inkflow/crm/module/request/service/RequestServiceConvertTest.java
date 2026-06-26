@@ -3,7 +3,6 @@ package com.inkflow.crm.module.request.service;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.Request;
-import com.inkflow.crm.domain.enums.ClientStatus;
 import com.inkflow.crm.domain.enums.RequestSource;
 import com.inkflow.crm.domain.enums.RequestStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
@@ -70,6 +69,8 @@ class RequestServiceConvertTest {
 
         when(requestRepository.findByIdAndTenantId(requestId, tenantId)).thenReturn(Optional.of(request));
         when(clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull("+380991234567", tenantId)).thenReturn(false);
+        when(clientRepository.existsByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull("jane.doe@example.com", tenantId))
+                .thenReturn(false);
         when(clientRepository.save(any(Client.class))).thenAnswer(invocation -> {
             Client client = invocation.getArgument(0);
             client.setId(UUID.randomUUID());
@@ -81,6 +82,7 @@ class RequestServiceConvertTest {
         ConvertRequestRequest convertRequest = ConvertRequestRequest.builder()
                 .firstName("Jane")
                 .lastName("Doe")
+                .email("jane.doe@example.com")
                 .phone("+380991234567")
                 .build();
 
@@ -91,7 +93,7 @@ class RequestServiceConvertTest {
         Client savedClient = clientCaptor.getValue();
         assertEquals("Jane", savedClient.getFirstName());
         assertEquals("+380991234567", savedClient.getPhone());
-        assertEquals(ClientStatus.ACTIVE, savedClient.getStatus());
+        assertEquals(false, savedClient.isBlacklisted());
         assertEquals(BigDecimal.ZERO, savedClient.getLtv());
 
         assertEquals(RequestStatus.CONVERTED, request.getStatus());
@@ -116,6 +118,7 @@ class RequestServiceConvertTest {
         ConvertRequestRequest convertRequest = ConvertRequestRequest.builder()
                 .firstName("Jane")
                 .lastName("Doe")
+                .email("jane.doe@example.com")
                 .phone("+380991234567")
                 .build();
 
@@ -136,12 +139,15 @@ class RequestServiceConvertTest {
                 .build();
 
         when(requestRepository.findByIdAndTenantId(requestId, tenantId)).thenReturn(Optional.of(request));
+        when(clientRepository.findByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull("jane.doe@example.com", tenantId))
+                .thenReturn(Optional.empty());
         when(clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull(eq("+380991234567"), eq(tenantId)))
                 .thenReturn(true);
 
         ConvertRequestRequest convertRequest = ConvertRequestRequest.builder()
                 .firstName("Jane")
                 .lastName("Doe")
+                .email("jane.doe@example.com")
                 .phone("+380991234567")
                 .build();
 

@@ -11,22 +11,24 @@
 -- staff art 2:  c0000000-0000-0000-0000-000000000003
 -- staff art 3:  c0000000-0000-0000-0000-000000000004
 -- services:   d0000000-0000-0000-0000-00000000000{1-6}
--- clients:    e0000000-0000-0000-0000-00000000000{1-12}
+-- clients:    e0000000-0000-0000-0000-00000000000{1-14}
 -- projects:   f0000000-0000-0000-0000-00000000000{1-5}
 
 -- ============================================================
 -- 1. TENANT
 -- ============================================================
-INSERT INTO tenants (id, name, subdomain, currency, timezone, language, is_active, created_at, updated_at)
+INSERT INTO tenants (id, name, subdomain, currency, timezone, language, client_dormancy_days, is_active, created_at, updated_at)
 VALUES (
     'a0000000-0000-0000-0000-000000000001',
     'InkFlow Studio',
     'inkflow',
     'UAH',
     'Europe/Kyiv',
-    'uk', NOW(),
+    'uk',
+    90,
+    true, NOW(),
     NOW()
-) ON CONFLICT (id) DO NOTHING;
+) ON CONFLICT (id) DO UPDATE SET client_dormancy_days = EXCLUDED.client_dormancy_days;
 
 -- ============================================================
 -- 2. LOCATION
@@ -182,68 +184,78 @@ ON CONFLICT (staff_id, service_id) DO NOTHING;
 -- ============================================================
 -- 7. CLIENTS
 -- ============================================================
-INSERT INTO clients (id, tenant_id, first_name, last_name, phone, email, instagram, source, status,
+INSERT INTO clients (id, tenant_id, first_name, last_name, phone, email, instagram, source, dormant, blacklisted,
                      total_visits, cancelled_visits, ltv, notes, created_at, updated_at)
 VALUES
     ('e0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001',
      'Ірина', 'Савченко', '+380501111001', 'iryna.savchenko@gmail.com', '@iryna.s',
-     'INSTAGRAM', 'ACTIVE', 4, 0, 12500.00,
+     'INSTAGRAM', false, false, 4, 0, 12500.00,
      'Постійна клієнтка. Любить мінімалізм та фінлайн.', NOW() - INTERVAL '180 days', NOW()),
 
     ('e0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001',
      'Олексій', 'Петренко', '+380501111002', 'oleksii.p@gmail.com', '@oleksii.tattoo',
-     'REFERRAL', 'ACTIVE', 2, 0, 8500.00,
+     'REFERRAL', false, false, 2, 0, 8500.00,
      'Прийшов по рекомендації від Ірини. Цікавить реалізм.', NOW() - INTERVAL '90 days', NOW()),
 
     ('e0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001',
      'Катерина', 'Шевченко', '+380501111003', 'kate.shevchenko@ukr.net', '@kate_ink',
-     'INSTAGRAM', 'ACTIVE', 6, 1, 18000.00,
+     'INSTAGRAM', false, false, 6, 1, 18000.00,
      'VIP клієнт. Рукав у процесі.', NOW() - INTERVAL '365 days', NOW()),
 
     ('e0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000001',
-     'Максим', 'Ткаченко', '+380501111004', NULL, '@maks_tka',
-     'TELEGRAM', 'ACTIVE', 1, 0, 2500.00,
+     'Максим', 'Ткаченко', '+380501111004', 'maks.tkachenko@gmail.com', '@maks_tka',
+     'TELEGRAM', false, false, 1, 0, 2500.00,
      NULL, NOW() - INTERVAL '30 days', NOW()),
 
     ('e0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000001',
      'Софія', 'Іваненко', '+380501111005', 'sofia.i@gmail.com', NULL,
-     'WEBSITE', 'ACTIVE', 0, 0, 0.00,
+     'WEBSITE', false, false, 0, 0, 0.00,
      'Новий клієнт. Перше тату.', NOW() - INTERVAL '5 days', NOW()),
 
     ('e0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000001',
      'Андрій', 'Лисенко', '+380501111006', 'andrii.lysenko@gmail.com', '@andrii.l',
-     'INSTAGRAM', 'ACTIVE', 3, 0, 9500.00,
+     'INSTAGRAM', false, false, 3, 0, 9500.00,
      NULL, NOW() - INTERVAL '200 days', NOW()),
 
     ('e0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000001',
      'Наталія', 'Кравченко', '+380501111007', 'natalia.k@ukr.net', '@nat.krav',
-     'REFERRAL', 'ACTIVE', 1, 1, 0.00,
+     'REFERRAL', false, false, 1, 1, 0.00,
      'Скасувала минулий сеанс через хворобу.', NOW() - INTERVAL '60 days', NOW()),
 
     ('e0000000-0000-0000-0000-000000000008', 'a0000000-0000-0000-0000-000000000001',
-     'Владислав', 'Романенко', '+380501111008', NULL, NULL,
-     'WALK_IN', 'ACTIVE', 2, 0, 5300.00,
+     'Владислав', 'Романенко', '+380501111008', 'vlad.romanenko@gmail.com', NULL,
+     'WALK_IN', false, false, 2, 0, 5300.00,
      NULL, NOW() - INTERVAL '120 days', NOW()),
 
     ('e0000000-0000-0000-0000-000000000009', 'a0000000-0000-0000-0000-000000000001',
      'Юлія', 'Поліщук', '+380501111009', 'yulia.p@gmail.com', '@yulia.poly',
-     'INSTAGRAM', 'ACTIVE', 5, 0, 15500.00,
+     'INSTAGRAM', false, false, 5, 0, 15500.00,
      'Регулярна клієнтка. Акварельний стиль.', NOW() - INTERVAL '400 days', NOW()),
 
     ('e0000000-0000-0000-0000-000000000010', 'a0000000-0000-0000-0000-000000000001',
      'Денис', 'Харченко', '+380501111010', 'denys.h@gmail.com', NULL,
-     'OTHER', 'INACTIVE', 0, 2, 0.00,
+     'OTHER', true, false, 0, 2, 0.00,
      'Двічі не прийшов без попередження.', NOW() - INTERVAL '90 days', NOW()),
 
     ('e0000000-0000-0000-0000-000000000011', 'a0000000-0000-0000-0000-000000000001',
      'Марія', 'Гончаренко', '+380501111011', 'maria.g@gmail.com', '@maria.gonch',
-     'INSTAGRAM', 'ACTIVE', 3, 0, 10500.00,
+     'INSTAGRAM', false, false, 3, 0, 10500.00,
      NULL, NOW() - INTERVAL '150 days', NOW()),
 
     ('e0000000-0000-0000-0000-000000000012', 'a0000000-0000-0000-0000-000000000001',
-     'Тарас', 'Сірко', '+380501111012', NULL, '@taras.sirko',
-     'TELEGRAM', 'ACTIVE', 1, 0, 4500.00,
-     'Перший великий проект. Класична японська.', NOW() - INTERVAL '45 days', NOW())
+     'Тарас', 'Сірко', '+380501111012', 'taras.sirko@gmail.com', NULL,
+     'TELEGRAM', false, false, 1, 0, 4500.00,
+     'Перший великий проект. Класична японська.', NOW() - INTERVAL '45 days', NOW()),
+
+    ('e0000000-0000-0000-0000-000000000013', 'a0000000-0000-0000-0000-000000000001',
+     'Віктор', 'Блокований', '+380501111013', 'viktor.blocked@gmail.com', NULL,
+     'OTHER', false, true, 1, 2, 0.00,
+     'У чорному списку — тест blacklist.', NOW() - INTERVAL '200 days', NOW()),
+
+    ('e0000000-0000-0000-0000-000000000014', 'a0000000-0000-0000-0000-000000000001',
+     'Павло', 'Старий', '+380501111014', 'pavlo.staryi@gmail.com', NULL,
+     'REFERRAL', true, false, 2, 0, 5000.00,
+     'Давно не був — тест dormant.', NOW() - INTERVAL '400 days', NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================

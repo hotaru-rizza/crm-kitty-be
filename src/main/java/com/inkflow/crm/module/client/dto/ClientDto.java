@@ -28,7 +28,8 @@ public class ClientDto {
     private String whatsapp;
     private String facebook;
     private List<String> tags;
-    private String status;
+    private boolean dormant;
+    private boolean blacklisted;
     private String notes;
     private Instant lastVisit;
     private Instant firstVisit;

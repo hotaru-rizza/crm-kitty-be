@@ -217,6 +217,8 @@ class AppointmentServiceTest {
         when(entityResolver.requireAppointment(tenantId, appointmentId)).thenReturn(appointment);
         when(appointmentRepository.existsConflictingAppointmentExcluding(artistId, newStart, newEnd, appointmentId))
                 .thenReturn(false);
+        when(inkflowProperties.defaultZoneId()).thenReturn(ZoneId.of("Europe/Kyiv"));
+        when(leaveRequestRepository.findActiveLeaveForDate(eq(tenantId), eq(artistId), any())).thenReturn(List.of());
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(appointmentMapper.toDto(appointment)).thenReturn(AppointmentDto.builder().id(appointmentId).build());
 
@@ -257,6 +259,32 @@ class AppointmentServiceTest {
         UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
                 .startTime(newStart)
                 .endTime(newEnd)
+                .build();
+
+        assertThrows(BusinessRuleException.class, () -> appointmentService.updateAppointment(appointmentId, request));
+    }
+
+    @Test
+    void updateAppointment_revalidatesSlotWhenArtistChanged() {
+        UUID tenantId = UUID.randomUUID();
+        UUID appointmentId = UUID.randomUUID();
+        UUID currentArtistId = UUID.randomUUID();
+        UUID newArtistId = UUID.randomUUID();
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        authenticate(tenantId);
+
+        Appointment appointment = baseAppointment(
+                appointmentId, tenantId, staff(currentArtistId), start, end, AppointmentStatus.SCHEDULED);
+
+        when(entityResolver.requireAppointment(tenantId, appointmentId)).thenReturn(appointment);
+        when(entityResolver.requireStaff(tenantId, newArtistId)).thenReturn(staff(newArtistId));
+        when(appointmentRepository.existsConflictingAppointmentExcluding(newArtistId, start, end, appointmentId))
+                .thenReturn(true);
+
+        UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
+                .artistId(newArtistId)
                 .build();
 
         assertThrows(BusinessRuleException.class, () -> appointmentService.updateAppointment(appointmentId, request));

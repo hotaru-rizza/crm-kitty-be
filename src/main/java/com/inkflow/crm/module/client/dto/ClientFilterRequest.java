@@ -11,10 +11,11 @@ import java.util.UUID;
 @Data
 public class ClientFilterRequest {
     private String search;
-    private String status;
+    private Boolean dormant;
     private Boolean onlyMine;
     private Boolean lost;
     private Boolean blacklisted;
+    private Boolean excludeBlacklisted;
 
     private Integer totalVisitsMin;
     private Integer totalVisitsMax;

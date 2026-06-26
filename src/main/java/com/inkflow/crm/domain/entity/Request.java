@@ -48,6 +48,9 @@ public class Request {
     @Column(name = "phone")
     private String phone;
 
+    @Column(name = "email")
+    private String email;
+
     @Column(name = "instagram")
     private String instagram;
 

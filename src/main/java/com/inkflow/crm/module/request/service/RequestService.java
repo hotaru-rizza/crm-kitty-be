@@ -8,7 +8,6 @@ import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.common.util.PhoneUtils;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.Request;
-import com.inkflow.crm.domain.enums.ClientStatus;
 import com.inkflow.crm.domain.enums.RequestSource;
 import com.inkflow.crm.domain.enums.RequestStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
@@ -63,6 +62,7 @@ public class RequestService {
                 .clientNickname(createRequest.getClientNickname())
                 .message(createRequest.getMessage())
                 .phone(createRequest.getPhone())
+                .email(normalizeEmail(createRequest.getEmail()))
                 .instagram(createRequest.getInstagram())
                 .sketchUrl(createRequest.getSketchUrl())
                 .status(RequestStatus.NEW)
@@ -99,9 +99,33 @@ public class RequestService {
             throw new BusinessRuleException("Request has already been converted");
         }
 
-        String normalizedPhone = PhoneUtils.normalize(convertRequest.getPhone());
-        if (clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull(normalizedPhone, tenantId)) {
+        String email = resolveConversionEmail(request, convertRequest);
+        if (email == null) {
+            throw new BusinessRuleException("Email is required");
+        }
+
+        Client existingByEmail = clientRepository
+                .findByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull(email, tenantId)
+                .orElse(null);
+        if (existingByEmail != null) {
+            if (existingByEmail.isBlacklisted()) {
+                throw BusinessRuleException.clientBlacklisted();
+            }
+            request.markAsConverted(existingByEmail);
+            requestRepository.save(request);
+            log.info("Request linked to existing client by email: tenantId={} requestId={} clientId={}",
+                    tenantId, requestId, existingByEmail.getId());
+            return clientMapper.toDto(existingByEmail);
+        }
+
+        String normalizedPhone = resolveConversionPhone(request, convertRequest);
+        if (normalizedPhone != null
+                && clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull(normalizedPhone, tenantId)) {
             throw BusinessRuleException.phoneAlreadyExists(normalizedPhone);
+        }
+
+        if (clientRepository.existsByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull(email, tenantId)) {
+            throw BusinessRuleException.emailAlreadyExists(email);
         }
 
         Client client = Client.builder()
@@ -109,11 +133,10 @@ public class RequestService {
                 .firstName(convertRequest.getFirstName())
                 .lastName(convertRequest.getLastName())
                 .phone(normalizedPhone)
-                .email(convertRequest.getEmail())
+                .email(email)
                 .instagram(convertRequest.getInstagram())
                 .telegram(convertRequest.getTelegram())
                 .source(request.getSource())
-                .status(ClientStatus.ACTIVE)
                 .totalVisits(0)
                 .cancelledVisits(0)
                 .ltv(BigDecimal.ZERO)
@@ -171,6 +194,8 @@ public class RequestService {
     }
 
     private RequestDto toDto(Request request) {
+        MatchedClient matchedClient = resolveMatchedClient(request);
+
         return RequestDto.builder()
                 .id(request.getId())
                 .source(request.getSource().getValue())
@@ -178,9 +203,13 @@ public class RequestService {
                 .clientNickname(request.getClientNickname())
                 .message(request.getMessage())
                 .phone(request.getPhone())
+                .email(request.getEmail())
                 .instagram(request.getInstagram())
                 .status(request.getStatus().getValue())
                 .convertedClientId(request.getConvertedClientId())
+                .matchedClientId(matchedClient.id())
+                .matchedClientName(matchedClient.name())
+                .matchedClientBlacklisted(matchedClient.blacklisted())
                 .createdAt(request.getCreatedAt())
                 .repliedAt(request.getRepliedAt())
                 .convertedAt(request.getConvertedAt())
@@ -197,6 +226,49 @@ public class RequestService {
                 .assignedStaffId(request.getAssignedStaff() != null ? request.getAssignedStaff().getId() : null)
                 .assignedStaffName(request.getAssignedStaff() != null ? request.getAssignedStaff().getFullName() : null)
                 .build();
+    }
+
+    private MatchedClient resolveMatchedClient(Request request) {
+        if (request.getConvertedClient() != null) {
+            Client client = request.getConvertedClient();
+            return new MatchedClient(client.getId(), client.getFullName(), client.isBlacklisted());
+        }
+
+        String email = normalizeEmail(request.getEmail());
+        if (email == null) {
+            return MatchedClient.empty();
+        }
+
+        return clientRepository.findByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull(email, request.getTenantId())
+                .map(client -> new MatchedClient(client.getId(), client.getFullName(), client.isBlacklisted()))
+                .orElse(MatchedClient.empty());
+    }
+
+    private String resolveConversionEmail(Request request, ConvertRequestRequest convertRequest) {
+        String email = normalizeEmail(convertRequest.getEmail());
+        if (email != null) {
+            return email;
+        }
+        return normalizeEmail(request.getEmail());
+    }
+
+    private String resolveConversionPhone(Request request, ConvertRequestRequest convertRequest) {
+        String rawPhone = convertRequest.getPhone();
+        if (rawPhone == null || rawPhone.isBlank()) {
+            rawPhone = request.getPhone();
+        }
+        if (rawPhone == null || rawPhone.isBlank()) {
+            return null;
+        }
+        String normalized = PhoneUtils.normalize(rawPhone);
+        return normalized.isBlank() ? null : normalized;
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        return email.trim().toLowerCase();
     }
 
     private List<String> parseBodyZones(String bodyZones) {
@@ -217,5 +289,11 @@ public class RequestService {
                 .map(String::trim)
                 .filter(value -> !value.isEmpty())
                 .toList();
+    }
+
+    private record MatchedClient(UUID id, String name, boolean blacklisted) {
+        static MatchedClient empty() {
+            return new MatchedClient(null, null, false);
+        }
     }
 }

@@ -58,6 +58,7 @@ public class ProjectMapper {
                 .serviceId(appointment.getService() != null ? appointment.getService().getId() : null)
                 .serviceName(appointment.getService() != null ? appointment.getService().getTitle() : null)
                 .serviceColor(appointment.getService() != null ? appointment.getService().getColor() : null)
+                .artist(summaryMapper.toStaffSummary(appointment.getArtist()))
                 .price(appointment.getPrice())
                 .finalPrice(appointment.getFinalPrice())
                 .notes(appointment.getNotes())

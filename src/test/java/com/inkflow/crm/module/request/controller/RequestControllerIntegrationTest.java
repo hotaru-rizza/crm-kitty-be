@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.Request;
 import com.inkflow.crm.domain.entity.Staff;
-import com.inkflow.crm.domain.enums.ClientStatus;
 import com.inkflow.crm.domain.enums.RequestStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
@@ -153,6 +152,7 @@ class RequestControllerIntegrationTest {
         ConvertRequestRequest body = ConvertRequestRequest.builder()
                 .firstName("Convert")
                 .lastName("Me")
+                .email("convert.me@example.com")
                 .phone("+380671112233")
                 .build();
 
@@ -173,7 +173,7 @@ class RequestControllerIntegrationTest {
                 .findByPhoneAndTenantIdAndDeletedAtIsNull("+380671112233", bundle.tenant().getId())
                 .orElseThrow();
         assertEquals("Convert", persistedClient.getFirstName());
-        assertEquals(ClientStatus.ACTIVE, persistedClient.getStatus());
+        assertEquals(false, persistedClient.isBlacklisted());
     }
 
     @Test
@@ -268,7 +268,6 @@ class RequestControllerIntegrationTest {
                 .firstName("Existing")
                 .lastName("Client")
                 .phone(existingPhone)
-                .status(ClientStatus.ACTIVE)
                 .totalVisits(0)
                 .cancelledVisits(0)
                 .ltv(BigDecimal.ZERO)
@@ -277,6 +276,7 @@ class RequestControllerIntegrationTest {
         ConvertRequestRequest body = ConvertRequestRequest.builder()
                 .firstName("Duplicate")
                 .lastName("Phone")
+                .email("duplicate.phone@example.com")
                 .phone(existingPhone)
                 .build();
 

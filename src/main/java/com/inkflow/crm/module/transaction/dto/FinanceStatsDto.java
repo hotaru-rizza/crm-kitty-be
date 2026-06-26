@@ -17,6 +17,8 @@ public class FinanceStatsDto {
     private BigDecimal totalIncome;
     private BigDecimal totalExpenses;
     private BigDecimal netProfit;
+    private BigDecimal avgCheck;
+    private Long incomeCount;
     private Map<String, BigDecimal> byCategory;
     private Map<String, BigDecimal> byPaymentMethod;
     private List<ArtistRevenueDto> byArtist;

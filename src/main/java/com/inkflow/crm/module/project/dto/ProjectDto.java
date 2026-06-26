@@ -55,6 +55,7 @@ public class ProjectDto {
         private UUID serviceId;
         private String serviceName;
         private String serviceColor;
+        private StaffSummaryDto artist;
         private BigDecimal price;
         private BigDecimal finalPrice;
         private String notes;

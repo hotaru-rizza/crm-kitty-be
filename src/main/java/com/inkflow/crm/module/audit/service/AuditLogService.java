@@ -1,6 +1,8 @@
 package com.inkflow.crm.module.audit.service;
 
 import com.inkflow.crm.domain.entity.AuditLogEntry;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.repository.AuditLogRepository;
 import com.inkflow.crm.module.audit.dto.AuditLogDto;
 import com.inkflow.crm.security.SecurityUtils;
@@ -29,17 +31,19 @@ public class AuditLogService {
 
     @Async
     public void log(UUID tenantId, UUID actorId, String actorName,
-                    String action, String entityType, String entityId, String entityLabel,
-                    String details) {
+                    AuditAction action, AuditEntityType entityType,
+                    String entityId, String entityLabel,
+                    UUID subjectClientId, String details) {
         try {
             repo.save(AuditLogEntry.builder()
                     .tenantId(tenantId)
                     .actorId(actorId)
                     .actorName(actorName)
-                    .action(action)
-                    .entityType(entityType)
+                    .action(action.getValue())
+                    .entityType(entityType.getValue())
                     .entityId(entityId)
                     .entityLabel(entityLabel)
+                    .subjectClientId(subjectClientId)
                     .details(details)
                     .build());
         } catch (Exception e) {
@@ -47,30 +51,68 @@ public class AuditLogService {
         }
     }
 
+    @Async
+    public void logCurrent(AuditAction action, AuditEntityType entityType,
+                           String entityId, String entityLabel) {
+        logCurrent(action, entityType, entityId, entityLabel, null, null);
+    }
 
     @Async
-    public void logCurrent(String action, String entityType, String entityId, String entityLabel) {
+    public void logCurrent(AuditAction action, AuditEntityType entityType,
+                           String entityId, String entityLabel, UUID subjectClientId) {
+        logCurrent(action, entityType, entityId, entityLabel, subjectClientId, null);
+    }
+
+    @Async
+    public void logCurrent(AuditAction action, AuditEntityType entityType,
+                           String entityId, String entityLabel,
+                           UUID subjectClientId, String details) {
         try {
             com.inkflow.crm.security.UserPrincipal principal = SecurityUtils.getCurrentUser();
-            if (principal == null) return;
-            UUID tenantId = principal.getTenantId();
-            UUID actorId = principal.getId();
-            String actorName = principal.getEmail();
-            log(tenantId, actorId, actorName, action, entityType, entityId, entityLabel, null);
+            if (principal == null) {
+                return;
+            }
+            log(
+                    principal.getTenantId(),
+                    principal.getId(),
+                    principal.getEmail(),
+                    action,
+                    entityType,
+                    entityId,
+                    entityLabel,
+                    subjectClientId,
+                    details
+            );
         } catch (Exception e) {
             log.warn("Failed to write audit log: {}", e.getMessage());
         }
     }
 
     @Transactional(readOnly = true)
-    public Page<AuditLogDto> getLog(UUID actorId, String entityType, Instant from, Instant to, int page, int size) {
+    public Page<AuditLogDto> getLog(
+            List<UUID> actorIds,
+            UUID clientId,
+            List<String> actions,
+            String entityType,
+            Instant from,
+            Instant to,
+            int page,
+            int size
+    ) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         Specification<AuditLogEntry> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("tenantId"), tenantId));
-            if (actorId != null) {
-                predicates.add(cb.equal(root.get("actorId"), actorId));
+
+            if (actorIds != null && !actorIds.isEmpty()) {
+                predicates.add(root.get("actorId").in(actorIds));
+            }
+            if (clientId != null) {
+                predicates.add(cb.equal(root.get("subjectClientId"), clientId));
+            }
+            if (actions != null && !actions.isEmpty()) {
+                predicates.add(root.get("action").in(actions));
             }
             if (entityType != null && !entityType.isBlank()) {
                 predicates.add(cb.equal(root.get("entityType"), entityType));
@@ -81,6 +123,7 @@ public class AuditLogService {
             if (to != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), to));
             }
+
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
@@ -97,6 +140,7 @@ public class AuditLogService {
                 .entityType(e.getEntityType())
                 .entityId(e.getEntityId())
                 .entityLabel(e.getEntityLabel())
+                .subjectClientId(e.getSubjectClientId())
                 .details(e.getDetails())
                 .createdAt(e.getCreatedAt())
                 .build();

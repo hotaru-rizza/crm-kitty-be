@@ -79,7 +79,7 @@ class AuditLogControllerIntegrationTest {
                 .actorId(bundle.owner().getId())
                 .actorName("Owner User")
                 .action("CREATE")
-                .entityType("Client")
+                .entityType("CLIENT")
                 .entityId(bundle.client().getId().toString())
                 .entityLabel("Client One")
                 .build());
@@ -91,7 +91,7 @@ class AuditLogControllerIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].action").value("CREATE"))
-                .andExpect(jsonPath("$.data[0].entityType").value("Client"))
+                .andExpect(jsonPath("$.data[0].entityType").value("CLIENT"))
                 .andExpect(jsonPath("$.data[0].entityId").value(bundle.client().getId().toString()))
                 .andExpect(jsonPath("$.data[0].entityLabel").value("Client One"))
                 .andExpect(jsonPath("$.data[0].actorId").value(bundle.owner().getId().toString()));

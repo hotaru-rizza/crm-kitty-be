@@ -2,7 +2,6 @@ package com.inkflow.crm.module.client.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.domain.entity.Client;
-import com.inkflow.crm.domain.enums.ClientStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
@@ -79,6 +78,7 @@ class ClientControllerIntegrationTest {
         CreateClientRequest body = CreateClientRequest.builder()
                 .firstName("Api")
                 .lastName("Client")
+                .email("api.client@test.com")
                 .phone("+380501234567")
                 .build();
 
@@ -100,7 +100,8 @@ class ClientControllerIntegrationTest {
                 .findByIdAndTenantIdAndDeletedAtIsNull(clientId, bundle.tenant().getId())
                 .orElseThrow();
         assertEquals("+380501234567", persisted.getPhone());
-        assertEquals(ClientStatus.ACTIVE, persisted.getStatus());
+        assertEquals(false, persisted.isDormant());
+        assertEquals(false, persisted.isBlacklisted());
     }
 
     @Test
@@ -110,7 +111,7 @@ class ClientControllerIntegrationTest {
         CreateClientRequest body = CreateClientRequest.builder()
                 .firstName("")
                 .lastName("Client")
-                .phone("not-a-phone")
+                .email("invalid-email")
                 .build();
 
         mockMvc.perform(post("/clients")
@@ -149,7 +150,7 @@ class ClientControllerIntegrationTest {
         UpdateClientRequest body = UpdateClientRequest.builder()
                 .firstName("Updated")
                 .lastName("Name")
-                .status("inactive")
+                .blacklisted(true)
                 .build();
 
         mockMvc.perform(patch("/clients/{id}", bundle.client().getId())
@@ -158,14 +159,14 @@ class ClientControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.firstName").value("Updated"))
-                .andExpect(jsonPath("$.data.status").value("inactive"));
+                .andExpect(jsonPath("$.data.blacklisted").value(true));
 
         Client persisted = clientRepository
                 .findByIdAndTenantIdAndDeletedAtIsNull(bundle.client().getId(), bundle.tenant().getId())
                 .orElseThrow();
         assertEquals("Updated", persisted.getFirstName());
         assertEquals("Name", persisted.getLastName());
-        assertEquals(ClientStatus.INACTIVE, persisted.getStatus());
+        assertEquals(true, persisted.isBlacklisted());
     }
 
     @Test
@@ -174,7 +175,6 @@ class ClientControllerIntegrationTest {
 
         UpdateClientRequest body = UpdateClientRequest.builder()
                 .phone("bad-phone")
-                .status("archived")
                 .build();
 
         mockMvc.perform(patch("/clients/{id}", bundle.client().getId())

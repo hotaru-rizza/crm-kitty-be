@@ -3,7 +3,6 @@ package com.inkflow.crm.domain.repository;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
-import com.inkflow.crm.domain.enums.ClientStatus;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
@@ -45,20 +44,25 @@ public final class ClientSpecifications {
         };
     }
 
-    public static Specification<Client> statusIs(ClientStatus status) {
-        if (status == null) {
+    public static Specification<Client> dormantIs(Boolean dormant) {
+        if (dormant == null) {
             return null;
         }
-        return (root, query, cb) -> cb.equal(root.get("status"), status);
+        return (root, query, cb) -> cb.equal(root.get("dormant"), dormant);
     }
 
     public static Specification<Client> blacklisted(Boolean blacklisted) {
         if (blacklisted == null) {
             return null;
         }
-        return blacklisted
-                ? (root, query, cb) -> cb.equal(root.get("status"), ClientStatus.BLACKLISTED)
-                : (root, query, cb) -> cb.notEqual(root.get("status"), ClientStatus.BLACKLISTED);
+        return (root, query, cb) -> cb.equal(root.get("blacklisted"), blacklisted);
+    }
+
+    public static Specification<Client> excludeBlacklisted(Boolean excludeBlacklisted) {
+        if (!Boolean.TRUE.equals(excludeBlacklisted)) {
+            return null;
+        }
+        return (root, query, cb) -> cb.isFalse(root.get("blacklisted"));
     }
 
     public static Specification<Client> totalVisitsBetween(Integer min, Integer max) {

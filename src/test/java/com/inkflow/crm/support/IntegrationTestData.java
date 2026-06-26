@@ -7,7 +7,6 @@ import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.enums.AccountStatus;
 import com.inkflow.crm.domain.enums.AccountType;
-import com.inkflow.crm.domain.enums.ClientStatus;
 import com.inkflow.crm.domain.enums.PricingType;
 import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.SupportedCurrency;
@@ -77,8 +76,8 @@ public final class IntegrationTestData {
                 .tenantId(tenant.getId())
                 .firstName("Client")
                 .lastName("One")
+                .email("client-" + suffix + "@test.com")
                 .phone("+38099" + suffix.toString().replace("-", "").substring(0, 7).replaceAll("[^0-9]", "0123456"))
-                .status(ClientStatus.ACTIVE)
                 .totalVisits(0)
                 .cancelledVisits(0)
                 .ltv(BigDecimal.ZERO)

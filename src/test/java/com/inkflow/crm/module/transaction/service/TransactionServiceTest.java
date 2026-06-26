@@ -46,6 +46,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -196,12 +197,14 @@ class TransactionServiceTest {
         when(transactionRepository.sumByPaymentMethodAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
         when(transactionRepository.sumByArtistAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
         when(transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
+        when(transactionRepository.countByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to)).thenReturn(5L);
 
         FinanceStatsDto stats = transactionService.getFinanceStats(from, to, null);
 
         assertEquals(BigDecimal.valueOf(5000), stats.getTotalIncome());
         assertEquals(BigDecimal.valueOf(1200), stats.getTotalExpenses());
         assertEquals(BigDecimal.valueOf(3800), stats.getNetProfit());
+        assertEquals(new BigDecimal("1000.00"), stats.getAvgCheck());
     }
 
     @Test
@@ -393,12 +396,14 @@ class TransactionServiceTest {
         when(transactionRepository.sumByPaymentMethodAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
         when(transactionRepository.sumByArtistAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
         when(transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
+        when(transactionRepository.countByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to)).thenReturn(0L);
 
         FinanceStatsDto stats = transactionService.getFinanceStats(from, to, null);
 
         assertEquals(BigDecimal.ZERO, stats.getTotalIncome());
         assertEquals(BigDecimal.ZERO, stats.getTotalExpenses());
         assertEquals(BigDecimal.ZERO, stats.getNetProfit());
+        assertNull(stats.getAvgCheck());
     }
 
     @Test
@@ -424,10 +429,12 @@ class TransactionServiceTest {
                 }));
         when(transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to))
                 .thenReturn(List.<Object[]>of(new Object[]{"2025-01-10", BigDecimal.valueOf(1500)}));
+        when(transactionRepository.countByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to)).thenReturn(4L);
 
         FinanceStatsDto stats = transactionService.getFinanceStats(from, to, null);
 
         assertEquals(BigDecimal.valueOf(2500), stats.getNetProfit());
+        assertEquals(new BigDecimal("750.00"), stats.getAvgCheck());
         assertEquals(BigDecimal.valueOf(2800), stats.getByCategory().get("service"));
         assertEquals(BigDecimal.valueOf(2000), stats.getByPaymentMethod().get("card"));
         assertEquals(1, stats.getByArtist().size());
@@ -463,10 +470,12 @@ class TransactionServiceTest {
                 }));
         when(transactionRepository.sumIncomeByDayAndDateRangeForStaffs(tenantId, staffFilter, from, to))
                 .thenReturn(List.<Object[]>of(new Object[]{"2025-01-05", BigDecimal.valueOf(600)}));
+        when(transactionRepository.countByTypeAndDateRangeForStaffs(tenantId, TransactionType.INCOME, from, to, staffFilter)).thenReturn(2L);
 
         FinanceStatsDto stats = transactionService.getFinanceStats(from, to, staffFilter);
 
         assertEquals(BigDecimal.valueOf(1000), stats.getTotalIncome());
+        assertEquals(new BigDecimal("500.00"), stats.getAvgCheck());
         assertEquals(staffId.toString(), stats.getByArtist().getFirst().getArtistId());
         assertEquals(BigDecimal.valueOf(600), stats.getByDate().get("2025-01-05"));
         verify(transactionRepository).sumByArtistAndDateRangeForStaffs(tenantId, from, to, staffFilter);

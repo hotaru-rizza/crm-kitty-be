@@ -37,6 +37,12 @@ public class ClientController {
         return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
+    @GetMapping("/recent")
+    @RequirePermission({Permission.CLIENTS_VIEW_ALL, Permission.CLIENTS_VIEW_OWN})
+    public ResponseEntity<ApiResponse<List<ClientDto>>> getRecentClients() {
+        return ResponseEntity.ok(ApiResponse.success(clientService.getRecentClients()));
+    }
+
     @GetMapping("/{id}")
     @RequirePermission({Permission.CLIENTS_VIEW_ALL, Permission.CLIENTS_VIEW_OWN})
     public ResponseEntity<ApiResponse<ClientDetailDto>> getClient(@PathVariable UUID id) {

@@ -8,9 +8,9 @@ import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.common.util.PhoneUtils;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.Project;
-import com.inkflow.crm.domain.enums.ClientStatus;
 import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.domain.enums.ProjectStatus;
+import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.ClientSpecifications;
 import com.inkflow.crm.domain.repository.ProjectRepository;
@@ -29,17 +29,23 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ClientService {
 
+    public static final int RECENT_CLIENTS_LIMIT = 10;
     private static final int LOST_CLIENT_DAYS = 90;
 
     private final ClientRepository clientRepository;
+    private final AppointmentRepository appointmentRepository;
     private final ProjectRepository projectRepository;
     private final ClientMapper clientMapper;
     private final RolePermissionService rolePermissionService;
@@ -48,6 +54,33 @@ public class ClientService {
     public PageResult<ClientDto> getAllClients(PageRequest pageRequest, ClientFilterRequest filter) {
         Page<Client> page = getClientsPage(pageRequest, filter);
         return new PageResult<>(clientMapper.toDtoList(page.getContent()), PaginationDto.from(page));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClientDto> getRecentClients() {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        UUID artistId = resolveRecentClientsArtistScope();
+
+        List<UUID> clientIds = appointmentRepository.findRecentClientIds(
+                tenantId,
+                artistId,
+                org.springframework.data.domain.PageRequest.of(0, RECENT_CLIENTS_LIMIT)
+        );
+
+        if (clientIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<UUID, Client> clientsById = clientRepository
+                .findByIdInAndTenantIdAndDeletedAtIsNull(clientIds, tenantId)
+                .stream()
+                .collect(Collectors.toMap(Client::getId, Function.identity(), (left, right) -> left, LinkedHashMap::new));
+
+        return clientIds.stream()
+                .map(clientsById::get)
+                .filter(client -> client != null && !client.isBlacklisted())
+                .map(clientMapper::toDto)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -62,17 +95,35 @@ public class ClientService {
         return buildDetailDto(client, activeProjects);
     }
 
+    @Transactional(readOnly = true)
+    public ClientDto findByEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        return clientRepository.findByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull(email.trim(), tenantId)
+                .map(clientMapper::toDto)
+                .orElse(null);
+    }
+
     @Transactional
     public ClientDto createClient(CreateClientRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        String normalizedPhone = PhoneUtils.normalize(request.getPhone());
+        String normalizedEmail = normalizeEmail(request.getEmail());
 
-        if (clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull(normalizedPhone, tenantId)) {
+        if (clientRepository.existsByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull(normalizedEmail, tenantId)) {
+            throw BusinessRuleException.emailAlreadyExists(normalizedEmail);
+        }
+
+        String normalizedPhone = normalizeOptionalPhone(request.getPhone());
+        if (normalizedPhone != null
+                && clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull(normalizedPhone, tenantId)) {
             throw BusinessRuleException.phoneAlreadyExists(normalizedPhone);
         }
 
         Client client = clientMapper.toEntity(request);
         client.setTenantId(tenantId);
+        client.setEmail(normalizedEmail);
         client.setPhone(normalizedPhone);
         client = clientRepository.save(client);
 
@@ -86,12 +137,32 @@ public class ClientService {
         Client client = requireClient(tenantId, id);
 
         if (request.getPhone() != null) {
-            String normalizedPhone = PhoneUtils.normalize(request.getPhone());
-            if (!normalizedPhone.equals(client.getPhone())
-                    && clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull(normalizedPhone, tenantId)) {
-                throw BusinessRuleException.phoneAlreadyExists(normalizedPhone);
+            if (request.getPhone().isBlank()) {
+                client.setPhone(null);
+            } else {
+                String normalizedPhone = PhoneUtils.normalize(request.getPhone());
+                if (!normalizedPhone.equals(client.getPhone())
+                        && clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull(normalizedPhone, tenantId)) {
+                    throw BusinessRuleException.phoneAlreadyExists(normalizedPhone);
+                }
+                client.setPhone(normalizedPhone);
             }
-            request.setPhone(normalizedPhone);
+            request.setPhone(null);
+        }
+
+        if (request.getEmail() != null) {
+            if (request.getEmail().isBlank()) {
+                throw BusinessRuleException.emailRequired();
+            }
+
+            String normalizedEmail = normalizeEmail(request.getEmail());
+            if (client.getEmail() == null || !normalizedEmail.equalsIgnoreCase(client.getEmail())) {
+                if (clientRepository.existsByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull(normalizedEmail, tenantId)) {
+                    throw BusinessRuleException.emailAlreadyExists(normalizedEmail);
+                }
+            }
+            client.setEmail(normalizedEmail);
+            request.setEmail(null);
         }
 
         clientMapper.updateEntity(request, client);
@@ -133,10 +204,6 @@ public class ClientService {
         }
 
         UUID artistId = resolveArtistId(effectiveFilter);
-        ClientStatus clientStatus = effectiveFilter.getStatus() != null
-                ? ClientStatus.fromValue(effectiveFilter.getStatus())
-                : null;
-
         Instant lostCutoff = Boolean.TRUE.equals(effectiveFilter.getLost())
                 ? Instant.now().minus(LOST_CLIENT_DAYS, ChronoUnit.DAYS)
                 : null;
@@ -145,8 +212,9 @@ public class ClientService {
                 .where(ClientSpecifications.belongsToTenant(tenantId))
                 .and(ClientSpecifications.notDeleted())
                 .and(ClientSpecifications.searchLike(effectiveFilter.getSearch()))
-                .and(ClientSpecifications.statusIs(clientStatus))
+                .and(ClientSpecifications.dormantIs(effectiveFilter.getDormant()))
                 .and(ClientSpecifications.blacklisted(effectiveFilter.getBlacklisted()))
+                .and(ClientSpecifications.excludeBlacklisted(effectiveFilter.getExcludeBlacklisted()))
                 .and(ClientSpecifications.totalVisitsBetween(effectiveFilter.getTotalVisitsMin(), effectiveFilter.getTotalVisitsMax()))
                 .and(ClientSpecifications.cancelledVisitsBetween(effectiveFilter.getCancelledVisitsMin(), effectiveFilter.getCancelledVisitsMax()))
                 .and(ClientSpecifications.balanceBetween(effectiveFilter.getBalanceMin(), effectiveFilter.getBalanceMax()))
@@ -168,6 +236,14 @@ public class ClientService {
         return clientRepository.findAll(spec, pageRequest.toPageable());
     }
 
+    private UUID resolveRecentClientsArtistScope() {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        if (rolePermissionService.hasPermission(tenantId, SecurityUtils.getCurrentUserRole(), Permission.CLIENTS_VIEW_ALL.getValue())) {
+            return null;
+        }
+        return SecurityUtils.getCurrentUserId();
+    }
+
     private UUID resolveArtistId(ClientFilterRequest filter) {
         if (filter.getArtistId() != null) {
             return filter.getArtistId();
@@ -175,7 +251,7 @@ public class ClientService {
         return Boolean.TRUE.equals(filter.getOnlyMine()) ? SecurityUtils.getCurrentUserId() : null;
     }
 
-    private Client requireClient(UUID tenantId, UUID id) {
+    Client requireClient(UUID tenantId, UUID id) {
         return clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.client(id.toString()));
     }
@@ -202,7 +278,8 @@ public class ClientService {
                 .tags(new ArrayList<>(client.getTags()))
                 .medicalConditions(new ArrayList<>(client.getMedicalConditions()))
                 .source(client.getSource() != null ? client.getSource().getValue() : null)
-                .status(client.getStatus().getValue())
+                .dormant(client.isDormant())
+                .blacklisted(client.isBlacklisted())
                 .notes(client.getNotes())
                 .lastVisit(client.getLastVisit())
                 .firstVisit(client.getFirstVisit())
@@ -214,5 +291,18 @@ public class ClientService {
                 .createdAt(client.getCreatedAt())
                 .updatedAt(client.getUpdatedAt())
                 .build();
+    }
+
+    private static String normalizeEmail(String email) {
+        return email.trim().toLowerCase();
+    }
+
+    private static String normalizeOptionalPhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+
+        String normalized = PhoneUtils.normalize(phone);
+        return normalized.isBlank() ? null : normalized;
     }
 }

@@ -47,6 +47,9 @@ public class AuditLogEntry {
     @Column(name = "entity_label")
     private String entityLabel;
 
+    @Column(name = "subject_client_id")
+    private UUID subjectClientId;
+
     @Column(name = "details", columnDefinition = "TEXT")
     private String details;
 
