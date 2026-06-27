@@ -10,6 +10,10 @@ import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TransactionRepository;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.location.dto.*;
 import com.inkflow.crm.module.location.mapper.LocationMapper;
 import com.inkflow.crm.security.SecurityUtils;
@@ -37,6 +41,8 @@ public class LocationService {
     private final AppointmentRepository appointmentRepository;
     private final TransactionRepository transactionRepository;
     private final LocationMapper locationMapper;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
 
     @Transactional(readOnly = true)
     public PageResult<LocationDto> getAllLocations(PageRequest pageRequest) {
@@ -68,6 +74,12 @@ public class LocationService {
 
         location = locationRepository.save(location);
         log.info("Location created: tenantId={} locationId={}", tenantId, location.getId());
+        auditRecorder.record(
+                AuditAction.CREATE,
+                AuditEntityType.LOCATION,
+                location.getId().toString(),
+                auditLabelFormatter.location(location.getName())
+        );
         return locationMapper.toDtoWithStaffCount(location);
     }
 
@@ -82,6 +94,12 @@ public class LocationService {
         locationMapper.updateEntity(request, location);
         location = locationRepository.save(location);
         log.info("Location updated: tenantId={} locationId={}", tenantId, id);
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.LOCATION,
+                location.getId().toString(),
+                auditLabelFormatter.location(location.getName())
+        );
         return locationMapper.toDtoWithStaffCount(location);
     }
 
@@ -96,6 +114,12 @@ public class LocationService {
         location.softDelete();
         locationRepository.save(location);
         log.info("Location deleted: tenantId={} locationId={}", tenantId, id);
+        auditRecorder.record(
+                AuditAction.DELETE,
+                AuditEntityType.LOCATION,
+                location.getId().toString(),
+                auditLabelFormatter.location(location.getName())
+        );
     }
 
     @Transactional
@@ -110,6 +134,14 @@ public class LocationService {
         location.setStaff(new HashSet<>(staffList));
         locationRepository.save(location);
         log.info("Staff assigned to location: tenantId={} locationId={} count={}", tenantId, locationId, staffList.size());
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.LOCATION,
+                location.getId().toString(),
+                auditLabelFormatter.location(location.getName()),
+                null,
+                staffList.size() + " майстрів"
+        );
     }
 
     private LocationDetailDto.LocationStatsDto calculateStats(Location location) {

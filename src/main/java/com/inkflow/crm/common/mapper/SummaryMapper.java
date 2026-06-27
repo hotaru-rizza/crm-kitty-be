@@ -29,6 +29,7 @@ public class SummaryMapper {
                 .avatar(staff.getAvatar())
                 .calendarColor(staff.getCalendarColor())
                 .role(staff.getRole().getValue())
+                .accountStatus(staff.getAccountStatus().getValue())
                 .build();
     }
 }

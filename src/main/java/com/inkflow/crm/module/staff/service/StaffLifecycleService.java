@@ -6,9 +6,12 @@ import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.AccountStatus;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.infrastructure.supabase.SupabaseAdminService;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.staff.dto.DeactivateStaffRequest;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,7 @@ public class StaffLifecycleService {
     private final StaffRepository staffRepository;
     private final AppointmentRepository appointmentRepository;
     private final SupabaseAdminService supabaseAdminService;
+    private final AuditRecorder auditRecorder;
 
     @Transactional(readOnly = true)
     public int getFutureAppointmentsCount(UUID staffId) {
@@ -53,6 +57,14 @@ public class StaffLifecycleService {
         staff.setAccountStatus(AccountStatus.ACTIVE);
         staffRepository.save(staff);
         log.info("Staff reactivated: staffId={} tenantId={}", staffId, staff.getTenantId());
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.STAFF,
+                staffId.toString(),
+                staff.getFullName(),
+                null,
+                "Реактивовано"
+        );
     }
 
     @Transactional
@@ -65,7 +77,17 @@ public class StaffLifecycleService {
         }
 
         if (request.isCancelFutureAppointments()) {
-            cancelFutureAppointments(staffId);
+            int cancelled = cancelFutureAppointments(staffId);
+            if (cancelled > 0) {
+                auditRecorder.record(
+                        AuditAction.CANCEL,
+                        AuditEntityType.STAFF,
+                        staffId.toString(),
+                        staff.getFullName(),
+                        null,
+                        "Скасовано " + cancelled + " майбутніх записів"
+                );
+            }
         }
 
         staff.setAccountStatus(AccountStatus.DEACTIVATED);
@@ -77,14 +99,21 @@ public class StaffLifecycleService {
         }
 
         log.info("Staff deactivated: staffId={} tenantId={}", staffId, staff.getTenantId());
+        auditRecorder.record(
+                AuditAction.STAFF_DEACTIVATE,
+                AuditEntityType.STAFF,
+                staffId.toString(),
+                staff.getFullName()
+        );
     }
 
-    private void cancelFutureAppointments(UUID staffId) {
+    private int cancelFutureAppointments(UUID staffId) {
         List<Appointment> future = appointmentRepository.findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(
                 staffId,
                 List.of(AppointmentStatus.SCHEDULED),
                 Instant.now());
         future.forEach(appointment -> appointment.setStatus(AppointmentStatus.CANCELLED));
         appointmentRepository.saveAll(future);
+        return future.size();
     }
 }

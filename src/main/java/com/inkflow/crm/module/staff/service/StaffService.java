@@ -4,13 +4,18 @@ import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.common.exception.BusinessRuleException;
+import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.AccountStatus;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.dto.AuditContext;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.staff.dto.CreateStaffRequest;
 import com.inkflow.crm.module.staff.dto.StaffDto;
 import com.inkflow.crm.module.staff.dto.UpdateStaffRequest;
@@ -35,6 +40,7 @@ public class StaffService {
     private final StaffRepository staffRepository;
     private final LocationRepository locationRepository;
     private final StaffMapper staffMapper;
+    private final AuditRecorder auditRecorder;
 
     @Transactional(readOnly = true)
     public PageResult<StaffDto> getAllStaff(
@@ -61,6 +67,12 @@ public class StaffService {
 
         staff = staffRepository.save(staff);
         log.info("Staff created: tenantId={} staffId={}", tenantId, staff.getId());
+        auditRecorder.record(
+                AuditAction.CREATE,
+                AuditEntityType.STAFF,
+                staff.getId().toString(),
+                staff.getFullName()
+        );
         return staffMapper.toDto(staff);
     }
 
@@ -71,7 +83,11 @@ public class StaffService {
 
         if (request.getEmail() != null && !request.getEmail().equals(staff.getEmail())) {
             if (staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull(request.getEmail(), tenantId)) {
-                throw BusinessRuleException.emailAlreadyExists(request.getEmail());
+                throw new BusinessRuleException(
+                        ErrorCode.EMAIL_ALREADY_EXISTS,
+                        "Email already exists: " + request.getEmail(),
+                        AuditContext.of(AuditAction.UPDATE, AuditEntityType.STAFF, id.toString(), staff.getFullName())
+                );
             }
         }
 
@@ -83,6 +99,12 @@ public class StaffService {
 
         staff = staffRepository.save(staff);
         log.info("Staff updated: tenantId={} staffId={}", tenantId, id);
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.STAFF,
+                id.toString(),
+                staff.getFullName()
+        );
         return staffMapper.toDto(staff);
     }
 
@@ -96,6 +118,12 @@ public class StaffService {
         staff.softDelete();
         staffRepository.save(staff);
         log.info("Staff deleted: tenantId={} staffId={}", tenantId, id);
+        auditRecorder.record(
+                AuditAction.STAFF_DEACTIVATE,
+                AuditEntityType.STAFF,
+                id.toString(),
+                staff.getFullName()
+        );
     }
 
     private Staff requireStaff(UUID id, UUID tenantId) {

@@ -24,6 +24,8 @@ public class InkflowProperties {
     private Cors cors = new Cors();
     private Openapi openapi = new Openapi();
     private Email email = new Email();
+    private Audit audit = new Audit();
+    private Appointments appointments = new Appointments();
 
     public ZoneId defaultZoneId() {
         return ZoneId.of(defaultTimezone);
@@ -33,6 +35,15 @@ public class InkflowProperties {
     @Setter
     public static class Openapi {
         private boolean enabled = false;
+    }
+
+    @Getter
+    @Setter
+    public static class Audit {
+        private boolean retentionEnabled = true;
+        private int retentionDays = 730;
+        private String retentionCron = "0 0 3 * * *";
+        private String systemActorName = "system@inkflow";
     }
 
     @Getter
@@ -70,5 +81,11 @@ public class InkflowProperties {
                 "http://localhost:5174"
         ));
         private boolean allowCredentials = true;
+    }
+
+    @Getter
+    @Setter
+    public static class Appointments {
+        private int defaultReservationDurationMinutes = 60;
     }
 }

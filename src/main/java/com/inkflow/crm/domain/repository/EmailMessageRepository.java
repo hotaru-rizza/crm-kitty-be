@@ -68,4 +68,6 @@ public interface EmailMessageRepository extends JpaRepository<EmailMessage, UUID
     );
 
     long countByTenantIdAndStatusAndCreatedAtAfter(UUID tenantId, EmailMessageStatus status, Instant after);
+
+    List<EmailMessage> findByTenantIdAndEntityIdOrderByCreatedAtDesc(UUID tenantId, UUID entityId);
 }

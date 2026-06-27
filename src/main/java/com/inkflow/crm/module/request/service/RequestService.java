@@ -8,11 +8,14 @@ import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.common.util.PhoneUtils;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.Request;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.enums.RequestSource;
 import com.inkflow.crm.domain.enums.RequestStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.RequestRepository;
 import com.inkflow.crm.domain.repository.RequestSpecifications;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.client.dto.ClientDto;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
 import com.inkflow.crm.module.request.dto.*;
@@ -38,6 +41,7 @@ public class RequestService {
     private final RequestRepository requestRepository;
     private final ClientRepository clientRepository;
     private final ClientMapper clientMapper;
+    private final AuditRecorder auditRecorder;
 
     @Transactional(readOnly = true)
     public PageResult<RequestDto> getAllRequests(PageRequest pageRequest, RequestFilterRequest filter) {
@@ -70,6 +74,12 @@ public class RequestService {
 
         request = requestRepository.save(request);
         log.info("Request created: tenantId={} requestId={}", tenantId, request.getId());
+        auditRecorder.record(
+                AuditAction.CREATE,
+                AuditEntityType.REQUEST,
+                request.getId().toString(),
+                request.getClientName()
+        );
         return toDto(request);
     }
 
@@ -77,6 +87,7 @@ public class RequestService {
     public RequestDto updateRequestStatus(UUID id, UpdateRequestStatusRequest updateRequest) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Request request = requireRequest(tenantId, id);
+        RequestStatus previousStatus = request.getStatus();
         RequestStatus newStatus = RequestStatus.fromValue(updateRequest.getStatus());
 
         switch (newStatus) {
@@ -87,6 +98,14 @@ public class RequestService {
 
         request = requestRepository.save(request);
         log.info("Request status updated: tenantId={} requestId={} status={}", tenantId, id, newStatus.getValue());
+        auditRecorder.record(
+                AuditAction.STATUS_CHANGE,
+                AuditEntityType.REQUEST,
+                id.toString(),
+                request.getClientName(),
+                null,
+                previousStatus.getValue() + " → " + newStatus.getValue()
+        );
         return toDto(request);
     }
 
@@ -115,6 +134,13 @@ public class RequestService {
             requestRepository.save(request);
             log.info("Request linked to existing client by email: tenantId={} requestId={} clientId={}",
                     tenantId, requestId, existingByEmail.getId());
+            auditRecorder.record(
+                    AuditAction.CONVERT,
+                    AuditEntityType.REQUEST,
+                    requestId.toString(),
+                    request.getClientName(),
+                    existingByEmail.getId()
+            );
             return clientMapper.toDto(existingByEmail);
         }
 
@@ -147,6 +173,20 @@ public class RequestService {
         requestRepository.save(request);
 
         log.info("Request converted to client: tenantId={} requestId={} clientId={}", tenantId, requestId, client.getId());
+        auditRecorder.record(
+                AuditAction.CONVERT,
+                AuditEntityType.REQUEST,
+                requestId.toString(),
+                request.getClientName(),
+                client.getId()
+        );
+        auditRecorder.record(
+                AuditAction.CREATE,
+                AuditEntityType.CLIENT,
+                client.getId().toString(),
+                client.getFullName(),
+                client.getId()
+        );
         return clientMapper.toDto(client);
     }
 
@@ -154,8 +194,15 @@ public class RequestService {
     public void deleteRequest(UUID id) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Request request = requireRequest(tenantId, id);
+        String label = request.getClientName();
         requestRepository.delete(request);
         log.info("Request deleted: tenantId={} requestId={}", tenantId, id);
+        auditRecorder.record(
+                AuditAction.DELETE,
+                AuditEntityType.REQUEST,
+                id.toString(),
+                label
+        );
     }
 
     private Page<Request> getRequestsPage(PageRequest pageRequest, RequestFilterRequest filter) {

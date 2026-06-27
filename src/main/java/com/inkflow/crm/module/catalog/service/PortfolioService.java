@@ -3,6 +3,10 @@ package com.inkflow.crm.module.catalog.service;
 import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.catalog.dto.TattooDto;
 import com.inkflow.crm.module.catalog.entity.Tattoo;
 import com.inkflow.crm.module.catalog.entity.TattooStatus;
@@ -31,6 +35,8 @@ public class PortfolioService {
     private final PortfolioProcessor portfolioProcessor;
     private final TattooMapper tattooMapper;
     private final PortfolioShowcaseResolver showcaseResolver;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
 
     public List<TattooDto> getPortfolio(UUID staffId) {
         requireStaff(staffId);
@@ -61,10 +67,19 @@ public class PortfolioService {
         portfolioProcessor.processImages(ids);
 
         log.info("Portfolio bulk upload: staffId={} count={}", staffId, created.size());
+        auditRecorder.record(
+                AuditAction.CREATE,
+                AuditEntityType.STAFF,
+                staffId.toString(),
+                auditLabelFormatter.portfolio(staff),
+                null,
+                created.size() + " фото"
+        );
         return tattooMapper.toDtoList(created);
     }
 
     public TattooDto update(UUID staffId, Long tattooId, String description, List<String> tags) {
+        Staff staff = requireStaff(staffId);
         Tattoo tattoo = requireTattooForStaff(staffId, tattooId);
 
         if (description != null) {
@@ -78,11 +93,19 @@ public class PortfolioService {
         tattoo = tattooRepository.save(tattoo);
 
         log.info("Portfolio tattoo updated: staffId={} tattooId={}", staffId, tattooId);
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.STAFF,
+                staffId.toString(),
+                auditLabelFormatter.portfolio(staff),
+                null,
+                "Фото #" + tattooId
+        );
         return tattooMapper.toDto(tattoo);
     }
 
     public List<TattooDto> setShowcase(UUID staffId, List<Long> tattooIds) {
-        requireStaff(staffId);
+        Staff staff = requireStaff(staffId);
 
         if (tattooIds.size() > MAX_SHOWCASE) {
             throw new IllegalArgumentException("Maximum " + MAX_SHOWCASE + " showcase photos allowed");
@@ -101,6 +124,14 @@ public class PortfolioService {
         }
 
         log.info("Portfolio showcase updated: staffId={} count={}", staffId, tattooIds.size());
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.STAFF,
+                staffId.toString(),
+                auditLabelFormatter.portfolio(staff),
+                null,
+                "Вітрина: " + tattooIds.size() + " фото"
+        );
         return getPortfolio(staffId);
     }
 
@@ -109,9 +140,18 @@ public class PortfolioService {
     }
 
     public void delete(UUID staffId, Long tattooId) {
+        Staff staff = requireStaff(staffId);
         Tattoo tattoo = requireTattooForStaff(staffId, tattooId);
         tattooRepository.delete(tattoo);
         log.info("Portfolio tattoo deleted: staffId={} tattooId={}", staffId, tattooId);
+        auditRecorder.record(
+                AuditAction.DELETE,
+                AuditEntityType.STAFF,
+                staffId.toString(),
+                auditLabelFormatter.portfolio(staff),
+                null,
+                "Фото #" + tattooId
+        );
     }
 
     private Staff requireStaff(UUID staffId) {

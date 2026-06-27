@@ -17,6 +17,10 @@ import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.config.GoogleCalendarProperties;
 import com.inkflow.crm.config.InkflowProperties;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.staff.service.StaffLookup;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Staff;
@@ -49,6 +53,8 @@ public class GoogleCalendarSyncService {
     private final StaffLookup staffLookup;
     private final GoogleOAuthStateSigner oauthStateSigner;
     private final AppointmentRepository appointmentRepository;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
 
     private HttpTransport httpTransport;
     private JsonFactory jsonFactory;
@@ -105,6 +111,14 @@ public class GoogleCalendarSyncService {
 
             staffRepository.save(staff);
             log.info("Google Calendar connected for staff {}", staffId);
+            auditRecorder.record(
+                    AuditAction.UPDATE,
+                    AuditEntityType.STAFF,
+                    staff.getId().toString(),
+                    auditLabelFormatter.staff(staff),
+                    null,
+                    "Google Calendar підключено"
+            );
         } catch (Exception e) {
             log.error("Failed to handle Google OAuth callback for staff {}: {}", staffId, e.getMessage());
             throw new BusinessRuleException("Google OAuth callback failed: " + e.getMessage());
@@ -121,6 +135,14 @@ public class GoogleCalendarSyncService {
         staff.setGoogleCalendarEmail(null);
         staffRepository.save(staff);
         log.info("Google Calendar disconnected for staff {}", staffId);
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.STAFF,
+                staff.getId().toString(),
+                auditLabelFormatter.staff(staff),
+                null,
+                "Google Calendar відключено"
+        );
     }
 
     @Async

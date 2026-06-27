@@ -78,6 +78,12 @@ public class ClientController {
         return ResponseEntity.ok(ApiResponse.empty());
     }
 
+    @GetMapping("/{id}/balance")
+    @RequirePermission({Permission.CLIENTS_VIEW_ALL, Permission.CLIENTS_VIEW_OWN})
+    public ResponseEntity<ApiResponse<ClientBalanceDto>> getClientBalance(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(clientService.getClientBalance(id)));
+    }
+
     @GetMapping("/{id}/projects")
     public ResponseEntity<ApiResponse<List<ProjectSummaryDto>>> getClientProjects(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(clientService.getClientProjects(id)));

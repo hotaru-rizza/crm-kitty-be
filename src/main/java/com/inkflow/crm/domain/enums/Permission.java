@@ -44,6 +44,7 @@ public enum Permission {
 
     SETTINGS_ACCESS("settings.access", "Налаштування", "Доступ до налаштувань"),
     SETTINGS_ROLES("settings.roles", "Налаштування", "Керувати ролями"),
+    AUDIT_VIEW("audit.view", "Налаштування", "Переглядати журнал активності"),
 
 
     LEAVES_VIEW("leaves.view", "Відпустки", "Переглядати відпустки"),

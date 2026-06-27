@@ -21,6 +21,7 @@ public class AuthService {
     private final StaffRepository staffRepository;
     private final TenantRepository tenantRepository;
     private final RolePermissionService rolePermissionService;
+    private final AuthLoginAuditService authLoginAuditService;
 
     @Transactional(readOnly = true)
     public CurrentUserResponse getCurrentUser() {
@@ -32,6 +33,8 @@ public class AuthService {
 
         Tenant tenant = tenantRepository.findById(principal.getTenantId())
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.NOT_FOUND, "Tenant not found"));
+
+        authLoginAuditService.recordLoginIfNew(principal, staff);
 
         return CurrentUserResponse.builder()
                 .id(staff.getId())

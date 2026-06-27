@@ -36,13 +36,18 @@ public enum ErrorCode {
     EMAIL_ALREADY_EXISTS("EMAIL_ALREADY_EXISTS", "Email already exists", HttpStatus.CONFLICT),
     TIME_SLOT_CONFLICT("TIME_SLOT_CONFLICT", "Time slot is already booked", HttpStatus.CONFLICT),
     ARTIST_ON_LEAVE("ARTIST_ON_LEAVE", "Artist is on leave on the selected day", HttpStatus.UNPROCESSABLE_ENTITY),
+    STAFF_DEACTIVATED("STAFF_DEACTIVATED", "Staff member is deactivated", HttpStatus.UNPROCESSABLE_ENTITY),
 
 
     INVALID_STATUS_TRANSITION("INVALID_STATUS_TRANSITION", "Invalid status transition", HttpStatus.UNPROCESSABLE_ENTITY),
 
 
     STAFF_ALREADY_DEACTIVATED("STAFF_ALREADY_DEACTIVATED", "Staff member is already deactivated", HttpStatus.CONFLICT),
-    CLIENT_BLACKLISTED("CLIENT_BLACKLISTED", "Client is blacklisted", HttpStatus.UNPROCESSABLE_ENTITY);
+    CLIENT_BLACKLISTED("CLIENT_BLACKLISTED", "Client is blacklisted", HttpStatus.UNPROCESSABLE_ENTITY),
+    RESERVATION_PAYMENT_NOT_ALLOWED("RESERVATION_PAYMENT_NOT_ALLOWED",
+            "Payments are not allowed on reservation slots", HttpStatus.UNPROCESSABLE_ENTITY),
+    RESERVATION_STATUS_CHANGE_NOT_ALLOWED("RESERVATION_STATUS_CHANGE_NOT_ALLOWED",
+            "Reservation slots cannot change attendance status", HttpStatus.UNPROCESSABLE_ENTITY);
 
     private final String code;
     private final String defaultMessage;

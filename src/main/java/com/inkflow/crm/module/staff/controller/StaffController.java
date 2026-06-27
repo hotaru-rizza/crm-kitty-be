@@ -10,11 +10,13 @@ import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,6 +36,7 @@ public class StaffController {
     private final StaffPricingService staffPricingService;
     private final StaffLifecycleService staffLifecycleService;
     private final StaffFaqService staffFaqService;
+    private final StaffEarningsService staffEarningsService;
 
     @GetMapping
     @RequirePermission(Permission.STAFF_VIEW)
@@ -51,6 +54,15 @@ public class StaffController {
     @RequirePermission(Permission.STAFF_VIEW)
     public ResponseEntity<ApiResponse<StaffDetailDto>> getStaff(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(staffDetailService.getDetail(id)));
+    }
+
+    @GetMapping("/{id}/earnings")
+    @RequirePermission(Permission.FINANCE_VIEW)
+    public ResponseEntity<ApiResponse<StaffEarningsDto>> getStaffEarnings(
+            @PathVariable UUID id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+        return ResponseEntity.ok(ApiResponse.success(staffEarningsService.getEarnings(id, from, to)));
     }
 
     @PostMapping

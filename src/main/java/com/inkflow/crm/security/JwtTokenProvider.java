@@ -119,7 +119,26 @@ public class JwtTokenProvider {
                 .tenantId(tenantId)
                 .role(role)
                 .locationIds(locationIds)
+                .sessionId(resolveSessionId(jwt))
                 .build();
+    }
+
+    private String resolveSessionId(DecodedJWT jwt) {
+        String sessionId = jwt.getClaim("session_id").asString();
+        if (sessionId != null && !sessionId.isBlank()) {
+            return sessionId;
+        }
+
+        String tokenId = jwt.getId();
+        if (tokenId != null && !tokenId.isBlank()) {
+            return tokenId;
+        }
+
+        if (jwt.getIssuedAt() != null) {
+            return jwt.getSubject() + ":" + jwt.getIssuedAt().getTime();
+        }
+
+        return null;
     }
 
     private DecodedJWT verifyAndDecode(String token) {

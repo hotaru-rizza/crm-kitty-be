@@ -1,11 +1,15 @@
 package com.inkflow.crm.security;
 
+import com.inkflow.crm.common.logging.MdcKeys;
+import io.sentry.Sentry;
+import io.sentry.protocol.User;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -52,6 +56,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     TenantContext.setCurrentUser(userPrincipal.getId());
                     TenantContext.setCurrentRole(userPrincipal.getRole());
                     TenantContext.setCurrentLocationIds(userPrincipal.getLocationIds());
+
+                    MDC.put(MdcKeys.TENANT_ID, userPrincipal.getTenantId().toString());
+                    MDC.put(MdcKeys.USER_ID, userPrincipal.getId().toString());
+                    configureSentryScope(userPrincipal);
                 } else {
                     log.warn("JWT validation FAILED for request {} {}", request.getMethod(), request.getRequestURI());
                 }
@@ -75,5 +83,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearerToken.substring(7);
         }
         return null;
+    }
+
+    private void configureSentryScope(UserPrincipal principal) {
+        if (!Sentry.isEnabled()) {
+            return;
+        }
+
+        User user = new User();
+        user.setId(principal.getId().toString());
+        user.setEmail(principal.getEmail());
+        Sentry.setUser(user);
+        Sentry.configureScope(scope -> {
+            scope.setTag("tenantId", principal.getTenantId().toString());
+            scope.setTag("userId", principal.getId().toString());
+            scope.setTag("role", principal.getRole().name());
+        });
     }
 }

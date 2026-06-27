@@ -15,6 +15,11 @@ import com.inkflow.crm.domain.repository.TransactionRepository;
 import com.inkflow.crm.module.payment.dto.PaymentDto;
 import com.inkflow.crm.module.payment.dto.ProcessRefundRequest;
 import com.inkflow.crm.module.payment.mapper.PaymentMapper;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.domain.enums.ClientBalanceReason;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.client.service.ClientBalanceService;
 import com.inkflow.crm.module.payment.support.ReceiptNumberGenerator;
 import com.inkflow.crm.module.project.service.ProjectProgressSyncService;
 import com.inkflow.crm.security.SecurityUtils;
@@ -38,6 +43,8 @@ public class RefundProcessingService {
     private final PaymentMapper paymentMapper;
     private final ReceiptNumberGenerator receiptNumberGenerator;
     private final ProjectProgressSyncService projectProgressSyncService;
+    private final AuditRecorder auditRecorder;
+    private final ClientBalanceService clientBalanceService;
 
     @Transactional
     public PaymentDto processRefund(ProcessRefundRequest request) {
@@ -62,7 +69,21 @@ public class RefundProcessingService {
         log.info("Refund processed: tenantId={} refundId={} originalTransactionId={}",
                 tenantId, refundTransaction.getId(), originalTransaction.getId());
 
+        UUID clientId = originalTransaction.getAppointment() != null
+                && originalTransaction.getAppointment().getClient() != null
+                ? originalTransaction.getAppointment().getClient().getId()
+                : null;
+        auditRecorder.record(
+                AuditAction.TXN_EXPENSE,
+                AuditEntityType.TRANSACTION,
+                refundTransaction.getId().toString(),
+                "Повернення · " + request.getAmount() + " ₴",
+                clientId,
+                "Оригінал: " + originalTransaction.getId()
+        );
+
         adjustDepositAfterRefund(originalTransaction, request.getAmount());
+        recordClientBalanceRefund(originalTransaction, refundTransaction);
         syncLinkedProjectProgress(originalTransaction.getAppointment());
 
         return paymentMapper.toDto(refundTransaction);
@@ -119,6 +140,26 @@ public class RefundProcessingService {
         BigDecimal newPrepayment = appointment.getPrepayment().subtract(refundAmount);
         appointment.setPrepayment(newPrepayment.max(BigDecimal.ZERO));
         appointmentRepository.save(appointment);
+    }
+
+    private void recordClientBalanceRefund(Transaction originalTransaction, Transaction refundTransaction) {
+        Appointment appointment = originalTransaction.getAppointment();
+        if (appointment == null || appointment.getClient() == null) {
+            return;
+        }
+        if (originalTransaction.getPaymentType() != PaymentType.SERVICE_PAYMENT
+                && originalTransaction.getPaymentType() != PaymentType.DEPOSIT) {
+            return;
+        }
+
+        clientBalanceService.record(
+                appointment.getClient(),
+                refundTransaction.getAmount().negate(),
+                ClientBalanceReason.REFUND,
+                appointment.getId(),
+                refundTransaction.getId(),
+                null
+        );
     }
 
     private void syncLinkedProjectProgress(Appointment appointment) {

@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -39,8 +40,15 @@ public class UpdateAppointmentRequest {
     private String notes;
     private String sketchImage;
 
+    private List<AppointmentItemRequest> items;
+
+    /** When true and items are updated, end time is recalculated from item durations. */
+    private Boolean adjustEndTimeFromItems;
+
     @Pattern(regexp = "^(scheduled|completed|cancelled|no_show)$", message = "Invalid status")
     private String status;
 
     private String cancellationReason;
+
+    private Boolean reservation;
 }

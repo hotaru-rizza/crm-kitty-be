@@ -175,3 +175,18 @@ Audit answers "who did what" (for the studio). This answers "why did it break" (
 - No per-tenant separate log files / databases — `tenant_id` column + filtering only.
 - No full field-diff audit ("changed X from A to B") in this batch — `details` free text is enough for now.
 - No log aggregator / JSON logging until Phase 4 and only when justified by scale.
+
+---
+
+## Phase 2.5 — Enforcement (implemented)
+
+Goal: stop relying on manual one-off `auditRecorder.record()` calls as the only guard.
+
+1. **`@Audited` annotation + `AuditedAspect`** — declarative audit on service methods via SpEL (`#result`, params, `@bean` refs). See `StaffFaqService.upsertFaq` as reference.
+2. **`AuditRecorder.recordSystem(tenantId, …)`** — webhooks/schedulers without user principal (Monobank payment webhook).
+3. **`docs/audit/coverage-matrix.md`** — living checklist of every mutation; update on every PR that adds/changes endpoints.
+4. **`AuditedAspectTest` + `AuditRecorderSystemTest`** — unit regression for aspect and system actor.
+5. **Rollout rule:** new mutation endpoints MUST either use `@Audited` or call `AuditRecorder` + update coverage matrix.
+
+Remaining manual wiring is acceptable for complex side-effects (appointments via `AppointmentSideEffectService`) until migrated incrementally.
+

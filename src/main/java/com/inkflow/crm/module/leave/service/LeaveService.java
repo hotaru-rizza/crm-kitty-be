@@ -3,6 +3,11 @@ package com.inkflow.crm.module.leave.service;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.module.audit.dto.AuditContext;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.domain.entity.LeaveRequest;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.LeaveStatus;
@@ -43,6 +48,8 @@ public class LeaveService {
     private final StaffRepository staffRepository;
     private final LeaveRequestMapper leaveMapper;
     private final EntityManager entityManager;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
 
     @Transactional(readOnly = true)
     public List<LeaveRequestDto> getLeavesByStaffId(UUID staffId) {
@@ -108,9 +115,10 @@ public class LeaveService {
                 .orElseThrow(() -> ResourceNotFoundException.staff(request.getStaffId().toString()));
 
         validateDateRange(request.getStartDate(), request.getEndDate());
-        validateNoOverlap(tenantId, request.getStaffId(), request.getStartDate(), request.getEndDate(), null);
-
         LeaveType leaveType = parseLeaveType(request.getLeaveType());
+        String leaveLabel = auditLabelFormatter.leave(staff, leaveType, request.getStartDate(), request.getEndDate());
+        validateNoOverlap(tenantId, request.getStaffId(), request.getStartDate(), request.getEndDate(), null, leaveLabel);
+
         boolean autoApprove = isAutoApproveEligible(currentUserId, staff);
 
         LeaveRequest leave = LeaveRequest.builder()
@@ -130,6 +138,23 @@ public class LeaveService {
 
         leave = leaveRequestRepository.save(leave);
         log.info("Leave created: tenantId={} leaveId={} staffId={}", tenantId, leave.getId(), staff.getId());
+        if (autoApprove) {
+            auditRecorder.record(
+                    AuditAction.CREATE,
+                    AuditEntityType.LEAVE,
+                    leave.getId().toString(),
+                    leaveLabel,
+                    null,
+                    "Автоматично схвалено"
+            );
+        } else {
+            auditRecorder.record(
+                    AuditAction.CREATE,
+                    AuditEntityType.LEAVE,
+                    leave.getId().toString(),
+                    leaveLabel
+            );
+        }
         return leaveMapper.toDto(leave);
     }
 
@@ -138,14 +163,17 @@ public class LeaveService {
         LeaveRequest leave = requireLeave(id);
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UUID currentUserId = SecurityUtils.getCurrentUserId();
+        LeaveStatus previousStatus = leave.getStatus();
         LeaveStatus newStatus = parseLeaveStatus(request.getStatus());
+        String leaveLabel = auditLabelFormatter.leave(
+                leave.getStaff(), leave.getLeaveType(), leave.getStartDate(), leave.getEndDate());
 
         if (newStatus == LeaveStatus.PENDING) {
             throw new BusinessRuleException("Cannot set status back to PENDING");
         }
 
         if (newStatus == LeaveStatus.APPROVED) {
-            validateNoOverlap(tenantId, leave.getStaff().getId(), leave.getStartDate(), leave.getEndDate(), leave.getId());
+            validateNoOverlap(tenantId, leave.getStaff().getId(), leave.getStartDate(), leave.getEndDate(), leave.getId(), leaveLabel);
         }
 
         leave.setStatus(newStatus);
@@ -159,6 +187,14 @@ public class LeaveService {
 
         leave = leaveRequestRepository.save(leave);
         log.info("Leave status updated: tenantId={} leaveId={} status={}", tenantId, id, newStatus);
+        auditRecorder.record(
+                AuditAction.STATUS_CHANGE,
+                AuditEntityType.LEAVE,
+                leave.getId().toString(),
+                leaveLabel,
+                null,
+                previousStatus.getDisplayName() + " → " + newStatus.getDisplayName()
+        );
         return leaveMapper.toDto(leave);
     }
 
@@ -174,15 +210,30 @@ public class LeaveService {
         leave = leaveRequestRepository.save(leave);
 
         log.info("Leave cancelled: tenantId={} leaveId={}", leave.getTenantId(), id);
+        auditRecorder.record(
+                AuditAction.CANCEL,
+                AuditEntityType.LEAVE,
+                leave.getId().toString(),
+                auditLabelFormatter.leave(
+                        leave.getStaff(), leave.getLeaveType(), leave.getStartDate(), leave.getEndDate())
+        );
         return leaveMapper.toDto(leave);
     }
 
     @Transactional
     public void deleteLeave(UUID id) {
         LeaveRequest leave = requireLeave(id);
+        String leaveLabel = auditLabelFormatter.leave(
+                leave.getStaff(), leave.getLeaveType(), leave.getStartDate(), leave.getEndDate());
         leave.softDelete();
         leaveRequestRepository.save(leave);
         log.info("Leave deleted: tenantId={} leaveId={}", leave.getTenantId(), id);
+        auditRecorder.record(
+                AuditAction.DELETE,
+                AuditEntityType.LEAVE,
+                leave.getId().toString(),
+                leaveLabel
+        );
     }
 
     @Transactional(readOnly = true)
@@ -255,13 +306,25 @@ public class LeaveService {
         }
     }
 
-    private void validateNoOverlap(UUID tenantId, UUID staffId, LocalDate start, LocalDate end, UUID excludeId) {
+    private void validateNoOverlap(
+            UUID tenantId,
+            UUID staffId,
+            LocalDate start,
+            LocalDate end,
+            UUID excludeId,
+            String leaveLabel) {
         List<LeaveRequest> overlapping = leaveRequestRepository.findOverlappingLeaves(tenantId, staffId, start, end);
         boolean hasConflict = overlapping.stream()
                 .anyMatch(leave -> excludeId == null || !leave.getId().equals(excludeId));
 
         if (hasConflict) {
-            throw new BusinessRuleException("Leave request overlaps with existing approved leave");
+            String entityId = excludeId != null ? excludeId.toString() : staffId.toString();
+            AuditAction attemptedAction = excludeId != null ? AuditAction.STATUS_CHANGE : AuditAction.CREATE;
+            throw new BusinessRuleException(
+                    ErrorCode.BUSINESS_RULE_VIOLATION,
+                    "Заявка перетинається з іншою схваленою відпусткою",
+                    AuditContext.of(attemptedAction, AuditEntityType.LEAVE, entityId, leaveLabel)
+            );
         }
     }
 

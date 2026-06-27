@@ -70,6 +70,12 @@ inkflow:
       - ${FRONTEND_URL:http://localhost:5173}
       - ${CONSUMER_FRONTEND_URL:http://localhost:5174}
     allow-credentials: true
+  audit:
+    retention-enabled: ${INKFLOW_AUDIT_RETENTION_ENABLED:true}
+    retention-days: ${INKFLOW_AUDIT_RETENTION_DAYS:730}
+    retention-cron: ${INKFLOW_AUDIT_RETENTION_CRON:0 0 3 * * *}
+  appointments:
+    default-reservation-duration-minutes: ${INKFLOW_DEFAULT_RESERVATION_DURATION_MINUTES:60}
 
 r2:
   account-id: ${R2_ACCOUNT_ID}
@@ -139,6 +145,8 @@ monobank:
     invoice-validity-seconds: 3600
 
 logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{requestId}] [%X{tenantId}] [%X{userId}] %logger{36} - %msg%n"
   level:
     root: INFO
     com.inkflow: INFO
@@ -167,6 +175,12 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:development}
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0.0}
+  send-default-pii: false
 
 ---
 spring:

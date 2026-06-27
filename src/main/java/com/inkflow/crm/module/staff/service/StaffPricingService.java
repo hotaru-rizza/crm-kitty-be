@@ -1,6 +1,10 @@
 package com.inkflow.crm.module.staff.service;
 
 import com.inkflow.crm.common.exception.BusinessRuleException;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.entity.ArtistServicePricing;
 import com.inkflow.crm.domain.entity.Service;
 import com.inkflow.crm.domain.entity.Staff;
@@ -30,6 +34,19 @@ public class StaffPricingService {
     private final ArtistServicePricingRepository artistServicePricingRepository;
     private final StaffPricingMapper staffPricingMapper;
     private final EntityManager entityManager;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
+
+    private void auditStaffMutation(Staff staff, String details) {
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.STAFF,
+                staff.getId().toString(),
+                auditLabelFormatter.staff(staff),
+                null,
+                details
+        );
+    }
 
     @Transactional(readOnly = true)
     public List<StaffServiceDto> getStaffServices(UUID staffId) {
@@ -59,6 +76,7 @@ public class StaffPricingService {
         }
 
         log.info("Staff services updated: tenantId={} staffId={} count={}", tenantId, staffId, saved.size());
+        auditStaffMutation(staff, "Послуги оновлено");
         return saved.stream().map(staffPricingMapper::toDto).toList();
     }
 
@@ -80,18 +98,21 @@ public class StaffPricingService {
         pricing = artistServicePricingRepository.save(pricing);
 
         log.info("Staff service added: tenantId={} staffId={} serviceId={}", tenantId, staffId, serviceId);
+        auditStaffMutation(staff, "Додано послугу: " + service.getTitle());
         return staffPricingMapper.toDto(pricing);
     }
 
     @Transactional
     public void removeServiceFromStaff(UUID staffId, UUID serviceId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        staffLookup.requireStaff(staffId);
+        Staff staff = staffLookup.requireStaff(staffId);
 
         ArtistServicePricing pricing = requireAssignment(staffId, serviceId);
+        String serviceTitle = pricing.getService().getTitle();
         artistServicePricingRepository.delete(pricing);
 
         log.info("Staff service removed: tenantId={} staffId={} serviceId={}", tenantId, staffId, serviceId);
+        auditStaffMutation(staff, "Прибрано послугу: " + serviceTitle);
     }
 
     @Transactional
@@ -101,13 +122,14 @@ public class StaffPricingService {
             BigDecimal customPrice,
             Integer customDuration) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        staffLookup.requireStaff(staffId);
+        Staff staff = staffLookup.requireStaff(staffId);
 
         ArtistServicePricing pricing = requireAssignment(staffId, serviceId);
         applyPricingUpdate(pricing, customPrice, customDuration);
 
         pricing = artistServicePricingRepository.save(pricing);
         log.info("Staff service pricing updated: tenantId={} staffId={} serviceId={}", tenantId, staffId, serviceId);
+        auditStaffMutation(staff, "Оновлено ціни: " + pricing.getService().getTitle());
         return staffPricingMapper.toDto(pricing);
     }
 

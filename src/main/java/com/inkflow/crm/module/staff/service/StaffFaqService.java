@@ -3,6 +3,9 @@ package com.inkflow.crm.module.staff.service;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.StaffFaq;
 import com.inkflow.crm.domain.repository.StaffFaqRepository;
+import com.inkflow.crm.module.audit.annotation.Audited;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.module.staff.dto.StaffFaqDto;
 import com.inkflow.crm.module.staff.dto.UpsertFaqRequest;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +35,13 @@ public class StaffFaqService {
     }
 
     @Transactional
+    @Audited(
+            action = AuditAction.UPDATE,
+            entityType = AuditEntityType.STAFF,
+            entityId = "#staffId.toString()",
+            entityLabel = "@auditLabelFormatter.staff(@staffLookup.requireStaff(#staffId))",
+            details = "'FAQ оновлено'"
+    )
     public List<StaffFaqDto> upsertFaq(UUID staffId, UpsertFaqRequest request) {
         Staff staff = staffLookup.requireStaff(staffId);
 

@@ -1,7 +1,10 @@
 package com.inkflow.crm.module.email.service.sending;
 
 import com.inkflow.crm.config.InkflowProperties;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.repository.ClientRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.email.dto.EmailComposeRequest;
 import com.inkflow.crm.module.email.dto.EmailLayoutContext;
@@ -40,6 +43,7 @@ public class BulkEmailService {
     private final StaffRepository staffRepository;
     private final EmailTenantContextLoader tenantContextLoader;
     private final InkflowProperties inkflowProperties;
+    private final AuditRecorder auditRecorder;
 
     @Transactional
     public SendEmailResultDto sendBulk(UUID tenantId, SendEmailRequest request) {
@@ -68,6 +72,14 @@ public class BulkEmailService {
         int sent = recipients.size();
         int skipped = requested - sent;
         log.info("Bulk email: tenantId={} queued={} skipped={}", tenantId, sent, skipped);
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.TENANT,
+                tenantId.toString(),
+                context.studioName(),
+                null,
+                "Розсилка: " + sent + " отримувачів · " + request.subject()
+        );
 
         return new SendEmailResultDto(sent, skipped);
     }

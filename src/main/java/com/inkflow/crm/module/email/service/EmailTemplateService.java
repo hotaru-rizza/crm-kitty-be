@@ -4,6 +4,11 @@ import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.domain.entity.EmailTemplate;
 import com.inkflow.crm.domain.repository.EmailTemplateRepository;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.module.audit.annotation.Audited;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.email.dto.CreateEmailTemplateRequest;
 import com.inkflow.crm.module.email.dto.EmailTemplatePreviewRequest;
 import com.inkflow.crm.module.email.dto.EmailTemplateResponseDto;
@@ -28,6 +33,8 @@ public class EmailTemplateService {
     private final EmailTemplateRepository emailTemplateRepository;
     private final TemplateEmailRenderer templateEmailRenderer;
     private final EmailTenantContextLoader tenantContextLoader;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
 
     @Transactional(readOnly = true)
     public List<EmailTemplateResponseDto> list(UUID tenantId) {
@@ -37,6 +44,12 @@ public class EmailTemplateService {
     }
 
     @Transactional
+    @Audited(
+            action = AuditAction.CREATE,
+            entityType = AuditEntityType.EMAIL_TEMPLATE,
+            entityId = "#result.id",
+            entityLabel = "#result.subject"
+    )
     public EmailTemplateResponseDto create(UUID tenantId, CreateEmailTemplateRequest request, UUID createdBy) {
         validateOffset(request.triggerType(), request.offsetMinutes());
 
@@ -58,6 +71,12 @@ public class EmailTemplateService {
     }
 
     @Transactional
+    @Audited(
+            action = AuditAction.UPDATE,
+            entityType = AuditEntityType.EMAIL_TEMPLATE,
+            entityId = "#templateId.toString()",
+            entityLabel = "#result.subject"
+    )
     public EmailTemplateResponseDto update(
             UUID tenantId,
             UUID templateId,
@@ -101,8 +120,15 @@ public class EmailTemplateService {
             throw new BusinessRuleException(ErrorCode.FORBIDDEN, "Built-in template cannot be deleted");
         }
 
+        String label = auditLabelFormatter.emailTemplate(template.getSubject());
         emailTemplateRepository.delete(template);
         log.info("Email template deleted: tenantId={} id={}", tenantId, templateId);
+        auditRecorder.record(
+                AuditAction.DELETE,
+                AuditEntityType.EMAIL_TEMPLATE,
+                templateId.toString(),
+                label
+        );
     }
 
     @Transactional(readOnly = true)

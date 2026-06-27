@@ -8,12 +8,15 @@ import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.common.util.PhoneUtils;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.Project;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.domain.enums.ProjectStatus;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.ClientSpecifications;
 import com.inkflow.crm.domain.repository.ProjectRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.client.dto.*;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
 import com.inkflow.crm.module.project.dto.ProjectSummaryDto;
@@ -49,6 +52,8 @@ public class ClientService {
     private final ProjectRepository projectRepository;
     private final ClientMapper clientMapper;
     private final RolePermissionService rolePermissionService;
+    private final AuditRecorder auditRecorder;
+    private final ClientBalanceService clientBalanceService;
 
     @Transactional(readOnly = true)
     public PageResult<ClientDto> getAllClients(PageRequest pageRequest, ClientFilterRequest filter) {
@@ -96,6 +101,11 @@ public class ClientService {
     }
 
     @Transactional(readOnly = true)
+    public ClientBalanceDto getClientBalance(UUID id) {
+        return clientBalanceService.getClientBalance(id);
+    }
+
+    @Transactional(readOnly = true)
     public ClientDto findByEmail(String email) {
         if (email == null || email.isBlank()) {
             return null;
@@ -128,6 +138,13 @@ public class ClientService {
         client = clientRepository.save(client);
 
         log.info("Client created: tenantId={} clientId={}", tenantId, client.getId());
+        auditRecorder.record(
+                AuditAction.CREATE,
+                AuditEntityType.CLIENT,
+                client.getId().toString(),
+                client.getFullName(),
+                client.getId()
+        );
         return clientMapper.toDto(client);
     }
 
@@ -135,6 +152,7 @@ public class ClientService {
     public ClientDto updateClient(UUID id, UpdateClientRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Client client = requireClient(tenantId, id);
+        boolean wasBlacklisted = client.isBlacklisted();
 
         if (request.getPhone() != null) {
             if (request.getPhone().isBlank()) {
@@ -169,6 +187,7 @@ public class ClientService {
         client = clientRepository.save(client);
 
         log.info("Client updated: tenantId={} clientId={}", tenantId, id);
+        auditClientUpdate(client, wasBlacklisted, request.getBlacklisted());
         return clientMapper.toDto(client);
     }
 
@@ -180,6 +199,13 @@ public class ClientService {
         client.softDelete();
         clientRepository.save(client);
         log.info("Client deleted: tenantId={} clientId={}", tenantId, id);
+        auditRecorder.record(
+                AuditAction.DELETE,
+                AuditEntityType.CLIENT,
+                id.toString(),
+                client.getFullName(),
+                id
+        );
     }
 
     @Transactional(readOnly = true)
@@ -291,6 +317,24 @@ public class ClientService {
                 .createdAt(client.getCreatedAt())
                 .updatedAt(client.getUpdatedAt())
                 .build();
+    }
+
+    private void auditClientUpdate(Client client, boolean wasBlacklisted, Boolean requestedBlacklisted) {
+        UUID clientId = client.getId();
+        String label = client.getFullName();
+
+        if (requestedBlacklisted != null) {
+            if (requestedBlacklisted && !wasBlacklisted) {
+                auditRecorder.record(AuditAction.BLACKLIST_ADD, AuditEntityType.CLIENT, clientId.toString(), label, clientId);
+                return;
+            }
+            if (!requestedBlacklisted && wasBlacklisted) {
+                auditRecorder.record(AuditAction.BLACKLIST_REMOVE, AuditEntityType.CLIENT, clientId.toString(), label, clientId);
+                return;
+            }
+        }
+
+        auditRecorder.record(AuditAction.UPDATE, AuditEntityType.CLIENT, clientId.toString(), label, clientId);
     }
 
     private static String normalizeEmail(String email) {

@@ -13,7 +13,12 @@ public enum AuditEntityType {
     STAFF,
     ROLE,
     SCHEDULE,
-    LOCATION;
+    LOCATION,
+    LEAVE,
+    PROJECT,
+    SERVICE,
+    TENANT,
+    EMAIL_TEMPLATE;
 
     public String getValue() {
         return name();

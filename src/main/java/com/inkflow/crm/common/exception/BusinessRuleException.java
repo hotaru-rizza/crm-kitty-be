@@ -1,5 +1,7 @@
 package com.inkflow.crm.common.exception;
 
+import com.inkflow.crm.module.audit.dto.AuditContext;
+
 public class BusinessRuleException extends ApiException {
 
     public BusinessRuleException(String message) {
@@ -8,6 +10,10 @@ public class BusinessRuleException extends ApiException {
 
     public BusinessRuleException(ErrorCode errorCode, String message) {
         super(errorCode, message);
+    }
+
+    public BusinessRuleException(ErrorCode errorCode, String message, AuditContext auditContext) {
+        super(errorCode, message, auditContext);
     }
 
     public static BusinessRuleException phoneAlreadyExists(String phone) {
@@ -30,6 +36,10 @@ public class BusinessRuleException extends ApiException {
         return new BusinessRuleException(ErrorCode.ARTIST_ON_LEAVE, "Artist is on leave on the selected day");
     }
 
+    public static BusinessRuleException artistDeactivated() {
+        return new BusinessRuleException(ErrorCode.STAFF_DEACTIVATED, "Staff member is deactivated");
+    }
+
     public static BusinessRuleException invalidStatusTransition(String from, String to) {
         return new BusinessRuleException(ErrorCode.INVALID_STATUS_TRANSITION,
                 String.format("Cannot transition from '%s' to '%s'", from, to));
@@ -41,5 +51,19 @@ public class BusinessRuleException extends ApiException {
 
     public static BusinessRuleException clientBlacklisted() {
         return new BusinessRuleException(ErrorCode.CLIENT_BLACKLISTED, "Client is blacklisted");
+    }
+
+    public static BusinessRuleException reservationPaymentNotAllowed() {
+        return new BusinessRuleException(ErrorCode.RESERVATION_PAYMENT_NOT_ALLOWED,
+                "Payments are not allowed on reservation slots");
+    }
+
+    public static BusinessRuleException reservationStatusChangeNotAllowed() {
+        return new BusinessRuleException(ErrorCode.RESERVATION_STATUS_CHANGE_NOT_ALLOWED,
+                "Reservation slots cannot change attendance status");
+    }
+
+    public static BusinessRuleException reservationRequiresClientOrNone() {
+        return new BusinessRuleException("Reservation slots cannot include services or payments");
     }
 }

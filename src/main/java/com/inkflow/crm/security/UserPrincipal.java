@@ -21,6 +21,7 @@ public class UserPrincipal implements UserDetails {
     private final UUID tenantId;
     private final UserRole role;
     private final List<UUID> locationIds;
+    private final String sessionId;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

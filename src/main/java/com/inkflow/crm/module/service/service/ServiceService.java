@@ -7,6 +7,10 @@ import com.inkflow.crm.domain.entity.ArtistServicePricing;
 import com.inkflow.crm.domain.entity.Service;
 import com.inkflow.crm.domain.repository.ArtistServicePricingRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.service.dto.*;
 import com.inkflow.crm.module.service.mapper.ServiceMapper;
 import com.inkflow.crm.security.SecurityUtils;
@@ -28,6 +32,8 @@ public class ServiceService {
     private final ArtistServicePricingRepository artistServicePricingRepository;
     private final ServiceMapper serviceMapper;
     private final ServiceLookup serviceLookup;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
 
     @Transactional(readOnly = true)
     public PageResult<ServiceDto> getAllServices(PageRequest pageRequest, Boolean active) {
@@ -58,6 +64,12 @@ public class ServiceService {
         service = serviceRepository.save(service);
 
         log.info("Service created: tenantId={} serviceId={}", tenantId, service.getId());
+        auditRecorder.record(
+                AuditAction.CREATE,
+                AuditEntityType.SERVICE,
+                service.getId().toString(),
+                auditLabelFormatter.catalogService(service.getTitle())
+        );
         return serviceMapper.toDto(service);
     }
 
@@ -71,6 +83,12 @@ public class ServiceService {
         service = serviceRepository.save(service);
 
         log.info("Service updated: tenantId={} serviceId={}", tenantId, id);
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.SERVICE,
+                service.getId().toString(),
+                auditLabelFormatter.catalogService(service.getTitle())
+        );
         return serviceMapper.toDto(service);
     }
 
@@ -84,6 +102,12 @@ public class ServiceService {
         serviceRepository.save(service);
 
         log.info("Service deleted: tenantId={} serviceId={}", tenantId, id);
+        auditRecorder.record(
+                AuditAction.DELETE,
+                AuditEntityType.SERVICE,
+                service.getId().toString(),
+                auditLabelFormatter.catalogService(service.getTitle())
+        );
     }
 
     @Transactional(readOnly = true)

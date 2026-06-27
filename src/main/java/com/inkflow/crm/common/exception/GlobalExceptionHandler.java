@@ -2,6 +2,10 @@ package com.inkflow.crm.common.exception;
 
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.ErrorResponse;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.module.audit.dto.AuditContext;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,11 +19,16 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final AuditRecorder auditRecorder;
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiResponse<Void>> handleApiException(ApiException ex) {
         log.error("API Exception: {} - {}", ex.getErrorCode(), ex.getMessage());
+
+        recordFailureIfPresent(ex);
 
         ErrorResponse errorResponse = ErrorResponse.of(
                 ex.getErrorCode().getCode(),
@@ -78,5 +87,25 @@ public class GlobalExceptionHandler {
                 .field(fieldError.getField())
                 .message(fieldError.getDefaultMessage())
                 .build();
+    }
+
+    private void recordFailureIfPresent(ApiException ex) {
+        AuditContext context = ex.getAuditContext();
+        if (context == null) {
+            return;
+        }
+
+        try {
+            auditRecorder.record(
+                    AuditAction.FAILED,
+                    context.entityType(),
+                    context.entityId(),
+                    context.entityLabel(),
+                    context.subjectClientId(),
+                    ex.getMessage()
+            );
+        } catch (Exception auditError) {
+            log.warn("Failed to record audit failure: {}", auditError.getMessage());
+        }
     }
 }
