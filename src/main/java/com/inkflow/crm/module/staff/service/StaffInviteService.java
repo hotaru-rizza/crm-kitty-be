@@ -5,11 +5,15 @@ import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.StaffInvite;
 import com.inkflow.crm.domain.enums.AccountStatus;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffInviteRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.staff.dto.AcceptInviteRequest;
 import com.inkflow.crm.module.staff.dto.InviteInfoDto;
 import com.inkflow.crm.module.staff.dto.InviteStaffRequest;
@@ -38,6 +42,8 @@ public class StaffInviteService {
     private final StaffInviteRepository staffInviteRepository;
     private final LocationRepository locationRepository;
     private final StaffMapper staffMapper;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
 
     @Transactional(readOnly = true)
     public InviteInfoDto getInviteInfo(String token) {
@@ -79,6 +85,14 @@ public class StaffInviteService {
 
         staffInviteRepository.save(invite);
         log.info("Staff invite created: tenantId={} email={}", tenantId, request.getEmail());
+        auditRecorder.record(
+                AuditAction.STAFF_INVITE,
+                AuditEntityType.STAFF,
+                token,
+                request.getEmail(),
+                null,
+                request.getRole()
+        );
         return token;
     }
 
@@ -95,6 +109,15 @@ public class StaffInviteService {
 
         staff = staffRepository.save(staff);
         log.info("Staff invite accepted: tenantId={} staffId={}", invite.getTenantId(), staff.getId());
+        auditRecorder.recordSystem(
+                invite.getTenantId(),
+                AuditAction.CREATE,
+                AuditEntityType.STAFF,
+                staff.getId().toString(),
+                auditLabelFormatter.staff(staff),
+                null,
+                "Прийнято запрошення"
+        );
         return staffMapper.toDto(staff);
     }
 

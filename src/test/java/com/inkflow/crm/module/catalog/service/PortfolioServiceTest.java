@@ -2,6 +2,8 @@ package com.inkflow.crm.module.catalog.service;
 
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.catalog.dto.TattooDto;
 import com.inkflow.crm.module.catalog.entity.Tattoo;
 import com.inkflow.crm.module.catalog.entity.TattooStatus;
@@ -9,6 +11,7 @@ import com.inkflow.crm.module.catalog.mapper.TattooMapper;
 import com.inkflow.crm.module.catalog.repository.TattooRepository;
 import com.inkflow.crm.module.catalog.support.PortfolioShowcaseResolver;
 import com.inkflow.crm.module.staff.service.StaffLookup;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -27,6 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,8 +57,19 @@ class PortfolioServiceTest {
     @Mock
     private PortfolioShowcaseResolver showcaseResolver;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private PortfolioService portfolioService;
+
+    @BeforeEach
+    void stubAuditLabels() {
+        lenient().when(auditLabelFormatter.portfolio(any())).thenReturn("Портфоліо");
+    }
 
     @Test
     void uploadBulk_createsProcessingTattoosAndTriggersProcessor() {

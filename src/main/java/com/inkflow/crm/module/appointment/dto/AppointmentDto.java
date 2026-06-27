@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -26,8 +27,13 @@ public class AppointmentDto {
     private Instant endTime;
     private String status;
     private BigDecimal price;
+    private BigDecimal prepayment;
+    private BigDecimal discount;
     private BigDecimal finalPrice;
+    private String notes;
     private String sketchImage;
+    private List<AppointmentItemDto> items;
+    private boolean reservation;
     private Instant createdAt;
 
     @Data

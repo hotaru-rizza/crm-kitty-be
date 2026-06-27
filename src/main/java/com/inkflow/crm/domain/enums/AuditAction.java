@@ -23,7 +23,8 @@ public enum AuditAction {
     STAFF_INVITE(AuditActionCategory.STAFF),
     STAFF_DEACTIVATE(AuditActionCategory.STAFF),
     PERMISSIONS_CHANGE(AuditActionCategory.ROLE),
-    LOGIN(AuditActionCategory.AUTH);
+    LOGIN(AuditActionCategory.AUTH),
+    FAILED(AuditActionCategory.GENERIC);
 
     private final AuditActionCategory category;
 

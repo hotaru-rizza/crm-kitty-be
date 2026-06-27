@@ -6,6 +6,8 @@ import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.LeaveStatus;
 import com.inkflow.crm.domain.repository.LeaveRequestRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.leave.dto.LeaveRequestDto;
 import com.inkflow.crm.module.leave.mapper.LeaveRequestMapper;
 import com.inkflow.crm.security.UserPrincipal;
@@ -21,6 +23,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.Optional;
 import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -42,12 +47,23 @@ class LeaveServiceCancelTest {
     @Mock
     private EntityManager entityManager;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private LeaveService leaveService;
 
     @AfterEach
     void clearSecurityContext() {
         SecurityContextHolder.clearContext();
+    }
+
+    @org.junit.jupiter.api.BeforeEach
+    void stubAuditLabel() {
+        lenient().when(auditLabelFormatter.leave(any(), any(), any(), any())).thenReturn("Відпустка · Test");
     }
 
     @Test

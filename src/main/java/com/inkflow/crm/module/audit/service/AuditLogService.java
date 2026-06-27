@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.audit.service;
 
+import com.inkflow.crm.common.http.HttpRequestUtils;
 import com.inkflow.crm.domain.entity.AuditLogEntry;
 import com.inkflow.crm.domain.enums.AuditAction;
 import com.inkflow.crm.domain.enums.AuditEntityType;
@@ -34,6 +35,15 @@ public class AuditLogService {
                     AuditAction action, AuditEntityType entityType,
                     String entityId, String entityLabel,
                     UUID subjectClientId, String details) {
+        log(tenantId, actorId, actorName, action, entityType, entityId, entityLabel,
+                subjectClientId, details, null);
+    }
+
+    @Async
+    public void log(UUID tenantId, UUID actorId, String actorName,
+                    AuditAction action, AuditEntityType entityType,
+                    String entityId, String entityLabel,
+                    UUID subjectClientId, String details, String ipAddress) {
         try {
             repo.save(AuditLogEntry.builder()
                     .tenantId(tenantId)
@@ -45,25 +55,23 @@ public class AuditLogService {
                     .entityLabel(entityLabel)
                     .subjectClientId(subjectClientId)
                     .details(details)
+                    .ipAddress(ipAddress)
                     .build());
         } catch (Exception e) {
             log.warn("Failed to write audit log: {}", e.getMessage());
         }
     }
 
-    @Async
     public void logCurrent(AuditAction action, AuditEntityType entityType,
                            String entityId, String entityLabel) {
         logCurrent(action, entityType, entityId, entityLabel, null, null);
     }
 
-    @Async
     public void logCurrent(AuditAction action, AuditEntityType entityType,
                            String entityId, String entityLabel, UUID subjectClientId) {
         logCurrent(action, entityType, entityId, entityLabel, subjectClientId, null);
     }
 
-    @Async
     public void logCurrent(AuditAction action, AuditEntityType entityType,
                            String entityId, String entityLabel,
                            UUID subjectClientId, String details) {
@@ -81,7 +89,8 @@ public class AuditLogService {
                     entityId,
                     entityLabel,
                     subjectClientId,
-                    details
+                    details,
+                    HttpRequestUtils.clientIpAddress()
             );
         } catch (Exception e) {
             log.warn("Failed to write audit log: {}", e.getMessage());
@@ -94,6 +103,7 @@ public class AuditLogService {
             UUID clientId,
             List<String> actions,
             String entityType,
+            String entityId,
             Instant from,
             Instant to,
             int page,
@@ -116,6 +126,9 @@ public class AuditLogService {
             }
             if (entityType != null && !entityType.isBlank()) {
                 predicates.add(cb.equal(root.get("entityType"), entityType));
+            }
+            if (entityId != null && !entityId.isBlank()) {
+                predicates.add(cb.equal(root.get("entityId"), entityId));
             }
             if (from != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), from));

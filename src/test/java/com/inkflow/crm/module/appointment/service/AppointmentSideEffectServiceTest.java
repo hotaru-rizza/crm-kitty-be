@@ -10,7 +10,8 @@ import com.inkflow.crm.module.appointment.event.AppointmentConfirmedEvent;
 import com.inkflow.crm.module.appointment.event.AppointmentRescheduledEvent;
 import com.inkflow.crm.domain.enums.AuditAction;
 import com.inkflow.crm.domain.enums.AuditEntityType;
-import com.inkflow.crm.module.audit.service.AuditLogService;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.email.service.sending.AppointmentNotificationService;
 import com.inkflow.crm.module.google.service.GoogleCalendarSyncService;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AppointmentSideEffectServiceTest {
@@ -39,7 +41,10 @@ class AppointmentSideEffectServiceTest {
     private GoogleCalendarSyncService googleCalendarSyncService;
 
     @Mock
-    private AuditLogService auditLogService;
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
 
     @InjectMocks
     private AppointmentSideEffectService sideEffectService;
@@ -47,16 +52,18 @@ class AppointmentSideEffectServiceTest {
     @Test
     void afterCreate_publishesConfirmedEventAndSyncsCalendar() {
         Appointment appointment = appointment(UUID.randomUUID());
+        when(auditLabelFormatter.appointment(appointment.getClient(), appointment.getStartTime()))
+                .thenReturn("Запис · John Doe · 14 черв. 2026, 13:00");
 
         sideEffectService.afterCreate(appointment);
 
         verify(eventPublisher).publishEvent(any(AppointmentConfirmedEvent.class));
         verify(googleCalendarSyncService).syncNewAppointment(appointment);
-        verify(auditLogService).logCurrent(
+        verify(auditRecorder).record(
                 AuditAction.CREATE,
                 AuditEntityType.APPOINTMENT,
                 appointment.getId().toString(),
-                "John Doe @ " + appointment.getStartTime(),
+                "Запис · John Doe · 14 черв. 2026, 13:00",
                 appointment.getClient().getId()
         );
     }

@@ -4,6 +4,10 @@ import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.repository.TenantRepository;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.settings.dto.ClientDormancySettingsDto;
 import com.inkflow.crm.module.settings.dto.CompanySettingsDto;
 import com.inkflow.crm.module.settings.dto.UpdateClientDormancySettingsRequest;
@@ -22,6 +26,8 @@ import java.util.UUID;
 public class SettingsService {
 
     private final TenantRepository tenantRepository;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
 
     @Transactional(readOnly = true)
     public CompanySettingsDto getCompanySettings() {
@@ -47,6 +53,12 @@ public class SettingsService {
 
         tenantRepository.save(tenant);
         log.info("Company settings updated via service: tenantId={}", tenantId);
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.TENANT,
+                tenantId.toString(),
+                auditLabelFormatter.tenantSetting("Студія")
+        );
 
         return toDto(tenant);
     }
@@ -64,6 +76,14 @@ public class SettingsService {
         tenant.setClientDormancyDays(request.getInactivityDays());
         tenantRepository.save(tenant);
         log.info("Client dormancy settings updated: tenantId={} inactivityDays={}", tenantId, request.getInactivityDays());
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.TENANT,
+                tenantId.toString(),
+                auditLabelFormatter.tenantSetting("Неактивні клієнти"),
+                null,
+                request.getInactivityDays() + " днів"
+        );
         return toClientDormancyDto(tenant);
     }
 

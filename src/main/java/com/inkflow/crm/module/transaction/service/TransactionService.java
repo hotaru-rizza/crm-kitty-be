@@ -7,6 +7,7 @@ import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.*;
 import com.inkflow.crm.domain.enums.*;
 import com.inkflow.crm.domain.repository.*;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.finance.service.CategoryConfigService;
 import com.inkflow.crm.module.transaction.dto.*;
 import com.inkflow.crm.module.transaction.mapper.TransactionMapper;
@@ -34,6 +35,7 @@ public class TransactionService {
     private final LocationRepository locationRepository;
     private final TransactionMapper transactionMapper;
     private final CategoryConfigService categoryConfigService;
+    private final AuditRecorder auditRecorder;
 
     @Transactional(readOnly = true)
     public PageResult<TransactionDto> getAllTransactions(
@@ -104,6 +106,7 @@ public class TransactionService {
 
         transaction = transactionRepository.save(transaction);
         log.info("Transaction created: tenantId={} transactionId={}", tenantId, transaction.getId());
+        auditTransactionCreated(transaction);
         return transactionMapper.toDto(transaction);
     }
 
@@ -116,6 +119,12 @@ public class TransactionService {
         transaction.softDelete();
         transactionRepository.save(transaction);
         log.info("Transaction deleted: tenantId={} transactionId={}", tenantId, id);
+        auditRecorder.record(
+                AuditAction.DELETE,
+                AuditEntityType.TRANSACTION,
+                id.toString(),
+                formatTransactionLabel(transaction)
+        );
     }
 
     @Transactional(readOnly = true)
@@ -193,5 +202,28 @@ public class TransactionService {
         }
 
         return totalIncome.divide(BigDecimal.valueOf(incomeCount), 2, RoundingMode.HALF_UP);
+    }
+
+    private void auditTransactionCreated(Transaction transaction) {
+        AuditAction action = transaction.getType() == TransactionType.INCOME
+                ? AuditAction.TXN_INCOME
+                : AuditAction.TXN_EXPENSE;
+        UUID clientId = transaction.getAppointment() != null && transaction.getAppointment().getClient() != null
+                ? transaction.getAppointment().getClient().getId()
+                : null;
+        String details = transaction.getAmount() + " ₴ · " + transaction.getPaymentMethod().getValue();
+
+        auditRecorder.record(
+                action,
+                AuditEntityType.TRANSACTION,
+                transaction.getId().toString(),
+                formatTransactionLabel(transaction),
+                clientId,
+                details
+        );
+    }
+
+    private String formatTransactionLabel(Transaction transaction) {
+        return transaction.getCategory() + " · " + transaction.getAmount() + " ₴";
     }
 }

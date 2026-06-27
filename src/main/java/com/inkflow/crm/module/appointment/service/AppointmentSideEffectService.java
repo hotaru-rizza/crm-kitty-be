@@ -8,8 +8,10 @@ import com.inkflow.crm.module.appointment.dto.AppointmentUpdateContext;
 import com.inkflow.crm.module.appointment.event.AppointmentCanceledEvent;
 import com.inkflow.crm.module.appointment.event.AppointmentCompletedEvent;
 import com.inkflow.crm.module.appointment.event.AppointmentConfirmedEvent;
+import com.inkflow.crm.module.appointment.event.AppointmentRestoredEvent;
 import com.inkflow.crm.module.appointment.event.AppointmentRescheduledEvent;
-import com.inkflow.crm.module.audit.service.AuditLogService;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.email.service.sending.AppointmentNotificationService;
 import com.inkflow.crm.module.google.service.GoogleCalendarSyncService;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +29,8 @@ public class AppointmentSideEffectService {
     private final AppointmentNotificationService appointmentNotificationService;
     private final ApplicationEventPublisher eventPublisher;
     private final GoogleCalendarSyncService googleCalendarSyncService;
-    private final AuditLogService auditLogService;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
 
     public void afterCreate(Appointment appointment) {
         log.info("Appointment side-effects after create: appointmentId={} tenantId={}",
@@ -45,6 +48,7 @@ public class AppointmentSideEffectService {
 
         sendUpdateEmails(appointment, context);
         syncCalendarAfterUpdate(appointment);
+        auditUpdate(appointment, context);
     }
 
     public void afterDelete(Appointment appointment, UUID appointmentId) {
@@ -103,6 +107,10 @@ public class AppointmentSideEffectService {
             eventPublisher.publishEvent(new AppointmentCompletedEvent(appointmentId, tenantId));
         }
 
+        if (previousStatus == AppointmentStatus.COMPLETED && newStatus == AppointmentStatus.SCHEDULED) {
+            eventPublisher.publishEvent(new AppointmentRestoredEvent(appointmentId, tenantId));
+        }
+
         if (newStatus == AppointmentStatus.CANCELLED && previousStatus != AppointmentStatus.CANCELLED) {
             eventPublisher.publishEvent(new AppointmentCanceledEvent(appointmentId, tenantId));
         }
@@ -151,29 +159,62 @@ public class AppointmentSideEffectService {
     }
 
     private void auditCreated(Appointment appointment) {
-        String label = appointment.getClient().getFirstName() + " " + appointment.getClient().getLastName()
-                + " @ " + appointment.getStartTime();
         UUID clientId = appointment.getClient() != null ? appointment.getClient().getId() : null;
-        auditLogService.logCurrent(
+        auditRecorder.record(
                 AuditAction.CREATE,
                 AuditEntityType.APPOINTMENT,
                 appointment.getId().toString(),
-                label,
+                buildAppointmentLabel(appointment),
                 clientId
         );
     }
 
     private void auditDeleted(Appointment appointment, UUID appointmentId) {
-        String label = appointment.getClient() != null
-                ? appointment.getClient().getFirstName() + " " + appointment.getClient().getLastName()
-                : appointmentId.toString();
         UUID clientId = appointment.getClient() != null ? appointment.getClient().getId() : null;
-        auditLogService.logCurrent(
+        auditRecorder.record(
                 AuditAction.DELETE,
                 AuditEntityType.APPOINTMENT,
                 appointmentId.toString(),
-                label,
+                buildAppointmentLabel(appointment),
                 clientId
         );
+    }
+
+    private void auditUpdate(Appointment appointment, AppointmentUpdateContext context) {
+        UUID clientId = appointment.getClient() != null ? appointment.getClient().getId() : null;
+        String entityId = appointment.getId().toString();
+        String label = buildAppointmentLabel(appointment);
+
+        if (context.requestedStatus() != null) {
+            AppointmentStatus newStatus = AppointmentStatus.fromValue(context.requestedStatus());
+            if (newStatus == AppointmentStatus.CANCELLED && context.previousStatus() != AppointmentStatus.CANCELLED) {
+                auditRecorder.record(AuditAction.CANCEL, AuditEntityType.APPOINTMENT, entityId, label, clientId);
+                return;
+            }
+            if (context.previousStatus() != null && context.previousStatus() != newStatus) {
+                auditRecorder.record(
+                        AuditAction.STATUS_CHANGE,
+                        AuditEntityType.APPOINTMENT,
+                        entityId,
+                        label,
+                        clientId,
+                        context.previousStatus().getValue() + " → " + newStatus.getValue()
+                );
+                if (!context.startTimeChanged()) {
+                    return;
+                }
+            }
+        }
+
+        if (context.startTimeChanged()) {
+            auditRecorder.record(AuditAction.RESCHEDULE, AuditEntityType.APPOINTMENT, entityId, label, clientId);
+            return;
+        }
+
+        auditRecorder.record(AuditAction.UPDATE, AuditEntityType.APPOINTMENT, entityId, label, clientId);
+    }
+
+    private String buildAppointmentLabel(Appointment appointment) {
+        return auditLabelFormatter.appointment(appointment.getClient(), appointment.getStartTime());
     }
 }

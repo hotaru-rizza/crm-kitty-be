@@ -35,7 +35,9 @@ public class AppointmentDetailDto {
     private String sketchImage;
     private String cancellationReason;
     private Instant cancelledAt;
+    private List<AppointmentItemDto> items;
     private List<PhotoDto> photos;
+    private boolean reservation;
     private Instant createdAt;
     private Instant updatedAt;
 

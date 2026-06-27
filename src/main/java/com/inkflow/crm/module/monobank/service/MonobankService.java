@@ -8,6 +8,8 @@ import com.inkflow.crm.domain.enums.*;
 import com.inkflow.crm.domain.repository.*;
 import com.inkflow.crm.module.monobank.config.MonobankConfig;
 import com.inkflow.crm.module.monobank.dto.*;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.subscription.service.SubscriptionService;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +38,8 @@ public class MonobankService {
     private final StaffRepository staffRepository;
     private final ObjectMapper objectMapper;
     private final SubscriptionService subscriptionService;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
 
     private static final int CCY_UAH = 980;
 
@@ -229,6 +233,17 @@ public class MonobankService {
         }
 
         log.info("Transaction {} recorded for Monobank invoice {}", transaction.getId(), invoice.getMonobankInvoiceId());
+
+        UUID clientId = appointment.getClient() != null ? appointment.getClient().getId() : null;
+        auditRecorder.recordSystem(
+                invoice.getTenantId(),
+                AuditAction.PAYMENT,
+                AuditEntityType.APPOINTMENT,
+                appointment.getId().toString(),
+                auditLabelFormatter.appointment(appointment.getClient(), appointment.getStartTime()),
+                clientId,
+                "Monobank · " + invoice.getAmount() + " ₴"
+        );
     }
 
     @SuppressWarnings("unchecked")

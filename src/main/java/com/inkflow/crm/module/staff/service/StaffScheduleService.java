@@ -2,8 +2,11 @@ package com.inkflow.crm.module.staff.service;
 
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.StaffSchedule;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.enums.DayOfWeek;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.staff.dto.UpdateScheduleRequest;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,7 @@ public class StaffScheduleService {
     private final StaffLookup staffLookup;
     private final StaffRepository staffRepository;
     private final EntityManager entityManager;
+    private final AuditRecorder auditRecorder;
 
     @Transactional
     public void updateSchedule(UUID staffId, UpdateScheduleRequest request) {
@@ -43,5 +47,11 @@ public class StaffScheduleService {
 
         staffRepository.save(staff);
         log.info("Schedule updated for staffId={} tenantId={}", staffId, staff.getTenantId());
+        auditRecorder.record(
+                AuditAction.SCHEDULE_SET,
+                AuditEntityType.SCHEDULE,
+                staffId.toString(),
+                staff.getFullName()
+        );
     }
 }

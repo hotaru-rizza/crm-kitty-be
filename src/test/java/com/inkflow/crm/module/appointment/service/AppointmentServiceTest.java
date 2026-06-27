@@ -72,6 +72,12 @@ class AppointmentServiceTest {
     @Mock
     private AppointmentMapper appointmentMapper;
 
+    @Mock
+    private AppointmentItemService appointmentItemService;
+
+    @Mock
+    private AppointmentPricingService appointmentPricingService;
+
     @InjectMocks
     private AppointmentService appointmentService;
 
@@ -98,7 +104,7 @@ class AppointmentServiceTest {
         Location location = location(locationId);
 
         when(entityResolver.requireClient(tenantId, clientId)).thenReturn(client);
-        when(entityResolver.requireStaff(tenantId, artistId)).thenReturn(artist);
+        when(entityResolver.requireActiveStaff(tenantId, artistId)).thenReturn(artist);
         when(entityResolver.requireService(tenantId, serviceId)).thenReturn(service);
         when(entityResolver.requireLocation(tenantId, locationId)).thenReturn(location);
         when(appointmentRepository.existsConflictingAppointment(artistId, start, end)).thenReturn(false);
@@ -150,7 +156,7 @@ class AppointmentServiceTest {
         authenticate(tenantId);
 
         when(entityResolver.requireClient(any(), any())).thenReturn(client(UUID.randomUUID()));
-        when(entityResolver.requireStaff(tenantId, artistId)).thenReturn(staff(artistId));
+        when(entityResolver.requireActiveStaff(tenantId, artistId)).thenReturn(staff(artistId));
         when(entityResolver.requireService(any(), any())).thenReturn(service(UUID.randomUUID()));
         when(entityResolver.requireLocation(any(), any())).thenReturn(location(UUID.randomUUID()));
         when(appointmentRepository.existsConflictingAppointment(artistId, start, end)).thenReturn(true);
@@ -178,13 +184,39 @@ class AppointmentServiceTest {
         authenticate(tenantId);
 
         when(entityResolver.requireClient(any(), any())).thenReturn(client(UUID.randomUUID()));
-        when(entityResolver.requireStaff(tenantId, artistId)).thenReturn(staff(artistId));
+        when(entityResolver.requireActiveStaff(tenantId, artistId)).thenReturn(staff(artistId));
         when(entityResolver.requireService(any(), any())).thenReturn(service(UUID.randomUUID()));
         when(entityResolver.requireLocation(any(), any())).thenReturn(location(UUID.randomUUID()));
         when(appointmentRepository.existsConflictingAppointment(artistId, start, end)).thenReturn(false);
         when(inkflowProperties.defaultZoneId()).thenReturn(ZoneId.of("Europe/Kyiv"));
         when(leaveRequestRepository.findActiveLeaveForDate(eq(tenantId), eq(artistId), any()))
                 .thenReturn(List.of(new LeaveRequest()));
+
+        CreateAppointmentRequest request = CreateAppointmentRequest.builder()
+                .clientId(UUID.randomUUID())
+                .artistId(artistId)
+                .serviceId(UUID.randomUUID())
+                .locationId(UUID.randomUUID())
+                .startTime(start)
+                .endTime(end)
+                .price(BigDecimal.valueOf(1000))
+                .build();
+
+        assertThrows(BusinessRuleException.class, () -> appointmentService.createAppointment(request));
+    }
+
+    @Test
+    void createAppointment_rejectsDeactivatedArtist() {
+        UUID tenantId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        authenticate(tenantId);
+
+        when(entityResolver.requireClient(any(), any())).thenReturn(client(UUID.randomUUID()));
+        when(entityResolver.requireActiveStaff(tenantId, artistId))
+                .thenThrow(BusinessRuleException.artistDeactivated());
 
         CreateAppointmentRequest request = CreateAppointmentRequest.builder()
                 .clientId(UUID.randomUUID())

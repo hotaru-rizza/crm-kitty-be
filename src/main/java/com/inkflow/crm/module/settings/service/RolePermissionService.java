@@ -1,9 +1,12 @@
 package com.inkflow.crm.module.settings.service;
 
 import com.inkflow.crm.domain.entity.RolePermission;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.RolePermissionRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.settings.dto.PermissionDto;
 import com.inkflow.crm.module.settings.dto.RolePermissionsDto;
 import com.inkflow.crm.module.settings.dto.UpdateRolePermissionsRequest;
@@ -23,6 +26,7 @@ import java.util.UUID;
 public class RolePermissionService {
 
     private final RolePermissionRepository rolePermissionRepository;
+    private final AuditRecorder auditRecorder;
 
     @Transactional(readOnly = true)
     public List<PermissionDto> getAllPermissions() {
@@ -53,6 +57,15 @@ public class RolePermissionService {
 
         log.info("Role permissions updated: tenantId={} role={} count={}",
                 tenantId, roleValue, request.getPermissions().size());
+
+        auditRecorder.record(
+                AuditAction.PERMISSIONS_CHANGE,
+                AuditEntityType.ROLE,
+                roleValue,
+                roleValue,
+                null,
+                String.valueOf(request.getPermissions().size())
+        );
 
         return RolePermissionsDto.builder()
                 .role(roleValue)

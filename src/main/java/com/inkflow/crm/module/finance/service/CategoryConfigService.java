@@ -2,8 +2,12 @@ package com.inkflow.crm.module.finance.service;
 
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.domain.entity.TransactionCategoryConfig;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.enums.TransactionType;
 import com.inkflow.crm.domain.repository.TransactionCategoryConfigRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.finance.dto.CategoryConfigDto;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +22,8 @@ import java.util.stream.Collectors;
 public class CategoryConfigService {
 
     private final TransactionCategoryConfigRepository repo;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
 
     private static final List<DefaultCategory> SYSTEM_DEFAULTS = List.of(
         new DefaultCategory("service",  "Послуга",             "#6366f1", "INCOME"),
@@ -51,6 +57,7 @@ public class CategoryConfigService {
         Optional<TransactionCategoryConfig> existing =
                 repo.findByTenantIdAndCategoryKeyAndDeletedAtIsNull(tenantId, categoryKey);
 
+        boolean isNew = existing.isEmpty();
         TransactionCategoryConfig cfg = existing.orElseGet(() ->
                 TransactionCategoryConfig.builder()
                         .tenantId(tenantId)
@@ -62,7 +69,14 @@ public class CategoryConfigService {
         cfg.setColor(color);
         cfg.setPlType(plType);
         cfg.setIsActive(true);
-        return toDto(repo.save(cfg));
+        TransactionCategoryConfig saved = repo.save(cfg);
+        auditRecorder.record(
+                isNew ? AuditAction.CREATE : AuditAction.UPDATE,
+                AuditEntityType.TRANSACTION,
+                saved.getId().toString(),
+                auditLabelFormatter.financeCategory(saved.getLabel())
+        );
+        return toDto(saved);
     }
 
     @Transactional
@@ -78,7 +92,14 @@ public class CategoryConfigService {
                 .isDefault(false)
                 .isActive(true)
                 .build();
-        return toDto(repo.save(cfg));
+        TransactionCategoryConfig saved = repo.save(cfg);
+        auditRecorder.record(
+                AuditAction.CREATE,
+                AuditEntityType.TRANSACTION,
+                saved.getId().toString(),
+                auditLabelFormatter.financeCategory(saved.getLabel())
+        );
+        return toDto(saved);
     }
 
     @Transactional
@@ -86,8 +107,15 @@ public class CategoryConfigService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         repo.findById(id).ifPresent(cfg -> {
             if (cfg.getTenantId().equals(tenantId) && !Boolean.TRUE.equals(cfg.getIsDefault())) {
+                String label = auditLabelFormatter.financeCategory(cfg.getLabel());
                 cfg.setDeletedAt(java.time.Instant.now());
                 repo.save(cfg);
+                auditRecorder.record(
+                        AuditAction.DELETE,
+                        AuditEntityType.TRANSACTION,
+                        cfg.getId().toString(),
+                        label
+                );
             }
         });
     }

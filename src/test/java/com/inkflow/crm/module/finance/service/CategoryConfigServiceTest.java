@@ -2,8 +2,11 @@ package com.inkflow.crm.module.finance.service;
 
 import com.inkflow.crm.domain.entity.TransactionCategoryConfig;
 import com.inkflow.crm.domain.repository.TransactionCategoryConfigRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -20,7 +23,9 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,12 +36,23 @@ class CategoryConfigServiceTest {
     @Mock
     private TransactionCategoryConfigRepository repo;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private CategoryConfigService service;
 
     @AfterEach
     void clearSecurityContext() {
         SecurityContextHolder.clearContext();
+    }
+
+    @BeforeEach
+    void stubAuditLabels() {
+        lenient().when(auditLabelFormatter.financeCategory(anyString())).thenAnswer(inv -> "Категорія · " + inv.getArgument(0));
     }
 
     @Test
@@ -95,6 +111,7 @@ class CategoryConfigServiceTest {
                 .id(configId)
                 .tenantId(tenantId)
                 .categoryKey("custom_key")
+                .label("Custom")
                 .isDefault(false)
                 .build();
 

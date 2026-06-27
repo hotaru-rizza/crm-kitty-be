@@ -102,7 +102,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(inkflowProperties.getCors().getAllowedOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("Authorization", "X-Location-Id"));
+        configuration.setExposedHeaders(List.of("Authorization", "X-Location-Id", "X-Request-Id"));
         configuration.setAllowCredentials(inkflowProperties.getCors().isAllowCredentials());
         configuration.setMaxAge(3600L);
 

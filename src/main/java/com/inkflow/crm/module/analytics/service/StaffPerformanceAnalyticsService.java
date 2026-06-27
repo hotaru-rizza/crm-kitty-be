@@ -6,6 +6,7 @@ import com.inkflow.crm.domain.entity.StaffSchedule;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.StaffScheduleRepository;
 import com.inkflow.crm.module.analytics.dto.StaffPerformanceDto;
+import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.module.analytics.support.AppointmentMetricsCalculator;
 import com.inkflow.crm.module.analytics.support.CommissionCalculator;
 import com.inkflow.crm.module.analytics.support.StaffUtilizationCalculator;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class StaffPerformanceAnalyticsService {
 
+    private final InkflowProperties inkflowProperties;
     private final AppointmentRepository appointmentRepository;
     private final StaffScheduleRepository staffScheduleRepository;
     private final StaffUtilizationCalculator utilizationCalculator;
@@ -76,7 +78,12 @@ public class StaffPerformanceAnalyticsService {
         BigDecimal avgCheck = metrics.calculateAvgCheck(revenue, completed);
 
         var salaryType = commissionCalculator.resolveSalaryType(artist);
-        BigDecimal calculatedSalary = commissionCalculator.calculate(artist, revenue);
+        BigDecimal calculatedSalary = commissionCalculator.calculateForPeriod(
+                artist,
+                revenue,
+                from,
+                to,
+                inkflowProperties.defaultZoneId());
 
         List<StaffSchedule> artistSchedule = schedulesByArtist.getOrDefault(artist.getId(), List.of());
         double scheduledHours = utilizationCalculator.calculateScheduledHours(artistSchedule, from, to);

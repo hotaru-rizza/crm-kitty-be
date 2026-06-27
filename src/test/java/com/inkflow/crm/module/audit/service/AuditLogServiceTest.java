@@ -196,6 +196,7 @@ class AuditLogServiceTest {
                 null,
                 null,
                 null,
+                null,
                 0,
                 20
         );
@@ -228,6 +229,7 @@ class AuditLogServiceTest {
                 clientId,
                 List.of("CREATE", "DELETE"),
                 "CLIENT",
+                null,
                 from,
                 to,
                 1,

@@ -10,6 +10,8 @@ import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.staff.service.StaffLookup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -66,8 +69,19 @@ class GoogleCalendarSyncServiceTest {
     @Mock
     private AppointmentRepository appointmentRepository;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private GoogleCalendarSyncService googleCalendarSyncService;
+
+    @BeforeEach
+    void stubAuditLabels() {
+        lenient().when(auditLabelFormatter.staff(any())).thenReturn("Staff");
+    }
 
     private void initGoogleTransport() {
         googleCalendarSyncService.init();

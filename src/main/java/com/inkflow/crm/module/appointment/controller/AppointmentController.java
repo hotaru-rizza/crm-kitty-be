@@ -5,7 +5,11 @@ import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.module.appointment.dto.*;
+import com.inkflow.crm.module.appointment.service.AppointmentNotificationQueryService;
 import com.inkflow.crm.module.appointment.service.AppointmentService;
+import com.inkflow.crm.module.audit.dto.AuditLogDto;
+import com.inkflow.crm.module.audit.service.AuditLogService;
+import com.inkflow.crm.common.dto.ApiResponses;
 import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +30,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
+    private final AppointmentNotificationQueryService appointmentNotificationQueryService;
+    private final AuditLogService auditLogService;
 
     @GetMapping
     @RequirePermission({Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
@@ -92,6 +98,31 @@ public class AppointmentController {
         log.info("Appointment deleted via API: appointmentId={}", id);
 
         return ResponseEntity.ok(ApiResponse.empty());
+    }
+
+    @GetMapping("/{id}/notifications")
+    @RequirePermission({Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
+    public ResponseEntity<ApiResponse<List<AppointmentNotificationDto>>> getNotifications(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(appointmentNotificationQueryService.getNotifications(id)));
+    }
+
+    @GetMapping("/{id}/history")
+    @RequirePermission({Permission.CALENDAR_VIEW_ALL, Permission.CALENDAR_VIEW_OWN})
+    public ResponseEntity<ApiResponse<List<AuditLogDto>>> getHistory(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ApiResponses.page(auditLogService.getLog(
+                List.of(),
+                null,
+                List.of(),
+                "APPOINTMENT",
+                id.toString(),
+                null,
+                null,
+                page,
+                Math.min(size, 100)
+        ));
     }
 
     @PostMapping("/{id}/photos")

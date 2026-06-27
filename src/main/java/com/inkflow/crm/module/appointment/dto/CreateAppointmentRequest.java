@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -20,13 +21,12 @@ import java.util.UUID;
 @ValidAppointmentTimeRange
 public class CreateAppointmentRequest {
 
-    @NotNull(message = "Client ID is required")
     private UUID clientId;
 
     @NotNull(message = "Artist ID is required")
     private UUID artistId;
 
-    @NotNull(message = "Service ID is required")
+    /** Legacy single-service create; ignored when {@code items} is provided. */
     private UUID serviceId;
 
     @NotNull(message = "Location ID is required")
@@ -41,9 +41,11 @@ public class CreateAppointmentRequest {
     @NotNull(message = "End time is required")
     private Instant endTime;
 
-    @NotNull(message = "Price is required")
+    /** Legacy price; ignored when {@code items} is provided. */
     @DecimalMin(value = "0.0", message = "Price must be positive")
     private BigDecimal price;
+
+    private List<AppointmentItemRequest> items;
 
     @DecimalMin(value = "0.0", message = "Prepayment must be positive")
     private BigDecimal prepayment;
@@ -53,4 +55,7 @@ public class CreateAppointmentRequest {
 
     private String notes;
     private String sketchImage;
+
+    /** When true, blocks time without client/services/payment lifecycle. */
+    private Boolean reservation;
 }

@@ -17,6 +17,10 @@ import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ProjectRepository;
 import com.inkflow.crm.domain.repository.ProjectSpecifications;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.project.dto.*;
 import com.inkflow.crm.module.project.mapper.ProjectMapper;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
@@ -44,6 +48,8 @@ public class ProjectService {
     private final LocationRepository locationRepository;
     private final RolePermissionService rolePermissionService;
     private final ProjectMapper projectMapper;
+    private final AuditRecorder auditRecorder;
+    private final AuditLabelFormatter auditLabelFormatter;
 
     @Transactional(readOnly = true)
     public PageResult<ProjectDto> getAllProjects(PageRequest pageRequest, ProjectFilterRequest filter, UUID locationId) {
@@ -87,6 +93,13 @@ public class ProjectService {
 
         project = projectRepository.save(project);
         log.info("Project created: tenantId={} projectId={}", tenantId, project.getId());
+        auditRecorder.record(
+                AuditAction.CREATE,
+                AuditEntityType.PROJECT,
+                project.getId().toString(),
+                auditLabelFormatter.project(project.getTitle()),
+                client.getId()
+        );
         return mapToDto(project);
     }
 
@@ -99,6 +112,13 @@ public class ProjectService {
         project = projectRepository.save(project);
 
         log.info("Project updated: tenantId={} projectId={}", tenantId, id);
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.PROJECT,
+                project.getId().toString(),
+                auditLabelFormatter.project(project.getTitle()),
+                project.getClient().getId()
+        );
         return mapToDto(project);
     }
 
@@ -114,6 +134,13 @@ public class ProjectService {
         project.softDelete();
         projectRepository.save(project);
         log.info("Project deleted: tenantId={} projectId={}", tenantId, id);
+        auditRecorder.record(
+                AuditAction.DELETE,
+                AuditEntityType.PROJECT,
+                project.getId().toString(),
+                auditLabelFormatter.project(project.getTitle()),
+                project.getClient().getId()
+        );
     }
 
     @Transactional
@@ -131,13 +158,21 @@ public class ProjectService {
 
         photo = galleryPhotoRepository.save(photo);
         log.info("Project photo added: tenantId={} projectId={} photoId={}", tenantId, projectId, photo.getId());
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.PROJECT,
+                project.getId().toString(),
+                auditLabelFormatter.project(project.getTitle()),
+                project.getClient().getId(),
+                "Додано фото"
+        );
         return projectMapper.toPhotoDto(photo);
     }
 
     @Transactional
     public void deletePhoto(UUID projectId, UUID photoId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        requireProject(tenantId, projectId);
+        Project project = requireProject(tenantId, projectId);
 
         GalleryPhoto photo = galleryPhotoRepository.findById(photoId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -145,6 +180,14 @@ public class ProjectService {
 
         galleryPhotoRepository.delete(photo);
         log.info("Project photo deleted: tenantId={} projectId={} photoId={}", tenantId, projectId, photoId);
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.PROJECT,
+                project.getId().toString(),
+                auditLabelFormatter.project(project.getTitle()),
+                project.getClient().getId(),
+                "Видалено фото"
+        );
     }
 
     private Page<Project> getProjectsPage(PageRequest pageRequest, ProjectFilterRequest filter, UUID locationId) {

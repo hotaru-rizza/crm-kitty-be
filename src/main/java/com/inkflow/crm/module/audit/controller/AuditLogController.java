@@ -27,13 +27,14 @@ public class AuditLogController {
     private final AuditLogService service;
 
     @GetMapping
-    @RequirePermission(Permission.CALENDAR_VIEW_ALL)
+    @RequirePermission(Permission.AUDIT_VIEW)
     public ResponseEntity<ApiResponse<List<AuditLogDto>>> getLog(
             @RequestParam(required = false) UUID actorId,
             @RequestParam(required = false) List<UUID> actorIds,
             @RequestParam(required = false) UUID clientId,
             @RequestParam(required = false) List<String> actions,
             @RequestParam(required = false) String entityType,
+            @RequestParam(required = false) String entityId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(defaultValue = "0") int page,
@@ -45,6 +46,7 @@ public class AuditLogController {
                         clientId,
                         actions,
                         entityType,
+                        entityId,
                         from,
                         to,
                         page,

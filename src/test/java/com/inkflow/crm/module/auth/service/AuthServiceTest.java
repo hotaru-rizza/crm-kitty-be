@@ -40,6 +40,9 @@ class AuthServiceTest {
     @Mock
     private RolePermissionService rolePermissionService;
 
+    @Mock
+    private AuthLoginAuditService authLoginAuditService;
+
     @InjectMocks
     private AuthService authService;
 

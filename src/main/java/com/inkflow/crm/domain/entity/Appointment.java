@@ -29,7 +29,7 @@ import java.util.List;
 public class Appointment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "client_id", nullable = false)
+    @JoinColumn(name = "client_id")
     private Client client;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -37,7 +37,7 @@ public class Appointment extends BaseEntity {
     private Staff artist;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "service_id", nullable = false)
+    @JoinColumn(name = "service_id")
     private Service service;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -85,6 +85,18 @@ public class Appointment extends BaseEntity {
     @Column(name = "cancelled_at")
     private Instant cancelledAt;
 
+    @Column(name = "balance_charged_at")
+    private Instant balanceChargedAt;
+
+    @Column(name = "reservation", nullable = false)
+    @Builder.Default
+    private boolean reservation = false;
+
+    @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    @Builder.Default
+    private List<AppointmentItem> items = new ArrayList<>();
+
     @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<GalleryPhoto> photos = new ArrayList<>();
@@ -92,6 +104,10 @@ public class Appointment extends BaseEntity {
     @OneToMany(mappedBy = "appointment")
     @Builder.Default
     private List<Transaction> transactions = new ArrayList<>();
+
+    public boolean isReservation() {
+        return reservation;
+    }
 
     public void calculateFinalPrice() {
         this.finalPrice = this.price.subtract(this.discount);

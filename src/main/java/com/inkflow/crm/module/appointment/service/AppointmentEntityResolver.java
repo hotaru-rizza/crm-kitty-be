@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.appointment.service;
 
+import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Client;
@@ -7,6 +8,7 @@ import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Project;
 import com.inkflow.crm.domain.entity.Service;
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.enums.AccountStatus;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
@@ -42,6 +44,14 @@ public class AppointmentEntityResolver {
     public Staff requireStaff(UUID tenantId, UUID id) {
         return staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.staff(id.toString()));
+    }
+
+    public Staff requireActiveStaff(UUID tenantId, UUID id) {
+        Staff staff = requireStaff(tenantId, id);
+        if (staff.getAccountStatus() == AccountStatus.DEACTIVATED) {
+            throw BusinessRuleException.artistDeactivated();
+        }
+        return staff;
     }
 
     public Service requireService(UUID tenantId, UUID id) {

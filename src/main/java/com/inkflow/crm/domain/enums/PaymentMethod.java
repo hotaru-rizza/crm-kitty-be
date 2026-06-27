@@ -9,7 +9,12 @@ public enum PaymentMethod {
     CASH("cash", "Cash payment"),
     CARD("card", "Card payment"),
     SPLIT("split", "Split payment (cash + card)"),
-    MONOBANK("monobank", "Monobank online payment");
+    MONOBANK("monobank", "Monobank online payment"),
+    BALANCE("balance", "Payment from client balance");
+
+    public boolean isRealMoney() {
+        return this != BALANCE;
+    }
 
     private final String value;
     private final String description;
