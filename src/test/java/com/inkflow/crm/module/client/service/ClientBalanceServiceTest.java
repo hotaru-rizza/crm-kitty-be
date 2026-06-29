@@ -149,17 +149,19 @@ class ClientBalanceServiceTest {
     }
 
     @Test
-    void validateBalanceSpend_shouldAllowWhenBalanceIsZero() {
+    void validateBalanceSpend_shouldRejectWhenBalanceIsZero() {
         Client client = client(UUID.randomUUID(), BigDecimal.ZERO);
 
-        clientBalanceService.validateBalanceSpend(client, BigDecimal.TEN);
+        assertThrows(BusinessRuleException.class,
+                () -> clientBalanceService.validateBalanceSpend(client, BigDecimal.TEN));
     }
 
     @Test
-    void validateBalanceSpend_shouldAllowWhenClientHasDebt() {
+    void validateBalanceSpend_shouldRejectWhenClientHasDebt() {
         Client client = client(UUID.randomUUID(), BigDecimal.valueOf(-500));
 
-        clientBalanceService.validateBalanceSpend(client, BigDecimal.valueOf(200));
+        assertThrows(BusinessRuleException.class,
+                () -> clientBalanceService.validateBalanceSpend(client, BigDecimal.valueOf(200)));
     }
 
     @Test

@@ -408,7 +408,7 @@ class PaymentProcessingServiceTest {
     }
 
     @Test
-    void processPaymentLines_balanceWithZeroCredit_createsTransaction() {
+    void processPaymentLines_balanceWithZeroCredit_rejects() {
         UUID tenantId = UUID.randomUUID();
         UUID appointmentId = UUID.randomUUID();
         UUID clientId = UUID.randomUUID();
@@ -426,7 +426,45 @@ class PaymentProcessingServiceTest {
                 .thenReturn(Optional.of(appointment));
         when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))
                 .thenReturn(Optional.of(client));
-        when(clientBalanceService.isBalanceCredit(client)).thenReturn(false);
+        doThrow(new BusinessRuleException("Insufficient client balance credit"))
+                .when(clientBalanceService)
+                .validateBalanceSpend(client, BigDecimal.valueOf(50));
+        when(summaryCalculator.calculate(appointment)).thenReturn(summary(appointmentId, BigDecimal.valueOf(900)));
+
+        ProcessPaymentRequest request = ProcessPaymentRequest.builder()
+                .appointmentId(appointmentId)
+                .lines(List.of(
+                        PaymentLineRequest.builder()
+                                .amount(BigDecimal.valueOf(50))
+                                .paymentMethod("balance")
+                                .paymentType("service_payment")
+                                .build()
+                ))
+                .build();
+
+        assertThrows(BusinessRuleException.class, () -> paymentProcessingService.processPayment(request));
+        verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    @Test
+    void processPaymentLines_balanceWithCredit_spendsCredit() {
+        UUID tenantId = UUID.randomUUID();
+        UUID appointmentId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        authenticate(tenantId, UUID.randomUUID());
+
+        Client client = Client.builder()
+                .id(clientId)
+                .tenantId(tenantId)
+                .balance(BigDecimal.valueOf(80))
+                .build();
+        Appointment appointment = appointment(appointmentId, tenantId);
+        appointment.setClient(client);
+
+        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+                .thenReturn(Optional.of(appointment));
+        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))
+                .thenReturn(Optional.of(client));
         when(summaryCalculator.calculate(appointment)).thenReturn(summary(appointmentId, BigDecimal.valueOf(900)));
         when(receiptNumberGenerator.generate()).thenReturn("RCP-BAL");
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
@@ -455,8 +493,15 @@ class PaymentProcessingServiceTest {
         PaymentDto result = paymentProcessingService.processPayment(request);
 
         assertEquals(BigDecimal.valueOf(50), result.getAmount());
-        verify(clientBalanceService, never()).validateBalanceSpend(eq(client), any());
-        verify(transactionRepository).save(any(Transaction.class));
+        verify(clientBalanceService).validateBalanceSpend(client, BigDecimal.valueOf(50));
+        verify(clientBalanceService).record(
+                eq(client),
+                eq(BigDecimal.valueOf(-50)),
+                eq(com.inkflow.crm.domain.enums.ClientBalanceReason.BALANCE_SPEND),
+                eq(appointmentId),
+                any(),
+                eq(null)
+        );
     }
 
     @Test
@@ -478,7 +523,6 @@ class PaymentProcessingServiceTest {
                 .thenReturn(Optional.of(appointment));
         when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))
                 .thenReturn(Optional.of(client));
-        when(clientBalanceService.isBalanceCredit(client)).thenReturn(true);
         doThrow(new BusinessRuleException("Insufficient client balance credit"))
                 .when(clientBalanceService)
                 .validateBalanceSpend(client, BigDecimal.valueOf(50));
