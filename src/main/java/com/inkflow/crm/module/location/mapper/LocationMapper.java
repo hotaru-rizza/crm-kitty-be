@@ -8,11 +8,15 @@ import com.inkflow.crm.module.location.dto.UpdateLocationRequest;
 import com.inkflow.crm.module.staff.dto.StaffSummaryDto;
 import org.mapstruct.*;
 
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring")
 public interface LocationMapper {
+
+    DateTimeFormatter WORKING_HOURS_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
     LocationDto toDto(Location location);
 
@@ -25,6 +29,8 @@ public interface LocationMapper {
     @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "staff", ignore = true)
     @Mapping(target = "isActive", constant = "true")
+    @Mapping(target = "workingHoursStart", ignore = true)
+    @Mapping(target = "workingHoursEnd", ignore = true)
     Location toEntity(CreateLocationRequest request);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
@@ -36,7 +42,41 @@ public interface LocationMapper {
     @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "staff", ignore = true)
+    @Mapping(target = "workingHoursStart", ignore = true)
+    @Mapping(target = "workingHoursEnd", ignore = true)
     void updateEntity(UpdateLocationRequest request, @MappingTarget Location location);
+
+    @AfterMapping
+    default void applyCreateWorkingHours(CreateLocationRequest request, @MappingTarget Location location) {
+        applyWorkingHours(request.getWorkingHoursStart(), request.getWorkingHoursEnd(), location);
+    }
+
+    @AfterMapping
+    default void applyUpdateWorkingHours(UpdateLocationRequest request, @MappingTarget Location location) {
+        if (request.getWorkingHoursStart() != null) {
+            location.setWorkingHoursStart(parseWorkingHours(request.getWorkingHoursStart()));
+        }
+        if (request.getWorkingHoursEnd() != null) {
+            location.setWorkingHoursEnd(parseWorkingHours(request.getWorkingHoursEnd()));
+        }
+    }
+
+    default void applyWorkingHours(String start, String end, Location location) {
+        if (start != null) {
+            location.setWorkingHoursStart(parseWorkingHours(start));
+        }
+        if (end != null) {
+            location.setWorkingHoursEnd(parseWorkingHours(end));
+        }
+    }
+
+    default LocalTime parseWorkingHours(String value) {
+        return value != null && !value.isBlank() ? LocalTime.parse(value) : null;
+    }
+
+    default String formatWorkingHours(LocalTime value) {
+        return value != null ? value.format(WORKING_HOURS_FORMAT) : null;
+    }
 
     default LocationDetailDto toDetailDto(Location location, LocationDetailDto.LocationStatsDto stats) {
         List<StaffSummaryDto> staffList = location.getStaff().stream()
@@ -81,6 +121,9 @@ public interface LocationMapper {
                 .photoUrl(location.getPhotoUrl())
                 .navigationInstructions(location.getNavigationInstructions())
                 .telegramContact(location.getTelegramContact())
+                .instagram(location.getInstagram())
+                .workingHoursStart(formatWorkingHours(location.getWorkingHoursStart()))
+                .workingHoursEnd(formatWorkingHours(location.getWorkingHoursEnd()))
                 .staffCount((int) location.getStaff().stream().filter(s -> s.getDeletedAt() == null).count())
                 .createdAt(location.getCreatedAt())
                 .build();

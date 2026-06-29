@@ -24,6 +24,8 @@ public class LocationDto {
     private String navigationInstructions;
     private String telegramContact;
     private String instagram;
+    private String workingHoursStart;
+    private String workingHoursEnd;
     private Integer staffCount;
     private Instant createdAt;
 }

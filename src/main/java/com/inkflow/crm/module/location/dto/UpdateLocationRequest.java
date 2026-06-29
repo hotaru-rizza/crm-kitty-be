@@ -32,4 +32,10 @@ public class UpdateLocationRequest {
     private String navigationInstructions;
     private String telegramContact;
     private String instagram;
+
+    @Pattern(regexp = "^([01]?[0-9]|2[0-3]):[0-5][0-9]$", message = "Working hours start must be in HH:mm format")
+    private String workingHoursStart;
+
+    @Pattern(regexp = "^([01]?[0-9]|2[0-3]):[0-5][0-9]$", message = "Working hours end must be in HH:mm format")
+    private String workingHoursEnd;
 }

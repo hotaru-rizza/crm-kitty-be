@@ -6,6 +6,7 @@ import lombok.experimental.SuperBuilder;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "locations")
@@ -54,6 +55,12 @@ public class Location extends BaseEntity {
 
     @Column(name = "instagram")
     private String instagram;
+
+    @Column(name = "working_hours_start", nullable = false)
+    private LocalTime workingHoursStart = LocalTime.of(9, 0);
+
+    @Column(name = "working_hours_end", nullable = false)
+    private LocalTime workingHoursEnd = LocalTime.of(22, 0);
 
     @ManyToMany(mappedBy = "locations")
     @Builder.Default
