@@ -368,6 +368,40 @@ class OnboardingServiceTest {
     }
 
     @Test
+    void completeOnboarding_persistsCompanySizeForTeamAccount() {
+        UUID supabaseUserId = UUID.randomUUID();
+
+        when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(supabaseUserId.toString()))
+                .thenReturn(Optional.empty());
+        when(inkflowProperties.getDefaultTimezone()).thenReturn("Europe/Kyiv");
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(invocation -> {
+            Tenant tenant = invocation.getArgument(0);
+            tenant.setId(UUID.randomUUID());
+            return tenant;
+        });
+        when(staffRepository.save(any(Staff.class))).thenAnswer(invocation -> {
+            Staff staff = invocation.getArgument(0);
+            staff.setId(UUID.randomUUID());
+            return staff;
+        });
+        when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inkflowProperties.getDefaultLanguage()).thenReturn("uk");
+
+        OnboardingRequest request = new OnboardingRequest();
+        request.setCompanyName("Big Studio");
+        request.setFirstName("Alex");
+        request.setLastName("Artist");
+        request.setTeamSize("team");
+        request.setCompanySize("4-10");
+
+        onboardingService.completeOnboarding(supabaseUserId, "alex@test.com", request);
+
+        ArgumentCaptor<Tenant> tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
+        verify(tenantRepository).save(tenantCaptor.capture());
+        assertEquals("4-10", tenantCaptor.getValue().getCompanySize());
+    }
+
+    @Test
     void shouldSkipProvisioningWhenStaffAlreadyExists() {
         UUID supabaseUserId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();

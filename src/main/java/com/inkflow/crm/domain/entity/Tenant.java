@@ -49,6 +49,9 @@ public class Tenant {
     @Column(name = "account_type", nullable = false)
     private AccountType accountType = AccountType.STUDIO;
 
+    @Column(name = "company_size")
+    private String companySize;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 

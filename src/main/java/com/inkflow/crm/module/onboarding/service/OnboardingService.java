@@ -69,6 +69,7 @@ public class OnboardingService {
                 .timezone(inkflowProperties.getDefaultTimezone())
                 .language(SupportedLocale.fromCode(inkflowProperties.getDefaultLanguage()))
                 .accountType(accountType)
+                .companySize(request.getCompanySize())
                 .isActive(true)
                 .build();
         tenant = tenantRepository.save(tenant);

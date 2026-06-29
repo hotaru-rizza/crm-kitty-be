@@ -21,5 +21,7 @@ public class OnboardingRequest {
 
     private String teamSize;
 
+    private String companySize;
+
     private String instagram;
 }
