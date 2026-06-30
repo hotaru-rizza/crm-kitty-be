@@ -1,0 +1,12 @@
+# Copy subject lines into Supabase → Authentication → Email Templates
+#
+# Logo: embedded as base64 in HTML (R2 URL fails in Supabase preview due to missing CORS)
+
+confirm-signup.subject
+  Підтвердьте email — INKAT
+
+reset-password.subject
+  Скиньте пароль — INKAT
+
+password-changed.subject
+  Ваш пароль змінено — INKAT
