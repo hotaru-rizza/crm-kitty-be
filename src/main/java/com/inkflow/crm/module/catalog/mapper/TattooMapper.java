@@ -37,11 +37,19 @@ public class TattooMapper {
     }
 
     public TattooStyleDto toStyleDto(TattooStyle style) {
+        return toStyleDto(style, null);
+    }
+
+    public TattooStyleDto toStyleDto(TattooStyle style, String catalogCoverUrl) {
+        String imageUrl = catalogCoverUrl != null && !catalogCoverUrl.isBlank()
+                ? catalogCoverUrl
+                : style.getImageUrl();
+
         return new TattooStyleDto(
                 style.getId(),
                 style.getSlug(),
                 style.getName(),
-                style.getImageUrl(),
+                imageUrl,
                 style.getImageUrls() != null ? Arrays.asList(style.getImageUrls()) : List.of()
         );
     }

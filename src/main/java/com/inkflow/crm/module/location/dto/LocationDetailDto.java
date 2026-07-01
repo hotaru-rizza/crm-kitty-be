@@ -19,6 +19,7 @@ public class LocationDetailDto {
     private UUID id;
     private String name;
     private String address;
+    private String city;
     private String phone;
     private String googleMapsLink;
     private String color;
@@ -26,6 +27,7 @@ public class LocationDetailDto {
     private String photoUrl;
     private String navigationInstructions;
     private String telegramContact;
+    private String instagram;
     private List<StaffSummaryDto> staff;
     private LocationStatsDto stats;
     private Instant createdAt;

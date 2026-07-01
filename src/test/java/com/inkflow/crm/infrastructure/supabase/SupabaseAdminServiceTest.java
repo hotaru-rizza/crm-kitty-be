@@ -6,6 +6,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -35,6 +37,24 @@ class SupabaseAdminServiceTest {
         SupabaseAdminService service = new SupabaseAdminService("", "service-role-key");
 
         assertDoesNotThrow(() -> service.revokeAllSessions("auth-user-790"));
+    }
+
+    @Test
+    void shouldSyncUserTenantClaimsWhenSupabaseRespondsOk() {
+        RestClient.Builder builder = RestClient.builder().baseUrl(BASE_URL);
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        UUID tenantId = UUID.randomUUID();
+        server.expect(requestTo(BASE_URL + "/auth/v1/admin/users/auth-user-ok"))
+                .andExpect(method(HttpMethod.PUT))
+                .andExpect(header("apikey", "service-role-key"))
+                .andExpect(header("Authorization", "Bearer service-role-key"))
+                .andRespond(withNoContent());
+
+        SupabaseAdminService service = new SupabaseAdminService(BASE_URL, "service-role-key");
+        ReflectionTestUtils.setField(service, "restClient", builder.build());
+
+        assertDoesNotThrow(() -> service.syncUserTenantClaims("auth-user-ok", tenantId, "owner"));
+        server.verify();
     }
 
     @Test

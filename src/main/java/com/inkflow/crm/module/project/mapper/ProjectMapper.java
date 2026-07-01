@@ -3,6 +3,7 @@ package com.inkflow.crm.module.project.mapper;
 import com.inkflow.crm.common.mapper.SummaryMapper;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.GalleryPhoto;
+import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Project;
 import com.inkflow.crm.module.project.dto.ProjectDto;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class ProjectMapper {
                 .completedSessions(project.getCompletedSessions())
                 .sketchImage(project.getSketchImage())
                 .createdAt(project.getCreatedAt())
+                .location(toLocationSummary(project.getLocation()))
                 .photos(photos)
                 .sessions(sessions)
                 .build();
@@ -72,5 +74,17 @@ public class ProjectMapper {
                 .sorted(Comparator.comparing(Appointment::getStartTime))
                 .map(this::toSessionDto)
                 .toList();
+    }
+
+    private ProjectDto.LocationSummaryDto toLocationSummary(Location location) {
+        if (location == null) {
+            return null;
+        }
+
+        return ProjectDto.LocationSummaryDto.builder()
+                .id(location.getId())
+                .name(location.getName())
+                .color(location.getColor())
+                .build();
     }
 }

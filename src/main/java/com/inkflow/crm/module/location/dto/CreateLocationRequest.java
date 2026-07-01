@@ -22,6 +22,9 @@ public class CreateLocationRequest {
     @Size(max = 255, message = "Address must not exceed 255 characters")
     private String address;
 
+    @Size(max = 100, message = "City must not exceed 100 characters")
+    private String city;
+
     @Size(max = 500, message = "Phone must not exceed 500 characters")
     private String phone;
 
@@ -34,6 +37,7 @@ public class CreateLocationRequest {
     private String photoUrl;
     private String navigationInstructions;
     private String telegramContact;
+    private String instagram;
 
     @Pattern(regexp = "^([01]?[0-9]|2[0-3]):[0-5][0-9]$", message = "Working hours start must be in HH:mm format")
     private String workingHoursStart;

@@ -48,7 +48,8 @@ public interface LocationMapper {
 
     @AfterMapping
     default void applyCreateWorkingHours(CreateLocationRequest request, @MappingTarget Location location) {
-        applyWorkingHours(request.getWorkingHoursStart(), request.getWorkingHoursEnd(), location);
+        location.setWorkingHoursStart(resolveWorkingHoursStart(request.getWorkingHoursStart()));
+        location.setWorkingHoursEnd(resolveWorkingHoursEnd(request.getWorkingHoursEnd()));
     }
 
     @AfterMapping
@@ -61,13 +62,16 @@ public interface LocationMapper {
         }
     }
 
-    default void applyWorkingHours(String start, String end, Location location) {
-        if (start != null) {
-            location.setWorkingHoursStart(parseWorkingHours(start));
-        }
-        if (end != null) {
-            location.setWorkingHoursEnd(parseWorkingHours(end));
-        }
+    default LocalTime resolveWorkingHoursStart(String value) {
+        return value != null && !value.isBlank()
+                ? parseWorkingHours(value)
+                : Location.DEFAULT_WORKING_HOURS_START;
+    }
+
+    default LocalTime resolveWorkingHoursEnd(String value) {
+        return value != null && !value.isBlank()
+                ? parseWorkingHours(value)
+                : Location.DEFAULT_WORKING_HOURS_END;
     }
 
     default LocalTime parseWorkingHours(String value) {
@@ -95,6 +99,7 @@ public interface LocationMapper {
                 .id(location.getId())
                 .name(location.getName())
                 .address(location.getAddress())
+                .city(location.getCity())
                 .phone(location.getPhone())
                 .googleMapsLink(location.getGoogleMapsLink())
                 .color(location.getColor())
@@ -102,6 +107,7 @@ public interface LocationMapper {
                 .photoUrl(location.getPhotoUrl())
                 .navigationInstructions(location.getNavigationInstructions())
                 .telegramContact(location.getTelegramContact())
+                .instagram(location.getInstagram())
                 .staff(staffList)
                 .stats(stats)
                 .createdAt(location.getCreatedAt())
@@ -122,6 +128,7 @@ public interface LocationMapper {
                 .navigationInstructions(location.getNavigationInstructions())
                 .telegramContact(location.getTelegramContact())
                 .instagram(location.getInstagram())
+                .city(location.getCity())
                 .workingHoursStart(formatWorkingHours(location.getWorkingHoursStart()))
                 .workingHoursEnd(formatWorkingHours(location.getWorkingHoursEnd()))
                 .staffCount((int) location.getStaff().stream().filter(s -> s.getDeletedAt() == null).count())
