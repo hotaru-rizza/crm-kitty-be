@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.email.service;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@BypassTenantFilter
 @RequiredArgsConstructor
 public class EmailModuleBootstrap {
 

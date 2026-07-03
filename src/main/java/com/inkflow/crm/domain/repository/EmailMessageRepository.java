@@ -12,7 +12,6 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -33,14 +32,13 @@ public interface EmailMessageRepository extends JpaRepository<EmailMessage, UUID
 
     boolean existsByDedupeKey(String dedupeKey);
 
-    @Query("SELECT e FROM EmailMessage e WHERE e.tenantId = :tenantId " +
-            "AND (CAST(:triggerType AS string) IS NULL OR e.triggerType = :triggerType) " +
+    @Query("SELECT e FROM EmailMessage e WHERE " +
+            "(CAST(:triggerType AS string) IS NULL OR e.triggerType = :triggerType) " +
             "AND (CAST(:status AS string) IS NULL OR e.status = :status) " +
             "AND (CAST(:from AS timestamp) IS NULL OR COALESCE(e.sentAt, e.createdAt) >= :from) " +
             "AND (CAST(:to AS timestamp) IS NULL OR COALESCE(e.sentAt, e.createdAt) < :to) " +
             "ORDER BY COALESCE(e.sentAt, e.createdAt) DESC")
     Page<EmailMessage> findFiltered(
-            @Param("tenantId") UUID tenantId,
             @Param("triggerType") TriggerType triggerType,
             @Param("status") EmailMessageStatus status,
             @Param("from") Instant from,
@@ -48,8 +46,8 @@ public interface EmailMessageRepository extends JpaRepository<EmailMessage, UUID
             Pageable pageable
     );
 
-    @Query("SELECT e FROM EmailMessage e WHERE e.tenantId = :tenantId " +
-            "AND (CAST(:triggerType AS string) IS NULL OR e.triggerType = :triggerType) " +
+    @Query("SELECT e FROM EmailMessage e WHERE " +
+            "(CAST(:triggerType AS string) IS NULL OR e.triggerType = :triggerType) " +
             "AND (CAST(:status AS string) IS NULL OR e.status = :status) " +
             "AND (CAST(:from AS timestamp) IS NULL OR COALESCE(e.sentAt, e.createdAt) >= :from) " +
             "AND (CAST(:to AS timestamp) IS NULL OR COALESCE(e.sentAt, e.createdAt) < :to) " +
@@ -58,7 +56,6 @@ public interface EmailMessageRepository extends JpaRepository<EmailMessage, UUID
             "     OR LOWER(e.subject) LIKE :searchPattern) " +
             "ORDER BY COALESCE(e.sentAt, e.createdAt) DESC")
     Page<EmailMessage> findFilteredWithSearch(
-            @Param("tenantId") UUID tenantId,
             @Param("triggerType") TriggerType triggerType,
             @Param("status") EmailMessageStatus status,
             @Param("from") Instant from,
@@ -67,7 +64,7 @@ public interface EmailMessageRepository extends JpaRepository<EmailMessage, UUID
             Pageable pageable
     );
 
-    long countByTenantIdAndStatusAndCreatedAtAfter(UUID tenantId, EmailMessageStatus status, Instant after);
+    long countByStatusAndCreatedAtAfter(EmailMessageStatus status, Instant after);
 
-    List<EmailMessage> findByTenantIdAndEntityIdOrderByCreatedAtDesc(UUID tenantId, UUID entityId);
+    List<EmailMessage> findByEntityIdOrderByCreatedAtDesc(UUID entityId);
 }

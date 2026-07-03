@@ -76,7 +76,7 @@ public class AppointmentService {
     public List<AppointmentDto> getClientHistory(UUID clientId, PageRequest pageRequest) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Page<Appointment> page = appointmentRepository
-                .findByTenantIdAndClientIdAndDeletedAtIsNullOrderByStartTimeDesc(tenantId, clientId, pageRequest.toPageable());
+                .findByClientIdAndDeletedAtIsNullOrderByStartTimeDesc( clientId, pageRequest.toPageable());
         return page.getContent().stream().map(appointmentMapper::toDto).toList();
     }
 
@@ -91,9 +91,7 @@ public class AppointmentService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         List<UUID> artistIds = resolveArtistIds(tenantId, request.getArtistIds());
 
-        Specification<Appointment> spec = Specification
-                .where(AppointmentSpecifications.belongsToTenant(tenantId))
-                .and(AppointmentSpecifications.notDeleted())
+        Specification<Appointment> spec = Specification.where(AppointmentSpecifications.notDeleted())
                 .and(AppointmentSpecifications.startTimeAfter(request.getFrom()))
                 .and(AppointmentSpecifications.startTimeBefore(request.getTo()))
                 .and(AppointmentSpecifications.withArtists(artistIds))
@@ -192,6 +190,7 @@ public class AppointmentService {
         boolean startTimeChanged = request.getStartTime() != null
                 && !request.getStartTime().equals(appointment.getStartTime());
 
+        validateScheduleUpdateIfNeeded(tenantId, appointment, request, previousArtistId, previousStartTime, id);
         applyScheduleUpdate(appointment, request);
         applyPricingUpdate(appointment, request);
         applyStatusUpdate(appointment, request);
@@ -204,8 +203,6 @@ public class AppointmentService {
         } else if (request.getDiscount() != null && appointment.getItems() != null && !appointment.getItems().isEmpty()) {
             appointmentPricingService.recompute(appointment, false);
         }
-
-        revalidateSlotIfNeeded(tenantId, appointment, previousArtistId, previousStartTime, id);
 
         appointment = appointmentRepository.save(appointment);
 
@@ -287,9 +284,7 @@ public class AppointmentService {
         Instant to = filter.to() != null ? Instant.parse(filter.to()) : null;
         List<UUID> artistIds = resolveArtistIds(tenantId, filter.artistIds());
 
-        Specification<Appointment> spec = Specification
-                .where(AppointmentSpecifications.belongsToTenant(tenantId))
-                .and(AppointmentSpecifications.notDeleted())
+        Specification<Appointment> spec = Specification.where(AppointmentSpecifications.notDeleted())
                 .and(AppointmentSpecifications.withLocation(filter.locationId()))
                 .and(AppointmentSpecifications.withArtists(artistIds))
                 .and(AppointmentSpecifications.withService(filter.serviceId()))
@@ -326,7 +321,7 @@ public class AppointmentService {
      */
     private void validateArtistAvailable(UUID tenantId, UUID artistId, Instant startTime) {
         LocalDate date = startTime.atZone(inkflowProperties.defaultZoneId()).toLocalDate();
-        List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate(tenantId, artistId, date);
+        List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate( artistId, date);
         if (!activeLeaves.isEmpty()) {
             throw BusinessRuleException.artistOnLeave();
         }
@@ -388,18 +383,10 @@ public class AppointmentService {
         }
     }
 
-    private void applyScheduleUpdate(Appointment appointment, UpdateAppointmentRequest request) {
-        if (request.getStartTime() == null || request.getEndTime() == null) {
-            return;
-        }
-
-        appointment.setStartTime(request.getStartTime());
-        appointment.setEndTime(request.getEndTime());
-    }
-
-    private void revalidateSlotIfNeeded(
+    private void validateScheduleUpdateIfNeeded(
             UUID tenantId,
             Appointment appointment,
+            UpdateAppointmentRequest request,
             UUID previousArtistId,
             Instant previousStartTime,
             UUID appointmentId) {
@@ -407,14 +394,27 @@ public class AppointmentService {
             return;
         }
 
-        boolean artistChanged = !appointment.getArtist().getId().equals(previousArtistId);
-        boolean timeChanged = !appointment.getStartTime().equals(previousStartTime);
+        Instant newStart = request.getStartTime() != null ? request.getStartTime() : appointment.getStartTime();
+        Instant newEnd = request.getEndTime() != null ? request.getEndTime() : appointment.getEndTime();
+        UUID artistId = appointment.getArtist().getId();
+
+        boolean artistChanged = !artistId.equals(previousArtistId);
+        boolean timeChanged = request.getStartTime() != null && !request.getStartTime().equals(previousStartTime);
         if (!artistChanged && !timeChanged) {
             return;
         }
 
-        validateTimeSlot(appointment.getArtist().getId(), appointment.getStartTime(), appointment.getEndTime(), appointmentId);
-        validateArtistAvailable(tenantId, appointment.getArtist().getId(), appointment.getStartTime());
+        validateTimeSlot(artistId, newStart, newEnd, appointmentId);
+        validateArtistAvailable(tenantId, artistId, newStart);
+    }
+
+    private void applyScheduleUpdate(Appointment appointment, UpdateAppointmentRequest request) {
+        if (request.getStartTime() == null || request.getEndTime() == null) {
+            return;
+        }
+
+        appointment.setStartTime(request.getStartTime());
+        appointment.setEndTime(request.getEndTime());
     }
 
     private void applyPricingUpdate(Appointment appointment, UpdateAppointmentRequest request) {

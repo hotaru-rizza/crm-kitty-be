@@ -51,13 +51,12 @@ public class RefundProcessingService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UUID currentUserId = SecurityUtils.getCurrentUserId();
 
-        Transaction originalTransaction = transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                request.getTransactionId(), tenantId)
+        Transaction originalTransaction = transactionRepository.findByIdAndDeletedAtIsNull(request.getTransactionId())
                 .orElseThrow(() -> ResourceNotFoundException.transaction(request.getTransactionId().toString()));
 
         validateRefundable(originalTransaction, request.getAmount());
 
-        Staff processedBy = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(currentUserId, tenantId)
+        Staff processedBy = staffRepository.findByIdAndDeletedAtIsNull(currentUserId)
                 .orElse(null);
 
         Transaction refundTransaction = buildRefundTransaction(request, originalTransaction, processedBy, tenantId);

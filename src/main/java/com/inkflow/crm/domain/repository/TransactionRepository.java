@@ -19,30 +19,28 @@ import java.util.UUID;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID>, JpaSpecificationExecutor<Transaction> {
 
-    Page<Transaction> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
+    Page<Transaction> findByDeletedAtIsNull(Pageable pageable);
 
-    Optional<Transaction> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+    Optional<Transaction> findByIdAndDeletedAtIsNull(UUID id);
 
-    Page<Transaction> findByTenantIdAndTypeAndDeletedAtIsNull(UUID tenantId, TransactionType type, Pageable pageable);
+    Page<Transaction> findByTypeAndDeletedAtIsNull(TransactionType type, Pageable pageable);
 
-    Page<Transaction> findByTenantIdAndCategoryAndDeletedAtIsNull(UUID tenantId, String category, Pageable pageable);
+    Page<Transaction> findByCategoryAndDeletedAtIsNull(String category, Pageable pageable);
 
-    Page<Transaction> findByTenantIdAndStaffIdAndDeletedAtIsNull(UUID tenantId, UUID staffId, Pageable pageable);
+    Page<Transaction> findByStaffIdAndDeletedAtIsNull(UUID staffId, Pageable pageable);
 
     List<Transaction> findByAppointmentIdAndDeletedAtIsNullOrderByDateDesc(UUID appointmentId);
 
-    long countByTenantIdAndDateBetweenAndDeletedAtIsNull(UUID tenantId, Instant from, Instant to);
+    long countByDateBetweenAndDeletedAtIsNull(Instant from, Instant to);
 
     @Query("""
             SELECT t FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.staff.id = :staffId
+            WHERE t.staff.id = :staffId
               AND t.date >= :from
               AND t.date < :to
               AND t.deletedAt IS NULL
             """)
-    Page<Transaction> findByTenantIdAndStaffIdAndDateRangeAndDeletedAtIsNull(
-            @Param("tenantId") UUID tenantId,
+    Page<Transaction> findByStaffIdAndDateRangeAndDeletedAtIsNull(
             @Param("staffId") UUID staffId,
             @Param("from") Instant from,
             @Param("to") Instant to,
@@ -50,27 +48,23 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     @Query("""
             SELECT t FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.date >= :from
+            WHERE t.date >= :from
               AND t.date < :to
               AND t.deletedAt IS NULL
             """)
-    Page<Transaction> findByTenantIdAndDateRangeAndDeletedAtIsNull(
-            @Param("tenantId") UUID tenantId,
+    Page<Transaction> findByDateRangeAndDeletedAtIsNull(
             @Param("from") Instant from,
             @Param("to") Instant to,
             Pageable pageable);
 
     @Query("""
             SELECT t FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.type = :type
+            WHERE t.type = :type
               AND t.date >= :from
               AND t.date < :to
               AND t.deletedAt IS NULL
             """)
-    Page<Transaction> findByTenantIdAndTypeAndDateRangeAndDeletedAtIsNull(
-            @Param("tenantId") UUID tenantId,
+    Page<Transaction> findByTypeAndDateRangeAndDeletedAtIsNull(
             @Param("type") TransactionType type,
             @Param("from") Instant from,
             @Param("to") Instant to,
@@ -78,29 +72,25 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     @Query("""
             SELECT SUM(t.amount) FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.type = :type
+            WHERE t.type = :type
               AND t.date >= :from
               AND t.date < :to
               AND t.deletedAt IS NULL
             """)
     BigDecimal sumByTypeAndDateRange(
-            @Param("tenantId") UUID tenantId,
             @Param("type") TransactionType type,
             @Param("from") Instant from,
             @Param("to") Instant to);
 
     @Query("""
             SELECT SUM(t.amount) FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.type = :type
+            WHERE t.type = :type
               AND t.date >= :from
               AND t.date < :to
               AND t.staff.id IN :staffIds
               AND t.deletedAt IS NULL
             """)
     BigDecimal sumByTypeAndDateRangeForStaffs(
-            @Param("tenantId") UUID tenantId,
             @Param("type") TransactionType type,
             @Param("from") Instant from,
             @Param("to") Instant to,
@@ -108,29 +98,25 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     @Query("""
             SELECT COUNT(t) FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.type = :type
+            WHERE t.type = :type
               AND t.date >= :from
               AND t.date < :to
               AND t.deletedAt IS NULL
             """)
     long countByTypeAndDateRange(
-            @Param("tenantId") UUID tenantId,
             @Param("type") TransactionType type,
             @Param("from") Instant from,
             @Param("to") Instant to);
 
     @Query("""
             SELECT COUNT(t) FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.type = :type
+            WHERE t.type = :type
               AND t.date >= :from
               AND t.date < :to
               AND t.staff.id IN :staffIds
               AND t.deletedAt IS NULL
             """)
     long countByTypeAndDateRangeForStaffs(
-            @Param("tenantId") UUID tenantId,
             @Param("type") TransactionType type,
             @Param("from") Instant from,
             @Param("to") Instant to,
@@ -138,50 +124,43 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     @Query("""
             SELECT t.category, SUM(t.amount) FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.date >= :from
+            WHERE t.date >= :from
               AND t.date < :to
               AND t.deletedAt IS NULL
             GROUP BY t.category
             """)
     List<Object[]> sumByCategoryAndDateRange(
-            @Param("tenantId") UUID tenantId,
             @Param("from") Instant from,
             @Param("to") Instant to);
 
     @Query("""
             SELECT t.category, SUM(t.amount) FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.date >= :from
+            WHERE t.date >= :from
               AND t.date < :to
               AND t.staff.id IN :staffIds
               AND t.deletedAt IS NULL
             GROUP BY t.category
             """)
     List<Object[]> sumByCategoryAndDateRangeForStaffs(
-            @Param("tenantId") UUID tenantId,
             @Param("from") Instant from,
             @Param("to") Instant to,
             @Param("staffIds") List<UUID> staffIds);
 
     @Query("""
             SELECT t.paymentMethod, SUM(t.amount) FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.type = 'INCOME'
+            WHERE t.type = 'INCOME'
               AND t.date >= :from
               AND t.date < :to
               AND t.deletedAt IS NULL
             GROUP BY t.paymentMethod
             """)
     List<Object[]> sumByPaymentMethodAndDateRange(
-            @Param("tenantId") UUID tenantId,
             @Param("from") Instant from,
             @Param("to") Instant to);
 
     @Query("""
             SELECT t.paymentMethod, SUM(t.amount) FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.type = 'INCOME'
+            WHERE t.type = 'INCOME'
               AND t.date >= :from
               AND t.date < :to
               AND t.staff.id IN :staffIds
@@ -189,7 +168,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             GROUP BY t.paymentMethod
             """)
     List<Object[]> sumByPaymentMethodAndDateRangeForStaffs(
-            @Param("tenantId") UUID tenantId,
             @Param("from") Instant from,
             @Param("to") Instant to,
             @Param("staffIds") List<UUID> staffIds);
@@ -198,8 +176,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             SELECT t.staff.id, t.staff.firstName, t.staff.lastName,
                    SUM(t.amount), COUNT(t), t.staff.calendarColor
             FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.type = 'INCOME'
+            WHERE t.type = 'INCOME'
               AND t.category = 'service'
               AND t.date >= :from
               AND t.date < :to
@@ -208,7 +185,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName, t.staff.calendarColor
             """)
     List<Object[]> sumByArtistAndDateRange(
-            @Param("tenantId") UUID tenantId,
             @Param("from") Instant from,
             @Param("to") Instant to);
 
@@ -216,8 +192,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             SELECT t.staff.id, t.staff.firstName, t.staff.lastName,
                    SUM(t.amount), COUNT(t), t.staff.calendarColor
             FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.type = 'INCOME'
+            WHERE t.type = 'INCOME'
               AND t.category = 'service'
               AND t.date >= :from
               AND t.date < :to
@@ -227,7 +202,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName, t.staff.calendarColor
             """)
     List<Object[]> sumByArtistAndDateRangeForStaffs(
-            @Param("tenantId") UUID tenantId,
             @Param("from") Instant from,
             @Param("to") Instant to,
             @Param("staffIds") List<UUID> staffIds);
@@ -268,15 +242,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     @Query("""
             SELECT SUM(t.amount) FROM Transaction t
-            WHERE t.tenantId = :tenantId
-              AND t.location.id = :locationId
+            WHERE t.location.id = :locationId
               AND t.type = 'INCOME'
               AND t.date >= :from
               AND t.date < :to
               AND t.deletedAt IS NULL
             """)
     BigDecimal sumRevenueByLocationAndDateRange(
-            @Param("tenantId") UUID tenantId,
             @Param("locationId") UUID locationId,
             @Param("from") Instant from,
             @Param("to") Instant to);

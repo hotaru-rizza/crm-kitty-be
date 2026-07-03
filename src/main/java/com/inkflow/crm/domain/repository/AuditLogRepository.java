@@ -1,8 +1,6 @@
 package com.inkflow.crm.domain.repository;
 
 import com.inkflow.crm.domain.entity.AuditLogEntry;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -21,8 +19,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLogEntry, UUID>,
     @Query("DELETE FROM AuditLogEntry e WHERE e.createdAt < :cutoff")
     int deleteByCreatedAtBefore(@Param("cutoff") Instant cutoff);
 
-    boolean existsByTenantIdAndActorIdAndActionAndDetails(
-            UUID tenantId,
+    boolean existsByActorIdAndActionAndDetails(
             UUID actorId,
             String action,
             String details

@@ -25,8 +25,7 @@ public class AuthLoginAuditService {
         }
 
         String sessionDetails = SESSION_DETAILS_PREFIX + principal.getSessionId();
-        if (auditLogRepository.existsByTenantIdAndActorIdAndActionAndDetails(
-                principal.getTenantId(),
+        if (auditLogRepository.existsByActorIdAndActionAndDetails(
                 staff.getId(),
                 AuditAction.LOGIN.getValue(),
                 sessionDetails

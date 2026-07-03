@@ -87,7 +87,7 @@ class ClientBalanceServiceTest {
                 .finalPrice(BigDecimal.valueOf(500))
                 .build();
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
         when(clientRepository.save(client)).thenAnswer(invocation -> invocation.getArgument(0));
         when(appointmentRepository.save(appointment)).thenAnswer(invocation -> invocation.getArgument(0));
@@ -113,7 +113,7 @@ class ClientBalanceServiceTest {
                 .balanceChargedAt(java.time.Instant.now())
                 .build();
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
 
         clientBalanceService.chargeAppointmentOnCompletion(appointmentId, tenantId);
@@ -136,7 +136,7 @@ class ClientBalanceServiceTest {
                 .balanceChargedAt(java.time.Instant.now())
                 .build();
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
         when(clientRepository.save(client)).thenAnswer(invocation -> invocation.getArgument(0));
         when(appointmentRepository.save(appointment)).thenAnswer(invocation -> invocation.getArgument(0));

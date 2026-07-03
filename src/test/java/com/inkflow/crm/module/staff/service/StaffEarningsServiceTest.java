@@ -87,7 +87,7 @@ class StaffEarningsServiceTest {
         Instant to = Instant.parse("2026-07-01T00:00:00Z");
 
         when(staffLookup.requireStaff(STAFF_ID)).thenReturn(staff);
-        when(appointmentRepository.findByTenantIdAndArtistIdAndDateRange(TENANT_ID, STAFF_ID, from, to))
+        when(appointmentRepository.findByArtistIdAndDateRange(STAFF_ID, from, to))
                 .thenReturn(List.of(completed));
 
         var result = staffEarningsService.getEarnings(STAFF_ID, from, to);

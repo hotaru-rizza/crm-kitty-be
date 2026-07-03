@@ -12,14 +12,14 @@ import java.util.UUID;
 
 @Repository
 public interface LocationRepository extends JpaRepository<Location, UUID> {
-    Page<Location> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
-    List<Location> findByTenantIdAndDeletedAtIsNull(UUID tenantId);
-    Optional<Location> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
-    List<Location> findByTenantIdAndIsActiveAndDeletedAtIsNull(UUID tenantId, Boolean isActive);
+    Page<Location> findByDeletedAtIsNull(Pageable pageable);
+    List<Location> findByDeletedAtIsNull();
+    Optional<Location> findByIdAndDeletedAtIsNull(UUID id);
+    List<Location> findByIsActiveAndDeletedAtIsNull(Boolean isActive);
 
-    long countByTenantIdAndDeletedAtIsNull(UUID tenantId);
+    long countByDeletedAtIsNull();
 
-    long countByTenantIdAndIsActiveAndDeletedAtIsNull(UUID tenantId, Boolean isActive);
+    long countByIsActiveAndDeletedAtIsNull(Boolean isActive);
 
-    Optional<Location> findFirstByTenantIdAndIsActiveTrueAndDeletedAtIsNull(UUID tenantId);
+    Optional<Location> findFirstByIsActiveTrueAndDeletedAtIsNull();
 }

@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.onboarding.service;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Service;
@@ -34,6 +35,7 @@ import java.util.UUID;
 @Slf4j
 @org.springframework.stereotype.Service
 @RequiredArgsConstructor
+@BypassTenantFilter
 public class OnboardingService {
 
     private static final String ONBOARDING_LOCK_QUERY =

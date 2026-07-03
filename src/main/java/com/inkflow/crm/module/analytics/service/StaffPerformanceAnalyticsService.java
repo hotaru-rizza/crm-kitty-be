@@ -38,7 +38,7 @@ public class StaffPerformanceAnalyticsService {
     @Transactional(readOnly = true)
     public List<StaffPerformanceDto> getStaffPerformance(Instant from, Instant to) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<Appointment> appointments = appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to);
+        List<Appointment> appointments = appointmentRepository.findByDateRange( from, to);
 
         Map<UUID, List<Appointment>> appointmentsByArtist = groupAppointmentsByArtist(appointments);
         Map<UUID, List<StaffSchedule>> schedulesByArtist = loadSchedulesByArtist(appointmentsByArtist.keySet());

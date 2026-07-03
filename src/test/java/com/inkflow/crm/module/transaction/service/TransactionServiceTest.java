@@ -16,6 +16,7 @@ import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TransactionRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.finance.service.CategoryConfigService;
 import com.inkflow.crm.module.transaction.dto.CreateTransactionRequest;
 import com.inkflow.crm.module.transaction.dto.FinanceStatsDto;
@@ -76,6 +77,9 @@ class TransactionServiceTest {
     @Mock
     private CategoryConfigService categoryConfigService;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
     @InjectMocks
     private TransactionService transactionService;
 
@@ -83,6 +87,13 @@ class TransactionServiceTest {
     void stubCategoryValidation() {
         lenient().when(categoryConfigService.requireActiveCategoryForTransaction(any(), any(), any()))
                 .thenReturn(TransactionCategoryConfig.builder().categoryKey("service").plType("INCOME").build());
+        lenient().when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
+            Transaction t = inv.getArgument(0);
+            if (t.getId() == null) {
+                t.setId(UUID.randomUUID());
+            }
+            return t;
+        });
     }
 
     @AfterEach
@@ -103,6 +114,7 @@ class TransactionServiceTest {
                 .type(TransactionType.INCOME)
                 .category(TransactionCategory.SERVICE.getValue())
                 .amount(BigDecimal.valueOf(1500))
+                .paymentMethod(PaymentMethod.CASH)
                 .location(location)
                 .build();
 
@@ -116,7 +128,7 @@ class TransactionServiceTest {
                 .description("Session payment")
                 .build();
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.of(location));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(saved);
         when(transactionMapper.toDto(saved)).thenReturn(TransactionDto.builder().id(saved.getId()).amount(saved.getAmount()).build());
@@ -133,7 +145,7 @@ class TransactionServiceTest {
         UUID locationId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.empty());
 
         CreateTransactionRequest request = CreateTransactionRequest.builder()
@@ -162,7 +174,7 @@ class TransactionServiceTest {
                 .paymentMethod(PaymentMethod.CASH)
                 .build();
 
-        when(transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(transactionId, tenantId))
+        when(transactionRepository.findByIdAndDeletedAtIsNull(transactionId))
                 .thenReturn(Optional.of(transaction));
         when(transactionRepository.save(transaction)).thenReturn(transaction);
 
@@ -189,15 +201,15 @@ class TransactionServiceTest {
         Instant from = Instant.parse("2025-01-01T00:00:00Z");
         Instant to = Instant.parse("2025-01-31T23:59:59Z");
 
-        when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.INCOME, from, to))
                 .thenReturn(BigDecimal.valueOf(5000));
-        when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to))
                 .thenReturn(BigDecimal.valueOf(1200));
-        when(transactionRepository.sumByCategoryAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByPaymentMethodAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByArtistAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
+        when(transactionRepository.sumByCategoryAndDateRange(from, to)).thenReturn(Collections.emptyList());
+        when(transactionRepository.sumByPaymentMethodAndDateRange(from, to)).thenReturn(Collections.emptyList());
+        when(transactionRepository.sumByArtistAndDateRange(from, to)).thenReturn(Collections.emptyList());
         when(transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.countByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to)).thenReturn(5L);
+        when(transactionRepository.countByTypeAndDateRange(TransactionType.INCOME, from, to)).thenReturn(5L);
 
         FinanceStatsDto stats = transactionService.getFinanceStats(from, to, null);
 
@@ -264,7 +276,7 @@ class TransactionServiceTest {
         UUID transactionId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(transactionId, tenantId))
+        when(transactionRepository.findByIdAndDeletedAtIsNull(transactionId))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> transactionService.getTransactionById(transactionId));
@@ -284,7 +296,7 @@ class TransactionServiceTest {
                 .build();
         TransactionDto dto = TransactionDto.builder().id(transactionId).amount(BigDecimal.valueOf(250)).build();
 
-        when(transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(transactionId, tenantId))
+        when(transactionRepository.findByIdAndDeletedAtIsNull(transactionId))
                 .thenReturn(Optional.of(transaction));
         when(transactionMapper.toDto(transaction)).thenReturn(dto);
 
@@ -388,15 +400,15 @@ class TransactionServiceTest {
         Instant from = Instant.parse("2025-01-01T00:00:00Z");
         Instant to = Instant.parse("2025-01-31T23:59:59Z");
 
-        when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.INCOME, from, to))
                 .thenReturn(null);
-        when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to))
                 .thenReturn(null);
-        when(transactionRepository.sumByCategoryAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByPaymentMethodAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByArtistAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
+        when(transactionRepository.sumByCategoryAndDateRange(from, to)).thenReturn(Collections.emptyList());
+        when(transactionRepository.sumByPaymentMethodAndDateRange(from, to)).thenReturn(Collections.emptyList());
+        when(transactionRepository.sumByArtistAndDateRange(from, to)).thenReturn(Collections.emptyList());
         when(transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.countByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to)).thenReturn(0L);
+        when(transactionRepository.countByTypeAndDateRange(TransactionType.INCOME, from, to)).thenReturn(0L);
 
         FinanceStatsDto stats = transactionService.getFinanceStats(from, to, null);
 
@@ -415,21 +427,21 @@ class TransactionServiceTest {
         Instant to = Instant.parse("2025-01-31T23:59:59Z");
         UUID artistId = UUID.randomUUID();
 
-        when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.INCOME, from, to))
                 .thenReturn(BigDecimal.valueOf(3000));
-        when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to))
                 .thenReturn(BigDecimal.valueOf(500));
-        when(transactionRepository.sumByCategoryAndDateRange(tenantId, from, to))
+        when(transactionRepository.sumByCategoryAndDateRange(from, to))
                 .thenReturn(List.<Object[]>of(new Object[]{"service", BigDecimal.valueOf(2800)}));
-        when(transactionRepository.sumByPaymentMethodAndDateRange(tenantId, from, to))
+        when(transactionRepository.sumByPaymentMethodAndDateRange(from, to))
                 .thenReturn(List.<Object[]>of(new Object[]{PaymentMethod.CARD, BigDecimal.valueOf(2000)}));
-        when(transactionRepository.sumByArtistAndDateRange(tenantId, from, to))
+        when(transactionRepository.sumByArtistAndDateRange(from, to))
                 .thenReturn(List.<Object[]>of(new Object[]{
                         artistId, "Jane", "Doe", BigDecimal.valueOf(2800), 4L, "#aabbcc"
                 }));
         when(transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to))
                 .thenReturn(List.<Object[]>of(new Object[]{"2025-01-10", BigDecimal.valueOf(1500)}));
-        when(transactionRepository.countByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to)).thenReturn(4L);
+        when(transactionRepository.countByTypeAndDateRange(TransactionType.INCOME, from, to)).thenReturn(4L);
 
         FinanceStatsDto stats = transactionService.getFinanceStats(from, to, null);
 
@@ -456,21 +468,21 @@ class TransactionServiceTest {
         Instant to = Instant.parse("2025-01-31T23:59:59Z");
         List<UUID> staffFilter = List.of(staffId);
 
-        when(transactionRepository.sumByTypeAndDateRangeForStaffs(tenantId, TransactionType.INCOME, from, to, staffFilter))
+        when(transactionRepository.sumByTypeAndDateRangeForStaffs(TransactionType.INCOME, from, to, staffFilter))
                 .thenReturn(BigDecimal.valueOf(1000));
-        when(transactionRepository.sumByTypeAndDateRangeForStaffs(tenantId, TransactionType.EXPENSE, from, to, staffFilter))
+        when(transactionRepository.sumByTypeAndDateRangeForStaffs(TransactionType.EXPENSE, from, to, staffFilter))
                 .thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.sumByCategoryAndDateRangeForStaffs(tenantId, from, to, staffFilter))
+        when(transactionRepository.sumByCategoryAndDateRangeForStaffs(from, to, staffFilter))
                 .thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByPaymentMethodAndDateRangeForStaffs(tenantId, from, to, staffFilter))
+        when(transactionRepository.sumByPaymentMethodAndDateRangeForStaffs(from, to, staffFilter))
                 .thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByArtistAndDateRangeForStaffs(tenantId, from, to, staffFilter))
+        when(transactionRepository.sumByArtistAndDateRangeForStaffs(from, to, staffFilter))
                 .thenReturn(List.<Object[]>of(new Object[]{
                         staffId, "Alex", "Smith", BigDecimal.valueOf(1000), 2L, "#112233"
                 }));
         when(transactionRepository.sumIncomeByDayAndDateRangeForStaffs(tenantId, staffFilter, from, to))
                 .thenReturn(List.<Object[]>of(new Object[]{"2025-01-05", BigDecimal.valueOf(600)}));
-        when(transactionRepository.countByTypeAndDateRangeForStaffs(tenantId, TransactionType.INCOME, from, to, staffFilter)).thenReturn(2L);
+        when(transactionRepository.countByTypeAndDateRangeForStaffs(TransactionType.INCOME, from, to, staffFilter)).thenReturn(2L);
 
         FinanceStatsDto stats = transactionService.getFinanceStats(from, to, staffFilter);
 
@@ -478,8 +490,8 @@ class TransactionServiceTest {
         assertEquals(new BigDecimal("500.00"), stats.getAvgCheck());
         assertEquals(staffId.toString(), stats.getByArtist().getFirst().getArtistId());
         assertEquals(BigDecimal.valueOf(600), stats.getByDate().get("2025-01-05"));
-        verify(transactionRepository).sumByArtistAndDateRangeForStaffs(tenantId, from, to, staffFilter);
-        verify(transactionRepository, never()).sumByArtistAndDateRange(tenantId, from, to);
+        verify(transactionRepository).sumByArtistAndDateRangeForStaffs(from, to, staffFilter);
+        verify(transactionRepository, never()).sumByArtistAndDateRange(from, to);
         verify(transactionRepository).sumIncomeByDayAndDateRangeForStaffs(tenantId, staffFilter, from, to);
         verify(transactionRepository, never()).sumIncomeByDayAndDateRange(tenantId, from, to);
     }
@@ -490,7 +502,7 @@ class TransactionServiceTest {
         UUID transactionId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(transactionId, tenantId))
+        when(transactionRepository.findByIdAndDeletedAtIsNull(transactionId))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> transactionService.deleteTransaction(transactionId));
@@ -510,11 +522,17 @@ class TransactionServiceTest {
                 .appointmentId(appointmentId)
                 .build();
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.of(location));
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
-        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction t = invocation.getArgument(0);
+            if (t.getId() == null) {
+                t.setId(UUID.randomUUID());
+            }
+            return t;
+        });
         when(transactionMapper.toDto(any(Transaction.class))).thenReturn(TransactionDto.builder().build());
 
         transactionService.createTransaction(request);
@@ -531,9 +549,9 @@ class TransactionServiceTest {
         UUID appointmentId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.of(Location.builder().id(locationId).tenantId(tenantId).build()));
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.empty());
 
         CreateTransactionRequest request = baseCreateRequest(locationId)
@@ -557,11 +575,17 @@ class TransactionServiceTest {
                 .staffId(staffId)
                 .build();
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.of(location));
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId))
                 .thenReturn(Optional.of(staff));
-        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction t = invocation.getArgument(0);
+            if (t.getId() == null) {
+                t.setId(UUID.randomUUID());
+            }
+            return t;
+        });
         when(transactionMapper.toDto(any(Transaction.class))).thenReturn(TransactionDto.builder().build());
 
         transactionService.createTransaction(request);
@@ -578,9 +602,9 @@ class TransactionServiceTest {
         UUID staffId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.of(Location.builder().id(locationId).tenantId(tenantId).build()));
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId))
                 .thenReturn(Optional.empty());
 
         CreateTransactionRequest request = baseCreateRequest(locationId)
@@ -600,14 +624,20 @@ class TransactionServiceTest {
         Location location = Location.builder().id(locationId).tenantId(tenantId).build();
         CreateTransactionRequest request = baseCreateRequest(locationId).build();
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.of(location));
-        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction t = invocation.getArgument(0);
+            if (t.getId() == null) {
+                t.setId(UUID.randomUUID());
+            }
+            return t;
+        });
         when(transactionMapper.toDto(any(Transaction.class))).thenReturn(TransactionDto.builder().build());
 
         transactionService.createTransaction(request);
 
-        verify(locationRepository).findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId);
+        verify(locationRepository).findByIdAndDeletedAtIsNull(locationId);
         ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
         verify(transactionRepository).save(captor.capture());
         assertEquals(location, captor.getValue().getLocation());

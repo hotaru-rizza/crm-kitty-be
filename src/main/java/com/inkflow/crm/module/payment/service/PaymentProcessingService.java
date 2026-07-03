@@ -267,7 +267,7 @@ public class PaymentProcessingService {
     }
 
     private Appointment requireAppointment(UUID appointmentId, UUID tenantId) {
-        return appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId)
+        return appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId)
                 .orElseThrow(() -> ResourceNotFoundException.appointment(appointmentId.toString()));
     }
 
@@ -284,7 +284,7 @@ public class PaymentProcessingService {
     }
 
     private Staff findProcessedByStaff(UUID currentUserId, UUID tenantId) {
-        return staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(currentUserId, tenantId)
+        return staffRepository.findByIdAndDeletedAtIsNull(currentUserId)
                 .orElse(null);
     }
 
@@ -434,7 +434,7 @@ public class PaymentProcessingService {
         if (appointment.getClient() == null) {
             throw new BusinessRuleException("Appointment has no client for balance payment");
         }
-        return clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointment.getClient().getId(), tenantId)
+        return clientRepository.findByIdAndDeletedAtIsNull(appointment.getClient().getId())
                 .orElseThrow(() -> ResourceNotFoundException.client(appointment.getClient().getId().toString()));
     }
 
@@ -450,9 +450,7 @@ public class PaymentProcessingService {
             return;
         }
 
-        Client client = clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                        appointment.getClient().getId(),
-                        SecurityUtils.getCurrentTenantId())
+        Client client = clientRepository.findByIdAndDeletedAtIsNull(appointment.getClient().getId())
                 .orElse(appointment.getClient());
 
         if (paymentMethod == PaymentMethod.BALANCE) {

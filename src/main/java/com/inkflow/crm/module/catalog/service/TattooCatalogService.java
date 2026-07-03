@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.catalog.service;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.module.catalog.dto.CatalogRetagResultDto;
@@ -25,6 +26,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@BypassTenantFilter
 @RequiredArgsConstructor
 @Slf4j
 public class TattooCatalogService {

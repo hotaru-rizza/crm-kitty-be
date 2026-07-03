@@ -60,7 +60,7 @@ class EmailMessageQueryServiceTest {
                 .build();
 
         when(emailMessageRepository.findFilteredWithSearch(
-                tenantId, TriggerType.BEFORE_BOOKING, EmailMessageStatus.SENT, from, to, "%client%", pageable))
+                TriggerType.BEFORE_BOOKING, EmailMessageStatus.SENT, from, to, "%client%", pageable))
                 .thenReturn(new PageImpl<>(List.of(message)));
         when(emailMessageMapper.toDto(message)).thenReturn(dto);
 

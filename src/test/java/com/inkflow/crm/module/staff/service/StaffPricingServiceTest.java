@@ -5,13 +5,17 @@ import com.inkflow.crm.domain.entity.ArtistServicePricing;
 import com.inkflow.crm.domain.entity.Service;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.repository.ArtistServicePricingRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.service.service.ServiceLookup;
+import com.inkflow.crm.support.AuditMocks;
 import com.inkflow.crm.module.staff.dto.StaffServiceDto;
 import com.inkflow.crm.module.staff.dto.UpdateStaffServicesRequest;
 import com.inkflow.crm.module.staff.mapper.StaffPricingMapper;
 import com.inkflow.crm.security.UserPrincipal;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -53,11 +57,22 @@ class StaffPricingServiceTest {
     @Mock
     private EntityManager entityManager;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @Captor
     private ArgumentCaptor<ArtistServicePricing> pricingCaptor;
 
     @InjectMocks
     private StaffPricingService staffPricingService;
+
+    @BeforeEach
+    void stubAudit() {
+        AuditMocks.stubLabelFormatter(auditLabelFormatter);
+    }
 
     @AfterEach
     void clearSecurityContext() {
@@ -121,7 +136,9 @@ class StaffPricingServiceTest {
         UUID serviceId = UUID.randomUUID();
         authenticate(tenantId);
 
-        ArtistServicePricing pricing = ArtistServicePricing.builder().build();
+        ArtistServicePricing pricing = ArtistServicePricing.builder()
+                .service(Service.builder().id(serviceId).title("Consultation").build())
+                .build();
         when(staffLookup.requireStaff(staffId)).thenReturn(Staff.builder().id(staffId).build());
         when(artistServicePricingRepository.findByStaffIdAndServiceId(staffId, serviceId))
                 .thenReturn(Optional.of(pricing));
@@ -228,6 +245,7 @@ class StaffPricingServiceTest {
         ArtistServicePricing pricing = ArtistServicePricing.builder()
                 .price(BigDecimal.valueOf(100))
                 .duration(60)
+                .service(Service.builder().id(serviceId).title("Consultation").build())
                 .build();
 
         when(staffLookup.requireStaff(staffId)).thenReturn(Staff.builder().id(staffId).build());

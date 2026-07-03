@@ -36,7 +36,7 @@ public class NotificationDispatcher {
         }
 
         List<EmailTemplate> templates = emailTemplateRepository
-                .findByTenantIdAndTriggerTypeAndEnabledTrue(context.tenantId(), triggerType);
+                .findByTriggerTypeAndEnabledTrue(triggerType);
 
         int enqueued = 0;
         for (EmailTemplate template : templates) {

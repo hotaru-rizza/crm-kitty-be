@@ -99,7 +99,7 @@ class AuthServiceTest {
         Tenant tenant = Tenant.builder().id(tenantId).name("Ink Studio").build();
 
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(authUserId)).thenReturn(Optional.empty());
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.of(staff));
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId)).thenReturn(Optional.of(staff));
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
         when(rolePermissionService.getGrantedPermissions(tenantId, UserRole.OWNER)).thenReturn(List.of("clients.view_all"));
 
@@ -211,7 +211,7 @@ class AuthServiceTest {
         authenticate(staffId, tenantId, authUserId, UserRole.OWNER);
 
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(authUserId)).thenReturn(Optional.empty());
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.empty());
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> authService.getCurrentUser());
     }

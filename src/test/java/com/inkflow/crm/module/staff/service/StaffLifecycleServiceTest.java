@@ -9,6 +9,7 @@ import com.inkflow.crm.domain.enums.AppointmentStatus;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.infrastructure.supabase.SupabaseAdminService;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.staff.dto.DeactivateStaffRequest;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
@@ -45,6 +46,9 @@ class StaffLifecycleServiceTest {
 
     @Mock
     private SupabaseAdminService supabaseAdminService;
+
+    @Mock
+    private AuditRecorder auditRecorder;
 
     @InjectMocks
     private StaffLifecycleService staffLifecycleService;

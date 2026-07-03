@@ -124,7 +124,7 @@ public class RequestService {
         }
 
         Client existingByEmail = clientRepository
-                .findByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull(email, tenantId)
+                .findByEmailIgnoreCaseAndDeletedAtIsNull(email)
                 .orElse(null);
         if (existingByEmail != null) {
             if (existingByEmail.isBlacklisted()) {
@@ -146,11 +146,11 @@ public class RequestService {
 
         String normalizedPhone = resolveConversionPhone(request, convertRequest);
         if (normalizedPhone != null
-                && clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull(normalizedPhone, tenantId)) {
+                && clientRepository.existsByPhoneAndDeletedAtIsNull(normalizedPhone)) {
             throw BusinessRuleException.phoneAlreadyExists(normalizedPhone);
         }
 
-        if (clientRepository.existsByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull(email, tenantId)) {
+        if (clientRepository.existsByEmailIgnoreCaseAndDeletedAtIsNull(email)) {
             throw BusinessRuleException.emailAlreadyExists(email);
         }
 
@@ -216,9 +216,7 @@ public class RequestService {
                 ? effectiveFilter.getSource().stream().map(RequestSource::fromValue).toList()
                 : null;
 
-        Specification<Request> spec = Specification
-                .where(RequestSpecifications.belongsToTenant(tenantId))
-                .and(RequestSpecifications.statusIs(requestStatus))
+        Specification<Request> spec = Specification.where(RequestSpecifications.statusIs(requestStatus))
                 .and(RequestSpecifications.sourceIn(requestSources))
                 .and(RequestSpecifications.createdBetween(effectiveFilter.getFrom(), effectiveFilter.getTo()))
                 .and(RequestSpecifications.locationIs(effectiveFilter.getLocationId()))
@@ -236,7 +234,7 @@ public class RequestService {
     }
 
     private Request requireRequest(UUID tenantId, UUID id) {
-        return requestRepository.findByIdAndTenantId(id, tenantId)
+        return requestRepository.findVisibleById(id)
                 .orElseThrow(() -> ResourceNotFoundException.request(id.toString()));
     }
 
@@ -286,7 +284,7 @@ public class RequestService {
             return MatchedClient.empty();
         }
 
-        return clientRepository.findByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull(email, request.getTenantId())
+        return clientRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(email)
                 .map(client -> new MatchedClient(client.getId(), client.getFullName(), client.isBlacklisted()))
                 .orElse(MatchedClient.empty());
     }

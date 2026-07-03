@@ -44,7 +44,7 @@ class StaffLookupTest {
         Staff staff = staffWithTenant(staffId, tenantId);
 
         authenticate(tenantId);
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId))
                 .thenReturn(Optional.of(staff));
 
         Staff result = staffLookup.requireStaff(staffId);
@@ -60,7 +60,7 @@ class StaffLookupTest {
         Staff staff = staffWithTenant(staffId, tenantId);
 
         authenticate(tenantId);
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId))
                 .thenReturn(Optional.empty());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(staffId.toString()))
                 .thenReturn(Optional.of(staff));
@@ -78,7 +78,7 @@ class StaffLookupTest {
         UUID staffId = UUID.randomUUID();
 
         authenticate(tenantId);
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId))
                 .thenReturn(Optional.empty());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(staffId.toString()))
                 .thenReturn(Optional.of(staffWithTenant(staffId, otherTenantId)));
@@ -92,7 +92,7 @@ class StaffLookupTest {
         UUID staffId = UUID.randomUUID();
 
         authenticate(tenantId);
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId))
                 .thenReturn(Optional.empty());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(staffId.toString()))
                 .thenReturn(Optional.empty());

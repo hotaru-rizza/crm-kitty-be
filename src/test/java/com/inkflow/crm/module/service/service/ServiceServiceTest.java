@@ -5,12 +5,16 @@ import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Service;
 import com.inkflow.crm.domain.repository.ArtistServicePricingRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.service.dto.CreateServiceRequest;
+import com.inkflow.crm.support.AuditMocks;
 import com.inkflow.crm.module.service.dto.ServiceDto;
 import com.inkflow.crm.module.service.dto.UpdateServiceRequest;
 import com.inkflow.crm.module.service.mapper.ServiceMapper;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -46,8 +50,19 @@ class ServiceServiceTest {
     @Mock
     private ServiceLookup serviceLookup;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private ServiceService serviceService;
+
+    @BeforeEach
+    void stubAudit() {
+        AuditMocks.stubLabelFormatter(auditLabelFormatter);
+    }
 
     @AfterEach
     void clearSecurityContext() {

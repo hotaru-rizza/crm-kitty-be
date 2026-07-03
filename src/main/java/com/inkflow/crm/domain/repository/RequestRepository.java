@@ -8,6 +8,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -17,16 +19,15 @@ import java.util.UUID;
 @Repository
 public interface RequestRepository extends JpaRepository<Request, UUID>, JpaSpecificationExecutor<Request> {
 
-    Page<Request> findByTenantId(UUID tenantId, Pageable pageable);
+    Page<Request> findByStatus(RequestStatus status, Pageable pageable);
 
-    Optional<Request> findByIdAndTenantId(UUID id, UUID tenantId);
+    Page<Request> findBySource(RequestSource source, Pageable pageable);
 
-    Page<Request> findByTenantIdAndStatus(UUID tenantId, RequestStatus status, Pageable pageable);
-
-    Page<Request> findByTenantIdAndSource(UUID tenantId, RequestSource source, Pageable pageable);
-
-    long countByTenantIdAndStatus(UUID tenantId, RequestStatus status);
+    long countByStatus(RequestStatus status);
 
     @EntityGraph(attributePaths = {"assignedStaff"})
     List<Request> findByConsumerUserIdOrderByCreatedAtDesc(UUID consumerUserId);
+
+    @Query("SELECT r FROM Request r WHERE r.id = :id")
+    Optional<Request> findVisibleById(@Param("id") UUID id);
 }

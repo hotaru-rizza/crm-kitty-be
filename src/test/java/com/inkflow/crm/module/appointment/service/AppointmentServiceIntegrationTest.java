@@ -15,7 +15,9 @@ import com.inkflow.crm.module.appointment.dto.UpdateAppointmentRequest;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
 import com.inkflow.crm.support.IntegrationTestData.TenantBundle;
+import com.inkflow.crm.support.PersistenceTestSupport;
 import com.inkflow.crm.support.SecurityTestSupport;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +57,9 @@ class AppointmentServiceIntegrationTest {
     @Autowired
     private LocationRepository locationRepository;
 
+    @Autowired
+    private EntityManager entityManager;
+
     @AfterEach
     void tearDown() {
         SecurityTestSupport.clearAuthentication();
@@ -80,6 +85,7 @@ class AppointmentServiceIntegrationTest {
                 .finalPrice(BigDecimal.valueOf(1000))
                 .build());
 
+        PersistenceTestSupport.clearPersistenceContext(entityManager);
         SecurityTestSupport.authenticate(tenantA.owner());
 
         assertThrows(

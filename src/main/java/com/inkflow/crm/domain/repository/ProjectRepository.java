@@ -18,23 +18,22 @@ import java.util.UUID;
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpecificationExecutor<Project> {
     @EntityGraph(attributePaths = {"client", "artist"})
-    Page<Project> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
+    Page<Project> findByDeletedAtIsNull(Pageable pageable);
 
     @EntityGraph(attributePaths = {"client", "artist", "appointments"})
-    Optional<Project> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+    Optional<Project> findByIdAndDeletedAtIsNull(UUID id);
 
     List<Project> findByClientIdAndDeletedAtIsNull(UUID clientId);
     List<Project> findByClientIdAndStatusInAndDeletedAtIsNull(UUID clientId, List<ProjectStatus> statuses);
     List<Project> findByArtistIdAndDeletedAtIsNull(UUID artistId);
 
     @EntityGraph(attributePaths = {"client", "artist"})
-    Page<Project> findByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, ProjectStatus status, Pageable pageable);
+    Page<Project> findByStatusAndDeletedAtIsNull(ProjectStatus status, Pageable pageable);
 
     @EntityGraph(attributePaths = {"client", "artist"})
     @Query("""
             SELECT p FROM Project p
-            WHERE p.tenantId = :tenantId
-              AND p.deletedAt IS NULL
+            WHERE p.deletedAt IS NULL
               AND (:status     IS NULL OR p.status       = :status)
               AND (:artistIds  IS NULL OR p.artist.id    IN :artistIds)
               AND (:clientId   IS NULL OR p.client.id    = :clientId)
@@ -43,7 +42,6 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
               AND (:locationId IS NULL OR p.location IS NULL OR p.location.id = :locationId)
             """)
     Page<Project> findWithFilters(
-            @Param("tenantId") UUID tenantId,
             @Param("status") ProjectStatus status,
             @Param("artistIds") List<UUID> artistIds,
             @Param("clientId") UUID clientId,

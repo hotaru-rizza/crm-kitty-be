@@ -25,7 +25,7 @@ public class AppointmentNotificationQueryService {
         entityResolver.requireAppointment(tenantId, appointmentId);
 
         return emailMessageRepository
-                .findByTenantIdAndEntityIdOrderByCreatedAtDesc(tenantId, appointmentId)
+                .findByEntityIdOrderByCreatedAtDesc( appointmentId)
                 .stream()
                 .map(this::toDto)
                 .toList();

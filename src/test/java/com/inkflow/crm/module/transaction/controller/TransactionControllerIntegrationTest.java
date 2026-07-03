@@ -229,8 +229,7 @@ class TransactionControllerIntegrationTest {
                 .andExpect(jsonPath("$.data[0].id").value(transactionId.toString()))
                 .andExpect(jsonPath("$.data[0].amount").value(2500));
 
-        var persisted = transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                transactionId, bundle.tenant().getId()).orElseThrow();
+        var persisted = transactionRepository.findByIdAndDeletedAtIsNull(transactionId).orElseThrow();
         assertEquals(BigDecimal.valueOf(2500), persisted.getAmount());
         assertTrue(persisted.getDeletedAt() == null);
     }

@@ -52,9 +52,7 @@ class AuthLoginAuditServiceTest {
                 .lastName("User")
                 .build();
 
-        when(auditLogRepository.existsByTenantIdAndActorIdAndActionAndDetails(
-                tenantId,
-                staffId,
+        when(auditLogRepository.existsByActorIdAndActionAndDetails(staffId,
                 AuditAction.LOGIN.getValue(),
                 AuthLoginAuditService.SESSION_DETAILS_PREFIX + sessionId
         )).thenReturn(false);
@@ -91,8 +89,7 @@ class AuthLoginAuditServiceTest {
                 .lastName("User")
                 .build();
 
-        when(auditLogRepository.existsByTenantIdAndActorIdAndActionAndDetails(
-                eq(tenantId),
+        when(auditLogRepository.existsByActorIdAndActionAndDetails(
                 eq(staffId),
                 eq(AuditAction.LOGIN.getValue()),
                 eq(AuthLoginAuditService.SESSION_DETAILS_PREFIX + sessionId)

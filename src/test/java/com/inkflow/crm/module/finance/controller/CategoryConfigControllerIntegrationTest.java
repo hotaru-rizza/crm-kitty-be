@@ -86,7 +86,7 @@ class CategoryConfigControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data.length()").value(6))
+                .andExpect(jsonPath("$.data.length()").value(8))
                 .andExpect(jsonPath("$.data[?(@.categoryKey == 'service')].plType").value("INCOME"))
                 .andExpect(jsonPath("$.data[?(@.categoryKey == 'rent')].plType").value("EXPENSE"))
                 .andExpect(jsonPath("$.data[?(@.categoryKey == 'service')].isDefault").value(true));
@@ -147,7 +147,7 @@ class CategoryConfigControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.label").value("Custom Rent"));
 
         var persisted = categoryConfigRepository
-                .findByTenantIdAndCategoryKeyAndDeletedAtIsNull(bundle.tenant().getId(), "custom_rent")
+                .findByCategoryKeyAndDeletedAtIsNull("custom_rent")
                 .orElseThrow();
         assertEquals("Custom Rent", persisted.getLabel());
         assertEquals("#f97316", persisted.getColor());

@@ -67,13 +67,13 @@ public class ProjectService {
     public ProjectDto createProject(CreateProjectRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
-        var client = clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getClientId(), tenantId)
+        var client = clientRepository.findByIdAndDeletedAtIsNull(request.getClientId())
                 .orElseThrow(() -> ResourceNotFoundException.client(request.getClientId().toString()));
-        var artist = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getArtistId(), tenantId)
+        var artist = staffRepository.findByIdAndDeletedAtIsNull(request.getArtistId())
                 .orElseThrow(() -> ResourceNotFoundException.staff(request.getArtistId().toString()));
 
         var location = request.getLocationId() != null
-                ? locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getLocationId(), tenantId).orElse(null)
+                ? locationRepository.findByIdAndDeletedAtIsNull(request.getLocationId()).orElse(null)
                 : null;
 
         Project project = Project.builder()
@@ -206,9 +206,7 @@ public class ProjectService {
                 ? List.of(SecurityUtils.getCurrentUserId())
                 : effectiveFilter.getArtistId();
 
-        Specification<Project> spec = Specification
-                .where(ProjectSpecifications.belongsToTenant(tenantId))
-                .and(ProjectSpecifications.notDeleted())
+        Specification<Project> spec = Specification.where(ProjectSpecifications.notDeleted())
                 .and(ProjectSpecifications.excludeArchivedWhenNoStatusFilter(effectiveFilter.getStatus()))
                 .and(ProjectSpecifications.statusIs(projectStatus))
                 .and(ProjectSpecifications.artistIn(effectiveArtistIds))
@@ -229,7 +227,7 @@ public class ProjectService {
     }
 
     private Project requireProject(UUID tenantId, UUID id) {
-        return projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        return projectRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.project(id.toString()));
     }
 
@@ -249,7 +247,7 @@ public class ProjectService {
         if (request.getArtistId() != null) {
             UUID currentArtistId = project.getArtist() != null ? project.getArtist().getId() : null;
             if (!request.getArtistId().equals(currentArtistId)) {
-                var artist = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getArtistId(), tenantId)
+                var artist = staffRepository.findByIdAndDeletedAtIsNull(request.getArtistId())
                         .orElseThrow(() -> ResourceNotFoundException.staff(request.getArtistId().toString()));
                 project.setArtist(artist);
             }

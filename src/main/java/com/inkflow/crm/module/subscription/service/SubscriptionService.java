@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.subscription.service;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.domain.entity.Subscription;
@@ -44,6 +45,7 @@ public class SubscriptionService {
         return toDto(sub);
     }
 
+    @BypassTenantFilter
     @Transactional
     public boolean isSubscriptionActive(UUID tenantId) {
         return subscriptionRepository.findByTenantId(tenantId)
@@ -109,6 +111,7 @@ public class SubscriptionService {
         log.info("Subscription activated for tenant {}, valid until {}", tenantId, sub.getCurrentPeriodEnd());
     }
 
+    @BypassTenantFilter
     @Transactional
     public Subscription createTrialForTenant(UUID tenantId) {
         return subscriptionRepository.findByTenantId(tenantId).orElseGet(() -> {

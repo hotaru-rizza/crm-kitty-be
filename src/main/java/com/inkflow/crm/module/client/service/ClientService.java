@@ -67,7 +67,6 @@ public class ClientService {
         UUID artistId = resolveRecentClientsArtistScope();
 
         List<UUID> clientIds = appointmentRepository.findRecentClientIds(
-                tenantId,
                 artistId,
                 org.springframework.data.domain.PageRequest.of(0, RECENT_CLIENTS_LIMIT)
         );
@@ -77,7 +76,7 @@ public class ClientService {
         }
 
         Map<UUID, Client> clientsById = clientRepository
-                .findByIdInAndTenantIdAndDeletedAtIsNull(clientIds, tenantId)
+                .findByIdInAndDeletedAtIsNull(clientIds)
                 .stream()
                 .collect(Collectors.toMap(Client::getId, Function.identity(), (left, right) -> left, LinkedHashMap::new));
 
@@ -91,7 +90,7 @@ public class ClientService {
     @Transactional(readOnly = true)
     public ClientDetailDto getClientById(UUID id) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Client client = clientRepository.findByIdWithCollections(id, tenantId)
+        Client client = clientRepository.findByIdWithCollections(id)
                 .orElseThrow(() -> ResourceNotFoundException.client(id.toString()));
 
         List<Project> activeProjects = projectRepository.findByClientIdAndStatusInAndDeletedAtIsNull(
@@ -111,7 +110,7 @@ public class ClientService {
             return null;
         }
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        return clientRepository.findByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull(email.trim(), tenantId)
+        return clientRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(email.trim())
                 .map(clientMapper::toDto)
                 .orElse(null);
     }
@@ -121,13 +120,13 @@ public class ClientService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         String normalizedEmail = normalizeEmail(request.getEmail());
 
-        if (clientRepository.existsByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull(normalizedEmail, tenantId)) {
+        if (clientRepository.existsByEmailIgnoreCaseAndDeletedAtIsNull(normalizedEmail)) {
             throw BusinessRuleException.emailAlreadyExists(normalizedEmail);
         }
 
         String normalizedPhone = normalizeOptionalPhone(request.getPhone());
         if (normalizedPhone != null
-                && clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull(normalizedPhone, tenantId)) {
+                && clientRepository.existsByPhoneAndDeletedAtIsNull(normalizedPhone)) {
             throw BusinessRuleException.phoneAlreadyExists(normalizedPhone);
         }
 
@@ -160,7 +159,7 @@ public class ClientService {
             } else {
                 String normalizedPhone = PhoneUtils.normalize(request.getPhone());
                 if (!normalizedPhone.equals(client.getPhone())
-                        && clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull(normalizedPhone, tenantId)) {
+                        && clientRepository.existsByPhoneAndDeletedAtIsNull(normalizedPhone)) {
                     throw BusinessRuleException.phoneAlreadyExists(normalizedPhone);
                 }
                 client.setPhone(normalizedPhone);
@@ -175,7 +174,7 @@ public class ClientService {
 
             String normalizedEmail = normalizeEmail(request.getEmail());
             if (client.getEmail() == null || !normalizedEmail.equalsIgnoreCase(client.getEmail())) {
-                if (clientRepository.existsByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull(normalizedEmail, tenantId)) {
+                if (clientRepository.existsByEmailIgnoreCaseAndDeletedAtIsNull(normalizedEmail)) {
                     throw BusinessRuleException.emailAlreadyExists(normalizedEmail);
                 }
             }
@@ -234,9 +233,7 @@ public class ClientService {
                 ? Instant.now().minus(LOST_CLIENT_DAYS, ChronoUnit.DAYS)
                 : null;
 
-        Specification<Client> spec = Specification
-                .where(ClientSpecifications.belongsToTenant(tenantId))
-                .and(ClientSpecifications.notDeleted())
+        Specification<Client> spec = Specification.where(ClientSpecifications.notDeleted())
                 .and(ClientSpecifications.searchLike(effectiveFilter.getSearch()))
                 .and(ClientSpecifications.dormantIs(effectiveFilter.getDormant()))
                 .and(ClientSpecifications.blacklisted(effectiveFilter.getBlacklisted()))
@@ -278,7 +275,7 @@ public class ClientService {
     }
 
     Client requireClient(UUID tenantId, UUID id) {
-        return clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        return clientRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.client(id.toString()));
     }
 

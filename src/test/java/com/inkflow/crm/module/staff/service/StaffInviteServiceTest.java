@@ -6,13 +6,17 @@ import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffInviteRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.staff.dto.AcceptInviteRequest;
+import com.inkflow.crm.support.AuditMocks;
 import com.inkflow.crm.module.staff.dto.InviteInfoDto;
 import com.inkflow.crm.module.staff.dto.InviteStaffRequest;
 import com.inkflow.crm.module.staff.dto.StaffDto;
 import com.inkflow.crm.module.staff.mapper.StaffMapper;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -51,8 +55,19 @@ class StaffInviteServiceTest {
     @Mock
     private StaffMapper staffMapper;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private StaffInviteService staffInviteService;
+
+    @BeforeEach
+    void stubAudit() {
+        AuditMocks.stubLabelFormatter(auditLabelFormatter);
+    }
 
     @AfterEach
     void clearSecurityContext() {
@@ -93,7 +108,7 @@ class StaffInviteServiceTest {
                 .calendarColor("#6366f1")
                 .build();
 
-        when(staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull("exists@test.com", tenantId))
+        when(staffRepository.existsByEmailAndDeletedAtIsNull("exists@test.com"))
                 .thenReturn(true);
 
         assertThrows(BusinessRuleException.class, () -> staffInviteService.inviteStaff(request));
@@ -111,8 +126,8 @@ class StaffInviteServiceTest {
                 .locationIds(List.of(UUID.randomUUID()))
                 .build();
 
-        when(staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull("pending@test.com", tenantId)).thenReturn(false);
-        when(staffInviteRepository.existsByEmailAndTenantIdAndAcceptedAtIsNull("pending@test.com", tenantId))
+        when(staffRepository.existsByEmailAndDeletedAtIsNull("pending@test.com")).thenReturn(false);
+        when(staffInviteRepository.existsByEmailAndAcceptedAtIsNull("pending@test.com"))
                 .thenReturn(true);
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
@@ -133,8 +148,8 @@ class StaffInviteServiceTest {
                 .locationIds(java.util.List.of(UUID.randomUUID()))
                 .build();
 
-        when(staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull("new@test.com", tenantId)).thenReturn(false);
-        when(staffInviteRepository.existsByEmailAndTenantIdAndAcceptedAtIsNull("new@test.com", tenantId)).thenReturn(false);
+        when(staffRepository.existsByEmailAndDeletedAtIsNull("new@test.com")).thenReturn(false);
+        when(staffInviteRepository.existsByEmailAndAcceptedAtIsNull("new@test.com")).thenReturn(false);
         when(staffInviteRepository.save(any(StaffInvite.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         String token = staffInviteService.inviteStaff(request);

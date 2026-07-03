@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.email.service;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.entity.EmailMessage;
 import com.inkflow.crm.domain.enums.EmailMessageStatus;
@@ -16,6 +17,7 @@ import java.util.List;
 
 @Slf4j
 @Component
+@BypassTenantFilter
 @RequiredArgsConstructor
 public class OutboxPoller {
 

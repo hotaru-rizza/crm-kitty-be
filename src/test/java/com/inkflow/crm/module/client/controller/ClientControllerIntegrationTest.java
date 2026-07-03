@@ -97,7 +97,7 @@ class ClientControllerIntegrationTest {
                 objectMapper.readTree(createResponse).path("data").path("id").asText());
 
         Client persisted = clientRepository
-                .findByIdAndTenantIdAndDeletedAtIsNull(clientId, bundle.tenant().getId())
+                .findByIdAndDeletedAtIsNull(clientId)
                 .orElseThrow();
         assertEquals("+380501234567", persisted.getPhone());
         assertEquals(false, persisted.isDormant());
@@ -162,7 +162,7 @@ class ClientControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.blacklisted").value(true));
 
         Client persisted = clientRepository
-                .findByIdAndTenantIdAndDeletedAtIsNull(bundle.client().getId(), bundle.tenant().getId())
+                .findByIdAndDeletedAtIsNull(bundle.client().getId())
                 .orElseThrow();
         assertEquals("Updated", persisted.getFirstName());
         assertEquals("Name", persisted.getLastName());

@@ -57,7 +57,7 @@ public class StaffService {
     public StaffDto createStaff(CreateStaffRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
-        if (staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull(request.getEmail(), tenantId)) {
+        if (staffRepository.existsByEmailAndDeletedAtIsNull(request.getEmail())) {
             throw BusinessRuleException.emailAlreadyExists(request.getEmail());
         }
 
@@ -82,7 +82,7 @@ public class StaffService {
         Staff staff = requireStaff(id, tenantId);
 
         if (request.getEmail() != null && !request.getEmail().equals(staff.getEmail())) {
-            if (staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull(request.getEmail(), tenantId)) {
+            if (staffRepository.existsByEmailAndDeletedAtIsNull(request.getEmail())) {
                 throw new BusinessRuleException(
                         ErrorCode.EMAIL_ALREADY_EXISTS,
                         "Email already exists: " + request.getEmail(),
@@ -127,7 +127,7 @@ public class StaffService {
     }
 
     private Staff requireStaff(UUID id, UUID tenantId) {
-        return staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        return staffRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.staff(id.toString()));
     }
 
@@ -145,6 +145,6 @@ public class StaffService {
         UserRole userRole = role != null ? UserRole.fromValue(role) : null;
         AccountStatus accStatus = accountStatus != null ? AccountStatus.fromValue(accountStatus) : null;
 
-        return staffRepository.findWithFilters(tenantId, search, userRole, locationId, accStatus, pageRequest.toPageable());
+        return staffRepository.findWithFilters( search, userRole, locationId, accStatus, pageRequest.toPageable());
     }
 }

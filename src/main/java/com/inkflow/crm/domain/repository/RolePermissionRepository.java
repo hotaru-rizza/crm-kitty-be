@@ -12,11 +12,9 @@ import java.util.UUID;
 @Repository
 public interface RolePermissionRepository extends JpaRepository<RolePermission, UUID> {
 
-    List<RolePermission> findByTenantIdAndRole(UUID tenantId, UserRole role);
+    List<RolePermission> findByRole(UserRole role);
 
-    List<RolePermission> findByTenantId(UUID tenantId);
+    Optional<RolePermission> findByRoleAndPermission(UserRole role, String permission);
 
-    Optional<RolePermission> findByTenantIdAndRoleAndPermission(UUID tenantId, UserRole role, String permission);
-
-    void deleteByTenantIdAndRole(UUID tenantId, UserRole role);
+    void deleteByRole(UserRole role);
 }

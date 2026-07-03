@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.staff.service;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
@@ -45,6 +46,7 @@ public class StaffInviteService {
     private final AuditRecorder auditRecorder;
     private final AuditLabelFormatter auditLabelFormatter;
 
+    @BypassTenantFilter
     @Transactional(readOnly = true)
     public InviteInfoDto getInviteInfo(String token) {
         StaffInvite invite = requireInvite(token);
@@ -63,10 +65,10 @@ public class StaffInviteService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UUID currentUserId = SecurityUtils.getCurrentUserId();
 
-        if (staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull(request.getEmail(), tenantId)) {
+        if (staffRepository.existsByEmailAndDeletedAtIsNull(request.getEmail())) {
             throw BusinessRuleException.emailAlreadyExists(request.getEmail());
         }
-        if (staffInviteRepository.existsByEmailAndTenantIdAndAcceptedAtIsNull(request.getEmail(), tenantId)) {
+        if (staffInviteRepository.existsByEmailAndAcceptedAtIsNull(request.getEmail())) {
             throw new BusinessRuleException("Invite already pending for this email");
         }
 
@@ -96,6 +98,7 @@ public class StaffInviteService {
         return token;
     }
 
+    @BypassTenantFilter
     @Transactional
     public StaffDto acceptInvite(AcceptInviteRequest request) {
         StaffInvite invite = requireInvite(request.getToken());

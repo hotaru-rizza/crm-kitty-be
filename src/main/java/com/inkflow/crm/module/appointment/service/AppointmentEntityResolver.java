@@ -32,17 +32,17 @@ public class AppointmentEntityResolver {
     private final ServiceLookup serviceLookup;
 
     public Appointment requireAppointment(UUID tenantId, UUID id) {
-        return appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        return appointmentRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.appointment(id.toString()));
     }
 
     public Client requireClient(UUID tenantId, UUID id) {
-        return clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        return clientRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.client(id.toString()));
     }
 
     public Staff requireStaff(UUID tenantId, UUID id) {
-        return staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        return staffRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.staff(id.toString()));
     }
 
@@ -59,12 +59,12 @@ public class AppointmentEntityResolver {
     }
 
     public Location requireLocation(UUID tenantId, UUID id) {
-        return locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        return locationRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.location(id.toString()));
     }
 
     public Project requireProject(UUID tenantId, UUID id) {
-        return projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        return projectRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.project(id.toString()));
     }
 }

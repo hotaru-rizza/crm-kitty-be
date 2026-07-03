@@ -12,7 +12,7 @@ public interface StaffInviteRepository extends JpaRepository<StaffInvite, UUID> 
 
     Optional<StaffInvite> findByToken(String token);
 
-    Optional<StaffInvite> findByEmailAndTenantIdAndAcceptedAtIsNull(String email, UUID tenantId);
+    Optional<StaffInvite> findByEmailAndAcceptedAtIsNull(String email);
 
-    boolean existsByEmailAndTenantIdAndAcceptedAtIsNull(String email, UUID tenantId);
+    boolean existsByEmailAndAcceptedAtIsNull(String email);
 }

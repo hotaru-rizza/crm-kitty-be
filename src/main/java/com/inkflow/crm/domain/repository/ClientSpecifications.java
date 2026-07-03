@@ -21,10 +21,6 @@ public final class ClientSpecifications {
 
     private ClientSpecifications() {}
 
-    public static Specification<Client> belongsToTenant(UUID tenantId) {
-        return (root, query, cb) -> cb.equal(root.get("tenantId"), tenantId);
-    }
-
     public static Specification<Client> notDeleted() {
         return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
     }

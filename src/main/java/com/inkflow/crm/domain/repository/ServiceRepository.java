@@ -13,15 +13,15 @@ import java.util.UUID;
 @Repository
 public interface ServiceRepository extends JpaRepository<Service, UUID> {
 
-    Page<Service> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
+    Page<Service> findByDeletedAtIsNull(Pageable pageable);
 
-    List<Service> findByTenantIdAndDeletedAtIsNull(UUID tenantId);
+    List<Service> findByDeletedAtIsNull();
 
-    Optional<Service> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+    Optional<Service> findByIdAndDeletedAtIsNull(UUID id);
 
-    List<Service> findByTenantIdAndIsActiveAndDeletedAtIsNull(UUID tenantId, Boolean isActive);
+    List<Service> findByIsActiveAndDeletedAtIsNull(Boolean isActive);
 
-    List<Service> findByTenantIdAndIsActiveTrueAndDeletedAtIsNull(UUID tenantId);
+    List<Service> findByIsActiveTrueAndDeletedAtIsNull();
 
-    long countByTenantIdAndIsActiveTrueAndDeletedAtIsNull(UUID tenantId);
+    long countByIsActiveTrueAndDeletedAtIsNull();
 }

@@ -59,13 +59,13 @@ class AppointmentEntityResolverTest {
         Appointment appointment = new Appointment();
         appointment.setId(appointmentId);
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
 
         Appointment result = resolver.requireAppointment(tenantId, appointmentId);
 
         assertEquals(appointmentId, result.getId());
-        verify(appointmentRepository).findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId);
+        verify(appointmentRepository).findByIdAndDeletedAtIsNull(appointmentId);
     }
 
     @Test
@@ -73,7 +73,7 @@ class AppointmentEntityResolverTest {
         UUID tenantId = UUID.randomUUID();
         UUID appointmentId = UUID.randomUUID();
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.empty());
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
@@ -87,14 +87,14 @@ class AppointmentEntityResolverTest {
         UUID tenantId = UUID.randomUUID();
         UUID appointmentId = UUID.randomUUID();
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.empty());
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> resolver.requireAppointment(tenantId, appointmentId));
 
         assertEquals(ErrorCode.APPOINTMENT_NOT_FOUND, ex.getErrorCode());
-        verify(appointmentRepository).findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId);
+        verify(appointmentRepository).findByIdAndDeletedAtIsNull(appointmentId);
     }
 
     @Test
@@ -104,13 +104,13 @@ class AppointmentEntityResolverTest {
         Client client = new Client();
         client.setId(clientId);
 
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId))
                 .thenReturn(Optional.of(client));
 
         Client result = resolver.requireClient(tenantId, clientId);
 
         assertEquals(clientId, result.getId());
-        verify(clientRepository).findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId);
+        verify(clientRepository).findByIdAndDeletedAtIsNull(clientId);
     }
 
     @Test
@@ -118,7 +118,7 @@ class AppointmentEntityResolverTest {
         UUID tenantId = UUID.randomUUID();
         UUID clientId = UUID.randomUUID();
 
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId))
                 .thenReturn(Optional.empty());
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
@@ -132,14 +132,14 @@ class AppointmentEntityResolverTest {
         UUID tenantId = UUID.randomUUID();
         UUID clientId = UUID.randomUUID();
 
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId))
                 .thenReturn(Optional.empty());
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> resolver.requireClient(tenantId, clientId));
 
         assertEquals(ErrorCode.CLIENT_NOT_FOUND, ex.getErrorCode());
-        verify(clientRepository).findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId);
+        verify(clientRepository).findByIdAndDeletedAtIsNull(clientId);
     }
 
     @Test
@@ -148,13 +148,13 @@ class AppointmentEntityResolverTest {
         UUID staffId = UUID.randomUUID();
         Staff staff = Staff.builder().id(staffId).tenantId(tenantId).build();
 
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId))
                 .thenReturn(Optional.of(staff));
 
         Staff result = resolver.requireStaff(tenantId, staffId);
 
         assertEquals(staffId, result.getId());
-        verify(staffRepository).findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId);
+        verify(staffRepository).findByIdAndDeletedAtIsNull(staffId);
     }
 
     @Test
@@ -162,7 +162,7 @@ class AppointmentEntityResolverTest {
         UUID tenantId = UUID.randomUUID();
         UUID staffId = UUID.randomUUID();
 
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId))
                 .thenReturn(Optional.empty());
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
@@ -176,14 +176,14 @@ class AppointmentEntityResolverTest {
         UUID tenantId = UUID.randomUUID();
         UUID staffId = UUID.randomUUID();
 
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId))
                 .thenReturn(Optional.empty());
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> resolver.requireStaff(tenantId, staffId));
 
         assertEquals(ErrorCode.STAFF_NOT_FOUND, ex.getErrorCode());
-        verify(staffRepository).findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId);
+        verify(staffRepository).findByIdAndDeletedAtIsNull(staffId);
     }
 
     @Test
@@ -220,13 +220,13 @@ class AppointmentEntityResolverTest {
         UUID locationId = UUID.randomUUID();
         Location location = Location.builder().id(locationId).tenantId(tenantId).name("Studio").build();
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.of(location));
 
         Location result = resolver.requireLocation(tenantId, locationId);
 
         assertEquals(locationId, result.getId());
-        verify(locationRepository).findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId);
+        verify(locationRepository).findByIdAndDeletedAtIsNull(locationId);
     }
 
     @Test
@@ -234,7 +234,7 @@ class AppointmentEntityResolverTest {
         UUID tenantId = UUID.randomUUID();
         UUID locationId = UUID.randomUUID();
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.empty());
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
@@ -248,14 +248,14 @@ class AppointmentEntityResolverTest {
         UUID tenantId = UUID.randomUUID();
         UUID locationId = UUID.randomUUID();
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.empty());
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> resolver.requireLocation(tenantId, locationId));
 
         assertEquals(ErrorCode.LOCATION_NOT_FOUND, ex.getErrorCode());
-        verify(locationRepository).findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId);
+        verify(locationRepository).findByIdAndDeletedAtIsNull(locationId);
     }
 
     @Test
@@ -264,13 +264,13 @@ class AppointmentEntityResolverTest {
         UUID projectId = UUID.randomUUID();
         Project project = Project.builder().id(projectId).tenantId(tenantId).title("Sleeve").build();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId))
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId))
                 .thenReturn(Optional.of(project));
 
         Project result = resolver.requireProject(tenantId, projectId);
 
         assertEquals(projectId, result.getId());
-        verify(projectRepository).findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId);
+        verify(projectRepository).findByIdAndDeletedAtIsNull(projectId);
     }
 
     @Test
@@ -278,7 +278,7 @@ class AppointmentEntityResolverTest {
         UUID tenantId = UUID.randomUUID();
         UUID projectId = UUID.randomUUID();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId))
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId))
                 .thenReturn(Optional.empty());
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
@@ -292,13 +292,13 @@ class AppointmentEntityResolverTest {
         UUID tenantId = UUID.randomUUID();
         UUID projectId = UUID.randomUUID();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId))
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId))
                 .thenReturn(Optional.empty());
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> resolver.requireProject(tenantId, projectId));
 
         assertEquals(ErrorCode.PROJECT_NOT_FOUND, ex.getErrorCode());
-        verify(projectRepository).findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId);
+        verify(projectRepository).findByIdAndDeletedAtIsNull(projectId);
     }
 }

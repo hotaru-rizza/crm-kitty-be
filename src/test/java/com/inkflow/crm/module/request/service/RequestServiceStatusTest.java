@@ -6,6 +6,7 @@ import com.inkflow.crm.domain.enums.RequestSource;
 import com.inkflow.crm.domain.enums.RequestStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.RequestRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
 import com.inkflow.crm.module.request.dto.UpdateRequestStatusRequest;
 import com.inkflow.crm.security.UserPrincipal;
@@ -39,6 +40,9 @@ class RequestServiceStatusTest {
     @Mock
     private ClientMapper clientMapper;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
     @InjectMocks
     private RequestService requestService;
 
@@ -60,7 +64,7 @@ class RequestServiceStatusTest {
                 .status(RequestStatus.NEW)
                 .build();
 
-        when(requestRepository.findByIdAndTenantId(requestId, tenantId))
+        when(requestRepository.findVisibleById(requestId))
                 .thenReturn(Optional.of(request));
         when(requestRepository.save(request)).thenReturn(request);
 
@@ -87,7 +91,7 @@ class RequestServiceStatusTest {
                 .status(RequestStatus.NEW)
                 .build();
 
-        when(requestRepository.findByIdAndTenantId(requestId, tenantId))
+        when(requestRepository.findVisibleById(requestId))
                 .thenReturn(Optional.of(request));
         when(requestRepository.save(request)).thenReturn(request);
 
@@ -112,7 +116,7 @@ class RequestServiceStatusTest {
                 .status(RequestStatus.NEW)
                 .build();
 
-        when(requestRepository.findByIdAndTenantId(requestId, tenantId))
+        when(requestRepository.findVisibleById(requestId))
                 .thenReturn(Optional.of(request));
         when(requestRepository.save(request)).thenReturn(request);
 
@@ -129,7 +133,7 @@ class RequestServiceStatusTest {
         UUID requestId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(requestRepository.findByIdAndTenantId(requestId, tenantId))
+        when(requestRepository.findVisibleById(requestId))
                 .thenReturn(Optional.empty());
 
         UpdateRequestStatusRequest update = UpdateRequestStatusRequest.builder()

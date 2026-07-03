@@ -37,9 +37,8 @@ public class EmailMessageQueryService {
         String normalizedSearch = StringUtils.hasText(search) ? search.trim() : null;
 
         Page<EmailMessage> page = normalizedSearch == null
-                ? emailMessageRepository.findFiltered(tenantId, triggerType, status, from, to, pageable)
+                ? emailMessageRepository.findFiltered( triggerType, status, from, to, pageable)
                 : emailMessageRepository.findFilteredWithSearch(
-                        tenantId,
                         triggerType,
                         status,
                         from,

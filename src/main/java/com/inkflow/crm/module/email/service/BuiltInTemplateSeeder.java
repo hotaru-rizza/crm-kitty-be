@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.email.service;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.inkflow.crm.domain.entity.EmailTemplate;
 import com.inkflow.crm.domain.repository.EmailTemplateRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
@@ -14,6 +15,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
+@BypassTenantFilter
 @RequiredArgsConstructor
 public class BuiltInTemplateSeeder {
 
@@ -34,7 +36,7 @@ public class BuiltInTemplateSeeder {
     }
 
     private void seedBuiltinIfMissing(UUID tenantId, BuiltInTemplateKey builtinKey) {
-        if (emailTemplateRepository.existsByTenantIdAndBuiltinKey(tenantId, builtinKey.name())) {
+        if (emailTemplateRepository.existsByBuiltinKey( builtinKey.name())) {
             return;
         }
 

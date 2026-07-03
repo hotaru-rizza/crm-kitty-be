@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.consumer.service;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.inkflow.crm.common.dto.ApiResponses;
 import com.inkflow.crm.common.exception.ApiException;
 import com.inkflow.crm.common.exception.ErrorCode;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@BypassTenantFilter
 @RequiredArgsConstructor
 @Slf4j
 public class ConsumerBookingService {

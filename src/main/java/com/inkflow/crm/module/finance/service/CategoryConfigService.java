@@ -45,7 +45,7 @@ public class CategoryConfigService {
     public List<CategoryConfigDto> getAll() {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         ensureDefaults(tenantId);
-        return repo.findByTenantIdAndDeletedAtIsNullOrderByIsDefaultDescLabelAsc(tenantId)
+        return repo.findByDeletedAtIsNullOrderByIsDefaultDescLabelAsc()
                 .stream().map(this::toDto).collect(Collectors.toList());
     }
 
@@ -55,7 +55,7 @@ public class CategoryConfigService {
         ensureDefaults(tenantId);
 
         Optional<TransactionCategoryConfig> existing =
-                repo.findByTenantIdAndCategoryKeyAndDeletedAtIsNull(tenantId, categoryKey);
+                repo.findByCategoryKeyAndDeletedAtIsNull( categoryKey);
 
         boolean isNew = existing.isEmpty();
         TransactionCategoryConfig cfg = existing.orElseGet(() ->
@@ -129,7 +129,7 @@ public class CategoryConfigService {
         ensureDefaults(tenantId);
 
         TransactionCategoryConfig config = repo
-                .findByTenantIdAndCategoryKeyAndDeletedAtIsNull(tenantId, categoryKey)
+                .findByCategoryKeyAndDeletedAtIsNull( categoryKey)
                 .orElseThrow(() -> new BusinessRuleException("Invalid transaction category"));
 
         if (!Boolean.TRUE.equals(config.getIsActive())) {
@@ -155,7 +155,7 @@ public class CategoryConfigService {
 
     @Transactional
     public void ensureDefaults(UUID tenantId) {
-        if (repo.existsByTenantIdAndDeletedAtIsNull(tenantId)) return;
+        if (repo.existsByDeletedAtIsNull()) return;
         SYSTEM_DEFAULTS.forEach(d -> repo.save(buildConfig(tenantId, d, true)));
         OPTIONAL_DEFAULTS.forEach(d -> repo.save(buildConfig(tenantId, d, false)));
     }

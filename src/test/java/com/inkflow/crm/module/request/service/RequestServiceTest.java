@@ -5,6 +5,7 @@ import com.inkflow.crm.domain.enums.RequestSource;
 import com.inkflow.crm.domain.enums.RequestStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.RequestRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
 import com.inkflow.crm.module.request.dto.CreateRequestRequest;
 import com.inkflow.crm.security.UserPrincipal;
@@ -36,6 +37,9 @@ class RequestServiceTest {
 
     @Mock
     private ClientMapper clientMapper;
+
+    @Mock
+    private AuditRecorder auditRecorder;
 
     @InjectMocks
     private RequestService requestService;

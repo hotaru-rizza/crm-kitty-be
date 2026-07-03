@@ -238,8 +238,7 @@ class SettingsControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.role").value("artist"))
                 .andExpect(jsonPath("$.data.permissions.length()").value(2));
 
-        var permissions = rolePermissionRepository.findByTenantIdAndRole(
-                bundle.tenant().getId(), UserRole.ARTIST);
+        var permissions = rolePermissionRepository.findByRole(UserRole.ARTIST);
         assertEquals(2, permissions.size());
         assertTrue(permissions.stream().allMatch(p -> p.getGranted()));
     }

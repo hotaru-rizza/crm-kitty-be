@@ -85,8 +85,7 @@ public class StaffDetailService {
         Instant monthStart = now.withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
         Instant monthEnd = now.plusMonths(1).withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
 
-        List<Appointment> monthAppointments = appointmentRepository.findByTenantIdAndArtistIdAndDateRange(
-                tenantId, staff.getId(), monthStart, monthEnd);
+        List<Appointment> monthAppointments = appointmentRepository.findByArtistIdAndDateRange( staff.getId(), monthStart, monthEnd);
 
         List<Appointment> upcoming = appointmentRepository.findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(
                 staff.getId(), List.of(AppointmentStatus.SCHEDULED), Instant.now());

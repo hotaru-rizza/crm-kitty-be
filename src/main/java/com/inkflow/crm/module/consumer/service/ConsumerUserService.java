@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.consumer.service;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.inkflow.crm.common.exception.ApiException;
 import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.module.consumer.dto.ConsumerUserDto;
@@ -22,6 +23,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 @Service
+@BypassTenantFilter
 @RequiredArgsConstructor
 @Slf4j
 public class ConsumerUserService {

@@ -3,17 +3,17 @@ package com.inkflow.crm.module.email.service;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.common.scheduler.SchedulerRunService;
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.EmailTemplate;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
-import com.inkflow.crm.domain.repository.AppointmentRepository;
-import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.EmailTemplateRepository;
 import com.inkflow.crm.module.email.dto.EmailTenantContext;
 import com.inkflow.crm.module.email.dto.NotificationDispatchContext;
 import com.inkflow.crm.module.email.enums.TriggerType;
+import com.inkflow.crm.security.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,17 +24,18 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 @Slf4j
 @Component
+@BypassTenantFilter
 @RequiredArgsConstructor
 public class TriggerScheduler {
 
     private static final String JOB_KEY = "TRIGGER_SCHEDULER";
 
-    private final AppointmentRepository appointmentRepository;
-    private final ClientRepository clientRepository;
     private final EmailTemplateRepository emailTemplateRepository;
+    private final ScheduledTriggerQueryService scheduledTriggerQueryService;
     private final EmailTenantContextLoader tenantContextLoader;
     private final TriggerVariableBuilder variableBuilder;
     private final NotificationDispatcher notificationDispatcher;
@@ -71,8 +72,8 @@ public class TriggerScheduler {
             Instant from = lastRun.plus(hoursBefore, ChronoUnit.HOURS);
             Instant to = now.plus(hoursBefore, ChronoUnit.HOURS);
 
-            for (Appointment appointment : appointmentRepository.findByTenantIdAndDateRange(
-                    template.getTenantId(), from, to)) {
+            for (Appointment appointment : withTenant(template.getTenantId(),
+                    () -> scheduledTriggerQueryService.findAppointmentsByDateRange(from, to))) {
                 if (isEligibleForReminder(appointment)) {
                     enqueueSafely(appointment, TriggerType.BEFORE_BOOKING, offsetMinutes);
                 }
@@ -87,8 +88,8 @@ public class TriggerScheduler {
             Instant from = lastRun.minus(hoursAfter, ChronoUnit.HOURS);
             Instant to = now.minus(hoursAfter, ChronoUnit.HOURS);
 
-            for (Appointment appointment : appointmentRepository.findByTenantIdAndDateRange(
-                    template.getTenantId(), from, to)) {
+            for (Appointment appointment : withTenant(template.getTenantId(),
+                    () -> scheduledTriggerQueryService.findAppointmentsByDateRange(from, to))) {
                 if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
                     enqueueSafely(appointment, TriggerType.AFTER_BOOKING, offsetMinutes);
                 }
@@ -100,8 +101,8 @@ public class TriggerScheduler {
         LocalDate today = now.atZone(properties.defaultZoneId()).toLocalDate();
 
         for (EmailTemplate template : findEnabledScheduled(TriggerType.CLIENT_BIRTHDAY)) {
-            List<Client> clients = clientRepository.findByTenantIdAndBirthDateAndDeletedAtIsNull(
-                    template.getTenantId(), today);
+            List<Client> clients = withTenant(template.getTenantId(),
+                    () -> scheduledTriggerQueryService.findClientsByBirthDate(today));
 
             for (Client client : clients) {
                 if (client.getEmail() == null || client.getEmail().isBlank()) {
@@ -125,8 +126,8 @@ public class TriggerScheduler {
             int offsetMinutes = requireOffset(template);
             Instant cutoff = now.minus(offsetMinutes, ChronoUnit.MINUTES);
 
-            List<Client> clients = clientRepository.findInactiveClients(
-                    template.getTenantId(), cutoff);
+            List<Client> clients = withTenant(template.getTenantId(),
+                    () -> scheduledTriggerQueryService.findInactiveClients(cutoff));
 
             for (Client client : clients) {
                 if (client.getEmail() == null || client.getEmail().isBlank()) {
@@ -175,5 +176,14 @@ public class TriggerScheduler {
 
     private boolean isEligibleForReminder(Appointment appointment) {
         return appointment.getStatus() == AppointmentStatus.SCHEDULED;
+    }
+
+    private <T> T withTenant(UUID tenantId, Supplier<T> action) {
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            return action.get();
+        } finally {
+            TenantContext.clear();
+        }
     }
 }

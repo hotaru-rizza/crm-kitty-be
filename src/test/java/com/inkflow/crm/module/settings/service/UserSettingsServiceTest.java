@@ -3,11 +3,15 @@ package com.inkflow.crm.module.settings.service;
 import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.settings.dto.UpdateUserSettingsRequest;
+import com.inkflow.crm.support.AuditMocks;
 import com.inkflow.crm.module.settings.dto.UserSettingsDto;
 import com.inkflow.crm.module.staff.service.StaffLookup;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -34,8 +38,19 @@ class UserSettingsServiceTest {
     @Mock
     private InkflowProperties inkflowProperties;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private UserSettingsService userSettingsService;
+
+    @BeforeEach
+    void stubAudit() {
+        AuditMocks.stubLabelFormatter(auditLabelFormatter);
+    }
 
     @AfterEach
     void clearSecurityContext() {

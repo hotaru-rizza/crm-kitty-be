@@ -13,10 +13,6 @@ public final class ProjectSpecifications {
 
     private ProjectSpecifications() {}
 
-    public static Specification<Project> belongsToTenant(UUID tenantId) {
-        return (root, query, cb) -> cb.equal(root.get("tenantId"), tenantId);
-    }
-
     public static Specification<Project> notDeleted() {
         return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
     }

@@ -49,7 +49,7 @@ public class PaymentService {
 
     private Appointment requireAppointment(UUID appointmentId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        return appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId)
+        return appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId)
                 .orElseThrow(() -> ResourceNotFoundException.appointment(appointmentId.toString()));
     }
 }

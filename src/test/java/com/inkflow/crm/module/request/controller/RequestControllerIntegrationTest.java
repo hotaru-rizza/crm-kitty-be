@@ -20,7 +20,9 @@ import java.util.UUID;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
 import com.inkflow.crm.support.IntegrationTestData.TenantBundle;
+import com.inkflow.crm.support.PersistenceTestSupport;
 import com.inkflow.crm.support.SecurityTestSupport;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,6 +71,9 @@ class RequestControllerIntegrationTest {
 
     @Autowired
     private RequestRepository requestRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @AfterEach
     void tearDown() {
@@ -138,7 +143,7 @@ class RequestControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("replied"));
 
-        Request persisted = requestRepository.findByIdAndTenantId(requestId, bundle.tenant().getId())
+        Request persisted = requestRepository.findById(requestId)
                 .orElseThrow();
         assertEquals(RequestStatus.REPLIED, persisted.getStatus());
         assertNotNull(persisted.getRepliedAt());
@@ -163,14 +168,14 @@ class RequestControllerIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.phone").value("+380671112233"));
 
-        Request persistedRequest = requestRepository.findByIdAndTenantId(requestId, bundle.tenant().getId())
+        Request persistedRequest = requestRepository.findById(requestId)
                 .orElseThrow();
         assertEquals(RequestStatus.CONVERTED, persistedRequest.getStatus());
         assertNotNull(persistedRequest.getConvertedAt());
         assertNotNull(persistedRequest.getConvertedClient());
 
         Client persistedClient = clientRepository
-                .findByPhoneAndTenantIdAndDeletedAtIsNull("+380671112233", bundle.tenant().getId())
+                .findByPhoneAndDeletedAtIsNull("+380671112233")
                 .orElseThrow();
         assertEquals("Convert", persistedClient.getFirstName());
         assertEquals(false, persistedClient.isBlacklisted());
@@ -215,6 +220,7 @@ class RequestControllerIntegrationTest {
         TenantBundle tenantA = seedTenant();
         TenantBundle tenantB = seedTenant();
         UUID requestId = createRequest(tenantB, "Foreign Request");
+        PersistenceTestSupport.clearPersistenceContext(entityManager);
 
         mockMvc.perform(get("/requests/{id}", requestId)
                         .with(crmUser(tenantA.owner())))
@@ -232,7 +238,7 @@ class RequestControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
-        assertTrue(requestRepository.findByIdAndTenantId(requestId, bundle.tenant().getId()).isEmpty());
+        assertTrue(requestRepository.findById(requestId).isEmpty());
     }
 
     @Test
@@ -251,7 +257,7 @@ class RequestControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("spam"));
 
-        Request persisted = requestRepository.findByIdAndTenantId(requestId, bundle.tenant().getId())
+        Request persisted = requestRepository.findById(requestId)
                 .orElseThrow();
         assertEquals(RequestStatus.SPAM, persisted.getStatus());
         assertNull(persisted.getRepliedAt());
@@ -263,10 +269,11 @@ class RequestControllerIntegrationTest {
         UUID requestId = createRequest(bundle, "Duplicate Phone");
         String existingPhone = "+380671112233";
 
-        clientRepository.save(Client.builder()
+        clientRepository.saveAndFlush(Client.builder()
                 .tenantId(bundle.tenant().getId())
                 .firstName("Existing")
                 .lastName("Client")
+                .email("existing.client@example.com")
                 .phone(existingPhone)
                 .totalVisits(0)
                 .cancelledVisits(0)
@@ -287,7 +294,7 @@ class RequestControllerIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.error.code").value("PHONE_ALREADY_EXISTS"));
 
-        Request persistedRequest = requestRepository.findByIdAndTenantId(requestId, bundle.tenant().getId())
+        Request persistedRequest = requestRepository.findById(requestId)
                 .orElseThrow();
         assertEquals(RequestStatus.NEW, persistedRequest.getStatus());
     }

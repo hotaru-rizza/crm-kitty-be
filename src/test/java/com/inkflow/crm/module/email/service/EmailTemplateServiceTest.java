@@ -56,7 +56,7 @@ class EmailTemplateServiceTest {
                 .category(BuiltInTemplateKey.CONFIRMATION.getCategory())
                 .build();
 
-        when(emailTemplateRepository.findByTenantIdOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc(TENANT))
+        when(emailTemplateRepository.findAllByOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc())
                 .thenReturn(List.of(template));
 
         List<EmailTemplateResponseDto> result = service.list(TENANT);
@@ -96,7 +96,7 @@ class EmailTemplateServiceTest {
                 .category(BuiltInTemplateKey.CONFIRMATION.getCategory())
                 .build();
 
-        when(emailTemplateRepository.findByIdAndTenantId(templateId, TENANT)).thenReturn(Optional.of(template));
+        when(emailTemplateRepository.findById(templateId)).thenReturn(Optional.of(template));
 
         assertThatThrownBy(() -> service.delete(TENANT, templateId))
                 .isInstanceOf(BusinessRuleException.class)
@@ -117,7 +117,7 @@ class EmailTemplateServiceTest {
                 .category(TriggerType.MANUAL.getCategory())
                 .build();
 
-        when(emailTemplateRepository.findByIdAndTenantId(templateId, TENANT)).thenReturn(Optional.of(template));
+        when(emailTemplateRepository.findById(templateId)).thenReturn(Optional.of(template));
         when(emailTemplateRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         EmailTemplateResponseDto result = service.update(

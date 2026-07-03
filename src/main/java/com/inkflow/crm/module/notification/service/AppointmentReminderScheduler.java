@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.notification.service;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.module.notification.event.AppointmentReminderEvent;
@@ -18,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
+@BypassTenantFilter
 @RequiredArgsConstructor
 public class AppointmentReminderScheduler {
 

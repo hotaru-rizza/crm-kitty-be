@@ -18,6 +18,7 @@ import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
 import com.inkflow.crm.support.IntegrationTestData.TenantBundle;
 import com.inkflow.crm.support.SecurityTestSupport;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +75,9 @@ class AppointmentControllerIntegrationTest {
 
     @Autowired
     private GalleryPhotoRepository galleryPhotoRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @AfterEach
     void tearDown() {
@@ -224,6 +228,11 @@ class AppointmentControllerIntegrationTest {
         Instant secondStart = firstStart.plus(3, ChronoUnit.HOURS);
         Instant secondEnd = secondStart.plus(1, ChronoUnit.HOURS);
         UUID secondAppointmentId = createAppointment(bundle, secondStart, secondEnd);
+        entityManager.flush();
+        entityManager.clear();
+        Instant expectedStart = appointmentRepository.findById(secondAppointmentId)
+                .orElseThrow()
+                .getStartTime();
 
         UpdateAppointmentRequest conflictBody = UpdateAppointmentRequest.builder()
                 .startTime(firstStart.plus(30, ChronoUnit.MINUTES))
@@ -237,8 +246,10 @@ class AppointmentControllerIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.error.code").value("TIME_SLOT_CONFLICT"));
 
+        entityManager.flush();
+        entityManager.clear();
         Appointment unchanged = appointmentRepository.findById(secondAppointmentId).orElseThrow();
-        assertEquals(secondStart.truncatedTo(ChronoUnit.MILLIS), unchanged.getStartTime().truncatedTo(ChronoUnit.MILLIS));
+        assertEquals(expectedStart.truncatedTo(ChronoUnit.MILLIS), unchanged.getStartTime().truncatedTo(ChronoUnit.MILLIS));
     }
 
     @Test

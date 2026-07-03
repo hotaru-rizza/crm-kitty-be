@@ -3,6 +3,7 @@ package com.inkflow.crm.module.staff.service;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.StaffSchedule;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.staff.dto.UpdateScheduleRequest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,9 @@ class StaffScheduleServiceTest {
 
     @Mock
     private EntityManager entityManager;
+
+    @Mock
+    private AuditRecorder auditRecorder;
 
     @Captor
     private ArgumentCaptor<Staff> staffCaptor;

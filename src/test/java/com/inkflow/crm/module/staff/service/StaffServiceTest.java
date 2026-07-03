@@ -5,6 +5,7 @@ import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.staff.dto.CreateStaffRequest;
 import com.inkflow.crm.module.staff.dto.StaffDto;
 import com.inkflow.crm.module.staff.mapper.StaffMapper;
@@ -44,6 +45,9 @@ class StaffServiceTest {
     @Mock
     private StaffMapper staffMapper;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
     @InjectMocks
     private StaffService staffService;
 
@@ -69,7 +73,7 @@ class StaffServiceTest {
         Staff entity = Staff.builder().firstName("Alex").build();
         Staff saved = Staff.builder().id(UUID.randomUUID()).tenantId(tenantId).email("alex@test.com").build();
 
-        when(staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull("alex@test.com", tenantId)).thenReturn(false);
+        when(staffRepository.existsByEmailAndDeletedAtIsNull("alex@test.com")).thenReturn(false);
         when(staffMapper.toEntity(request)).thenReturn(entity);
         when(locationRepository.findAllById(any())).thenReturn(java.util.List.of());
         when(staffRepository.save(entity)).thenReturn(saved);
@@ -94,7 +98,7 @@ class StaffServiceTest {
                 .locationIds(java.util.List.of(UUID.randomUUID()))
                 .build();
 
-        when(staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull("exists@test.com", tenantId)).thenReturn(true);
+        when(staffRepository.existsByEmailAndDeletedAtIsNull("exists@test.com")).thenReturn(true);
 
         assertThrows(BusinessRuleException.class, () -> staffService.createStaff(request));
     }
@@ -111,9 +115,9 @@ class StaffServiceTest {
                 .email("old@test.com")
                 .build();
 
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId))
                 .thenReturn(Optional.of(existing));
-        when(staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull("taken@test.com", tenantId))
+        when(staffRepository.existsByEmailAndDeletedAtIsNull("taken@test.com"))
                 .thenReturn(true);
 
         UpdateStaffRequest request = UpdateStaffRequest.builder()
@@ -135,7 +139,7 @@ class StaffServiceTest {
                 .email("delete@test.com")
                 .build();
 
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId))
                 .thenReturn(Optional.of(staff));
         when(staffRepository.save(staff)).thenReturn(staff);
 
@@ -160,7 +164,7 @@ class StaffServiceTest {
         UUID staffId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.empty());
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
                 () -> staffService.updateStaff(staffId, new com.inkflow.crm.module.staff.dto.UpdateStaffRequest()));

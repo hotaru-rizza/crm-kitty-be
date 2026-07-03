@@ -150,7 +150,7 @@ class EmailControllerIntegrationTest {
         verify(resendEmailClient, never()).send(anyString(), anyString(), anyString());
 
         var messages = emailMessageRepository.findFiltered(
-                bundle.tenant().getId(), TriggerType.MANUAL, null, null, null, PageRequest.of(0, 10)).getContent();
+                TriggerType.MANUAL, null, null, null, PageRequest.of(0, 10)).getContent();
         assertEquals(1, messages.size());
         assertEquals(client.getEmail(), messages.get(0).getRecipientEmail());
         assertEquals(TriggerType.MANUAL, messages.get(0).getTriggerType());
@@ -261,7 +261,7 @@ class EmailControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.skipped").value(1));
 
         assertEquals(0, emailMessageRepository.findFiltered(
-                tenantA.tenant().getId(), null, null, null, null, PageRequest.of(0, 10)).getTotalElements());
+                null, null, null, null, PageRequest.of(0, 10)).getTotalElements());
     }
 
     @Test
@@ -310,6 +310,6 @@ class EmailControllerIntegrationTest {
 
         verify(resendEmailClient, never()).send(anyString(), anyString(), anyString());
         assertEquals(0, emailMessageRepository.findFiltered(
-                bundle.tenant().getId(), TriggerType.MANUAL, null, null, null, PageRequest.of(0, 10)).getTotalElements());
+                TriggerType.MANUAL, null, null, null, PageRequest.of(0, 10)).getTotalElements());
     }
 }

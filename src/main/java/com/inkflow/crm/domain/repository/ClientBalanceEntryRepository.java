@@ -11,8 +11,7 @@ import java.util.UUID;
 @Repository
 public interface ClientBalanceEntryRepository extends JpaRepository<ClientBalanceEntry, UUID> {
 
-    Page<ClientBalanceEntry> findByClientIdAndTenantIdAndDeletedAtIsNullOrderByCreatedAtDesc(
+    Page<ClientBalanceEntry> findByClientIdAndDeletedAtIsNullOrderByCreatedAtDesc(
             UUID clientId,
-            UUID tenantId,
             Pageable pageable);
 }

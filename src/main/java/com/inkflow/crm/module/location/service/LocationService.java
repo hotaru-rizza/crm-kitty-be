@@ -48,7 +48,7 @@ public class LocationService {
     @Transactional(readOnly = true)
     public PageResult<LocationDto> getAllLocations(PageRequest pageRequest) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Page<Location> page = locationRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
+        Page<Location> page = locationRepository.findByDeletedAtIsNull( pageRequest.toPageable());
         List<LocationDto> data = page.getContent().stream()
                 .map(locationMapper::toDtoWithStaffCount)
                 .toList();
@@ -58,7 +58,7 @@ public class LocationService {
     @Transactional(readOnly = true)
     public LocationDetailDto getLocationById(UUID id) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Location location = locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        Location location = locationRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.location(id.toString()));
 
         LocationDetailDto.LocationStatsDto stats = calculateStats(location);
@@ -89,7 +89,7 @@ public class LocationService {
         SecurityUtils.requireAdminAccess();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
-        Location location = locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        Location location = locationRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.location(id.toString()));
 
         locationMapper.updateEntity(request, location);
@@ -110,7 +110,7 @@ public class LocationService {
         SecurityUtils.requireOwner();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
-        Location location = locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        Location location = locationRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.location(id.toString()));
 
         ensureCanDeleteLocation(tenantId);
@@ -131,7 +131,7 @@ public class LocationService {
         SecurityUtils.requireAdminAccess();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
-        Location location = locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId)
+        Location location = locationRepository.findByIdAndDeletedAtIsNull(locationId)
                 .orElseThrow(() -> ResourceNotFoundException.location(locationId.toString()));
 
         List<Staff> staffList = staffRepository.findAllById(request.getStaffIds());
@@ -149,7 +149,7 @@ public class LocationService {
     }
 
     private void ensureCanDeleteLocation(UUID tenantId) {
-        if (locationRepository.countByTenantIdAndDeletedAtIsNull(tenantId) <= 1) {
+        if (locationRepository.countByDeletedAtIsNull() <= 1) {
             throw BusinessRuleException.lastLocationCannotBeDeleted();
         }
     }
@@ -159,7 +159,7 @@ public class LocationService {
             return;
         }
 
-        if (locationRepository.countByTenantIdAndIsActiveAndDeletedAtIsNull(tenantId, true) <= 1) {
+        if (locationRepository.countByIsActiveAndDeletedAtIsNull( true) <= 1) {
             throw BusinessRuleException.lastActiveLocationCannotBeDeactivated();
         }
     }
@@ -170,11 +170,9 @@ public class LocationService {
         Instant monthStart = now.withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
         Instant monthEnd = now.plusMonths(1).withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
 
-        long appointmentsCount = appointmentRepository.countByTenantIdAndLocationIdAndStartTimeBetweenAndDeletedAtIsNull(
-                tenantId, location.getId(), monthStart, monthEnd);
+        long appointmentsCount = appointmentRepository.countByLocationIdAndStartTimeBetweenAndDeletedAtIsNull( location.getId(), monthStart, monthEnd);
 
-        BigDecimal revenue = transactionRepository.sumRevenueByLocationAndDateRange(
-                tenantId, location.getId(), monthStart, monthEnd);
+        BigDecimal revenue = transactionRepository.sumRevenueByLocationAndDateRange( location.getId(), monthStart, monthEnd);
 
         return LocationDetailDto.LocationStatsDto.builder()
                 .appointmentsThisMonth((int) appointmentsCount)

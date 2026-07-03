@@ -64,7 +64,7 @@ class PaymentServiceTest {
                 .remainingBalance(BigDecimal.valueOf(500))
                 .build();
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
         when(summaryCalculator.calculate(appointment)).thenReturn(summary);
 
@@ -80,7 +80,7 @@ class PaymentServiceTest {
         UUID appointmentId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment(appointmentId, tenantId)));
         when(summaryCalculator.listPayments(appointmentId)).thenReturn(List.of(
                 PaymentDto.builder().id(UUID.randomUUID()).amount(BigDecimal.TEN).build()
@@ -139,7 +139,7 @@ class PaymentServiceTest {
         UUID appointmentId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
@@ -152,7 +152,7 @@ class PaymentServiceTest {
         UUID appointmentId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
