@@ -127,6 +127,18 @@ class LocationControllerIntegrationTest {
     void deleteLocation_withOwnerAuth_softDeletesInDb() throws Exception {
         TenantBundle bundle = seedTenant();
 
+        CreateLocationRequest extraLocation = CreateLocationRequest.builder()
+                .name("Backup Studio")
+                .address("Kyiv, Backup St 2")
+                .color("#14b8a6")
+                .build();
+
+        mockMvc.perform(post("/locations")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(extraLocation)))
+                .andExpect(status().isCreated());
+
         mockMvc.perform(delete("/locations/{id}", bundle.location().getId())
                         .with(crmUser(bundle.owner())))
                 .andExpect(status().isOk())

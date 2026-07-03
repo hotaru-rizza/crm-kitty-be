@@ -10,8 +10,10 @@ import com.inkflow.crm.module.client.dto.ClientDto;
 import com.inkflow.crm.module.client.dto.CreateClientRequest;
 import com.inkflow.crm.module.client.dto.UpdateClientRequest;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
+import com.inkflow.crm.module.client.service.ClientBalanceService;
 import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.domain.enums.UserRole;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.security.UserPrincipal;
@@ -55,6 +57,12 @@ class ClientServiceTest {
 
     @Mock
     private RolePermissionService rolePermissionService;
+
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private ClientBalanceService clientBalanceService;
 
     @InjectMocks
     private ClientService clientService;

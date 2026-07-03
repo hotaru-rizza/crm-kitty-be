@@ -14,10 +14,14 @@ import com.inkflow.crm.module.monobank.config.MonobankConfig;
 import com.inkflow.crm.module.monobank.dto.CreateOnlineInvoiceRequest;
 import com.inkflow.crm.module.monobank.dto.MonobankWebhookPayload;
 import com.inkflow.crm.module.monobank.dto.OnlineInvoiceDto;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.subscription.service.SubscriptionService;
+import com.inkflow.crm.support.AuditMocks;
 import com.inkflow.crm.support.SecurityTestSupport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -60,8 +64,19 @@ class MonobankServiceTest {
     @Mock
     private SubscriptionService subscriptionService;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private MonobankService monobankService;
+
+    @BeforeEach
+    void stubAudit() {
+        AuditMocks.stubLabelFormatter(auditLabelFormatter);
+    }
 
     @AfterEach
     void tearDown() {

@@ -10,6 +10,7 @@ import com.inkflow.crm.domain.enums.TransactionType;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TransactionRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.payment.dto.PaymentDto;
 import com.inkflow.crm.module.payment.dto.ProcessRefundRequest;
 import com.inkflow.crm.module.payment.mapper.PaymentMapper;
@@ -53,6 +54,9 @@ class RefundProcessingServiceTest {
 
     @Mock
     private ReceiptNumberGenerator receiptNumberGenerator;
+
+    @Mock
+    private AuditRecorder auditRecorder;
 
     @InjectMocks
     private RefundProcessingService refundProcessingService;
@@ -108,7 +112,13 @@ class RefundProcessingServiceTest {
         when(transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(transactionId, tenantId))
                 .thenReturn(Optional.of(original));
         when(receiptNumberGenerator.generate()).thenReturn("RCP-REF");
-        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction tx = invocation.getArgument(0);
+            if (tx.getId() == null) {
+                tx.setId(UUID.randomUUID());
+            }
+            return tx;
+        });
         when(paymentMapper.toDto(any(Transaction.class))).thenReturn(PaymentDto.builder().build());
 
         BigDecimal refundAmount = BigDecimal.valueOf(300);
@@ -153,7 +163,13 @@ class RefundProcessingServiceTest {
         when(transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(transactionId, tenantId))
                 .thenReturn(Optional.of(original));
         when(receiptNumberGenerator.generate()).thenReturn("RCP-REF");
-        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction tx = invocation.getArgument(0);
+            if (tx.getId() == null) {
+                tx.setId(UUID.randomUUID());
+            }
+            return tx;
+        });
         when(paymentMapper.toDto(any(Transaction.class))).thenReturn(PaymentDto.builder().build());
 
         ProcessRefundRequest request = ProcessRefundRequest.builder()

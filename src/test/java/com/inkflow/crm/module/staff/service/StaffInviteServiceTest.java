@@ -6,13 +6,17 @@ import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffInviteRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.staff.dto.AcceptInviteRequest;
+import com.inkflow.crm.support.AuditMocks;
 import com.inkflow.crm.module.staff.dto.InviteInfoDto;
 import com.inkflow.crm.module.staff.dto.InviteStaffRequest;
 import com.inkflow.crm.module.staff.dto.StaffDto;
 import com.inkflow.crm.module.staff.mapper.StaffMapper;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -51,8 +55,19 @@ class StaffInviteServiceTest {
     @Mock
     private StaffMapper staffMapper;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private StaffInviteService staffInviteService;
+
+    @BeforeEach
+    void stubAudit() {
+        AuditMocks.stubLabelFormatter(auditLabelFormatter);
+    }
 
     @AfterEach
     void clearSecurityContext() {

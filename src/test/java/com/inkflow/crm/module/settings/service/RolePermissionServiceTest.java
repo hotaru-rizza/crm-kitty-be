@@ -5,6 +5,7 @@ import com.inkflow.crm.domain.entity.RolePermission;
 import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.RolePermissionRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.settings.dto.RolePermissionsDto;
 import com.inkflow.crm.module.settings.dto.UpdateRolePermissionsRequest;
 import com.inkflow.crm.security.UserPrincipal;
@@ -35,6 +36,9 @@ class RolePermissionServiceTest {
 
     @Mock
     private RolePermissionRepository rolePermissionRepository;
+
+    @Mock
+    private AuditRecorder auditRecorder;
 
     @InjectMocks
     private RolePermissionService rolePermissionService;

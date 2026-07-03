@@ -8,7 +8,11 @@ import com.inkflow.crm.domain.enums.LeaveType;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.LeaveRequestRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.leave.dto.LeaveRequestDto;
+import com.inkflow.crm.support.AuditMocks;
+import org.junit.jupiter.api.BeforeEach;
 import com.inkflow.crm.module.leave.dto.UpdateLeaveStatusRequest;
 import com.inkflow.crm.module.leave.mapper.LeaveRequestMapper;
 import com.inkflow.crm.security.UserPrincipal;
@@ -51,8 +55,19 @@ class LeaveServiceStatusTest {
     @Mock
     private EntityManager entityManager;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private LeaveService leaveService;
+
+    @BeforeEach
+    void stubAudit() {
+        AuditMocks.stubLabelFormatter(auditLabelFormatter);
+    }
 
     @AfterEach
     void clearSecurityContext() {
@@ -324,7 +339,11 @@ class LeaveServiceStatusTest {
         when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.of(staff));
         when(leaveRequestRepository.findOverlappingLeaves(any(), any(), any(), any())).thenReturn(List.of());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(userId.toString())).thenReturn(Optional.empty());
-        when(leaveRequestRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(leaveRequestRepository.save(any())).thenAnswer(invocation -> {
+            LeaveRequest saved = invocation.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            return saved;
+        });
         when(leaveMapper.toDto(any())).thenReturn(LeaveRequestDto.builder().status("PENDING").build());
 
         var request = com.inkflow.crm.module.leave.dto.CreateLeaveRequest.builder()

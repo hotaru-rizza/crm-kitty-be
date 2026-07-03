@@ -5,6 +5,7 @@ import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.staff.dto.CreateStaffRequest;
 import com.inkflow.crm.module.staff.dto.StaffDto;
 import com.inkflow.crm.module.staff.mapper.StaffMapper;
@@ -43,6 +44,9 @@ class StaffServiceTest {
 
     @Mock
     private StaffMapper staffMapper;
+
+    @Mock
+    private AuditRecorder auditRecorder;
 
     @InjectMocks
     private StaffService staffService;

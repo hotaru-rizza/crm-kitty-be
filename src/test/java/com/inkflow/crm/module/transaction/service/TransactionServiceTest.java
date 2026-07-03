@@ -16,6 +16,7 @@ import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TransactionRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.finance.service.CategoryConfigService;
 import com.inkflow.crm.module.transaction.dto.CreateTransactionRequest;
 import com.inkflow.crm.module.transaction.dto.FinanceStatsDto;
@@ -76,6 +77,9 @@ class TransactionServiceTest {
     @Mock
     private CategoryConfigService categoryConfigService;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
     @InjectMocks
     private TransactionService transactionService;
 
@@ -83,6 +87,13 @@ class TransactionServiceTest {
     void stubCategoryValidation() {
         lenient().when(categoryConfigService.requireActiveCategoryForTransaction(any(), any(), any()))
                 .thenReturn(TransactionCategoryConfig.builder().categoryKey("service").plType("INCOME").build());
+        lenient().when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
+            Transaction t = inv.getArgument(0);
+            if (t.getId() == null) {
+                t.setId(UUID.randomUUID());
+            }
+            return t;
+        });
     }
 
     @AfterEach
@@ -103,6 +114,7 @@ class TransactionServiceTest {
                 .type(TransactionType.INCOME)
                 .category(TransactionCategory.SERVICE.getValue())
                 .amount(BigDecimal.valueOf(1500))
+                .paymentMethod(PaymentMethod.CASH)
                 .location(location)
                 .build();
 
@@ -514,7 +526,13 @@ class TransactionServiceTest {
                 .thenReturn(Optional.of(location));
         when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
                 .thenReturn(Optional.of(appointment));
-        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction t = invocation.getArgument(0);
+            if (t.getId() == null) {
+                t.setId(UUID.randomUUID());
+            }
+            return t;
+        });
         when(transactionMapper.toDto(any(Transaction.class))).thenReturn(TransactionDto.builder().build());
 
         transactionService.createTransaction(request);
@@ -561,7 +579,13 @@ class TransactionServiceTest {
                 .thenReturn(Optional.of(location));
         when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId))
                 .thenReturn(Optional.of(staff));
-        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction t = invocation.getArgument(0);
+            if (t.getId() == null) {
+                t.setId(UUID.randomUUID());
+            }
+            return t;
+        });
         when(transactionMapper.toDto(any(Transaction.class))).thenReturn(TransactionDto.builder().build());
 
         transactionService.createTransaction(request);
@@ -602,7 +626,13 @@ class TransactionServiceTest {
 
         when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
                 .thenReturn(Optional.of(location));
-        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction t = invocation.getArgument(0);
+            if (t.getId() == null) {
+                t.setId(UUID.randomUUID());
+            }
+            return t;
+        });
         when(transactionMapper.toDto(any(Transaction.class))).thenReturn(TransactionDto.builder().build());
 
         transactionService.createTransaction(request);

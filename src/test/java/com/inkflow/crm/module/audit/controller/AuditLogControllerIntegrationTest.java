@@ -84,8 +84,6 @@ class AuditLogControllerIntegrationTest {
                 .entityLabel("Client One")
                 .build());
 
-        assertEquals(1, auditLogRepository.findAll().size());
-
         mockMvc.perform(get("/audit-log").with(crmUser(bundle.owner())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))

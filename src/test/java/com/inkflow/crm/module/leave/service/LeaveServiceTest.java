@@ -8,7 +8,11 @@ import com.inkflow.crm.domain.enums.LeaveStatus;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.LeaveRequestRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.leave.dto.CreateLeaveRequest;
+import com.inkflow.crm.support.AuditMocks;
+import org.junit.jupiter.api.BeforeEach;
 import com.inkflow.crm.module.leave.mapper.LeaveRequestMapper;
 import com.inkflow.crm.security.UserPrincipal;
 import jakarta.persistence.EntityManager;
@@ -34,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -52,8 +57,19 @@ class LeaveServiceTest {
     @Mock
     private EntityManager entityManager;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private LeaveService leaveService;
+
+    @BeforeEach
+    void stubAudit() {
+        AuditMocks.stubLabelFormatter(auditLabelFormatter);
+    }
 
     @AfterEach
     void clearSecurityContext() {
@@ -87,8 +103,6 @@ class LeaveServiceTest {
 
         Staff staff = Staff.builder().id(staffId).tenantId(tenantId).build();
         when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.of(staff));
-        when(leaveRequestRepository.findOverlappingLeaves(tenantId, staffId,
-                LocalDate.of(2026, 6, 10), LocalDate.of(2026, 6, 12))).thenReturn(java.util.List.of());
 
         CreateLeaveRequest request = CreateLeaveRequest.builder()
                 .staffId(staffId)
@@ -208,7 +222,11 @@ class LeaveServiceTest {
         when(leaveRequestRepository.findOverlappingLeaves(any(), any(), any(), any())).thenReturn(List.of());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(artistUserId.toString())).thenReturn(Optional.of(artist));
         when(staffRepository.countByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(2L);
-        when(leaveRequestRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(leaveRequestRepository.save(any())).thenAnswer(invocation -> {
+            LeaveRequest saved = invocation.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            return saved;
+        });
         when(leaveMapper.toDto(any())).thenReturn(com.inkflow.crm.module.leave.dto.LeaveRequestDto.builder().status("PENDING").build());
 
         CreateLeaveRequest request = CreateLeaveRequest.builder()
@@ -240,7 +258,11 @@ class LeaveServiceTest {
         when(leaveRequestRepository.findOverlappingLeaves(any(), any(), any(), any())).thenReturn(List.of());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(artistUserId.toString())).thenReturn(Optional.of(artist));
         when(staffRepository.countByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(1L);
-        when(leaveRequestRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(leaveRequestRepository.save(any())).thenAnswer(invocation -> {
+            LeaveRequest saved = invocation.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            return saved;
+        });
         when(leaveMapper.toDto(any())).thenReturn(com.inkflow.crm.module.leave.dto.LeaveRequestDto.builder().status("APPROVED").build());
 
         CreateLeaveRequest request = CreateLeaveRequest.builder()

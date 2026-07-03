@@ -11,6 +11,7 @@ import com.inkflow.crm.module.email.dto.EmailComposeRequest;
 import com.inkflow.crm.module.email.dto.SendEmailRequest;
 import com.inkflow.crm.module.email.dto.SendEmailResultDto;
 import com.inkflow.crm.module.email.enums.TriggerType;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.email.service.EmailTenantContextLoader;
 import com.inkflow.crm.module.email.service.NotificationDispatcher;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,7 @@ class BulkEmailServiceTest {
     @Mock private StaffRepository staffRepository;
     @Mock private EmailTenantContextLoader tenantContextLoader;
     @Mock private InkflowProperties inkflowProperties;
+    @Mock private AuditRecorder auditRecorder;
 
     @InjectMocks
     private BulkEmailService bulkEmailService;

@@ -263,10 +263,11 @@ class RequestControllerIntegrationTest {
         UUID requestId = createRequest(bundle, "Duplicate Phone");
         String existingPhone = "+380671112233";
 
-        clientRepository.save(Client.builder()
+        clientRepository.saveAndFlush(Client.builder()
                 .tenantId(bundle.tenant().getId())
                 .firstName("Existing")
                 .lastName("Client")
+                .email("existing.client@example.com")
                 .phone(existingPhone)
                 .totalVisits(0)
                 .cancelledVisits(0)

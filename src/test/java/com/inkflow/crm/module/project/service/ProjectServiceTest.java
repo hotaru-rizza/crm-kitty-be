@@ -17,14 +17,18 @@ import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ProjectRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.project.dto.CreateProjectRequest;
 import com.inkflow.crm.module.project.dto.ProjectDto;
 import com.inkflow.crm.module.project.dto.ProjectFilterRequest;
 import com.inkflow.crm.module.project.mapper.ProjectMapper;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.security.UserPrincipal;
+import com.inkflow.crm.support.AuditMocks;
 import com.inkflow.crm.module.project.dto.UpdateProjectRequest;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -76,8 +80,19 @@ class ProjectServiceTest {
     @Mock
     private ProjectMapper projectMapper;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private ProjectService projectService;
+
+    @BeforeEach
+    void stubAudit() {
+        AuditMocks.stubLabelFormatter(auditLabelFormatter);
+    }
 
     @AfterEach
     void clearSecurityContext() {
@@ -230,6 +245,7 @@ class ProjectServiceTest {
                 .status(ProjectStatus.IN_PROGRESS)
                 .estimatedCost(BigDecimal.valueOf(5000))
                 .totalSessions(3)
+                .client(testClient())
                 .build();
 
         when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
@@ -258,6 +274,7 @@ class ProjectServiceTest {
                 .status(ProjectStatus.IN_PROGRESS)
                 .estimatedCost(BigDecimal.valueOf(5000))
                 .totalSessions(3)
+                .client(testClient())
                 .build();
 
         when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
@@ -310,6 +327,7 @@ class ProjectServiceTest {
                 .sketchImage("https://cdn.example/sketch.png")
                 .estimatedCost(BigDecimal.valueOf(5000))
                 .totalSessions(3)
+                .client(testClient())
                 .build();
 
         when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
@@ -338,6 +356,7 @@ class ProjectServiceTest {
                 .status(ProjectStatus.ARCHIVED)
                 .estimatedCost(BigDecimal.valueOf(5000))
                 .totalSessions(3)
+                .client(testClient())
                 .build();
 
         when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
@@ -472,6 +491,7 @@ class ProjectServiceTest {
                 .status(ProjectStatus.IN_PROGRESS)
                 .estimatedCost(BigDecimal.valueOf(5000))
                 .totalSessions(3)
+                .client(testClient())
                 .build();
 
         when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
@@ -535,6 +555,7 @@ class ProjectServiceTest {
                 .status(ProjectStatus.IN_PROGRESS)
                 .estimatedCost(BigDecimal.valueOf(5000))
                 .totalSessions(3)
+                .client(testClient())
                 .build();
 
         when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
@@ -571,6 +592,7 @@ class ProjectServiceTest {
                 .status(ProjectStatus.IN_PROGRESS)
                 .estimatedCost(BigDecimal.valueOf(5000))
                 .totalSessions(3)
+                .client(testClient())
                 .build();
         GalleryPhoto photo = GalleryPhoto.builder().id(photoId).tenantId(tenantId).project(project).build();
 
@@ -602,6 +624,10 @@ class ProjectServiceTest {
         when(galleryPhotoRepository.findById(photoId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> projectService.deletePhoto(projectId, photoId));
+    }
+
+    private Client testClient() {
+        return Client.builder().id(UUID.randomUUID()).build();
     }
 
     private void authenticate(UUID tenantId) {

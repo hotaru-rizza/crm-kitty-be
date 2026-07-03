@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.analytics.service;
 
+import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
@@ -12,6 +13,7 @@ import com.inkflow.crm.module.analytics.support.CommissionCalculator;
 import com.inkflow.crm.module.analytics.support.StaffUtilizationCalculator;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,8 +54,16 @@ class StaffPerformanceAnalyticsServiceTest {
     @Mock
     private AppointmentMetricsCalculator metrics;
 
+    @Mock
+    private InkflowProperties inkflowProperties;
+
     @InjectMocks
     private StaffPerformanceAnalyticsService staffPerformanceAnalyticsService;
+
+    @BeforeEach
+    void stubZoneId() {
+        lenient().when(inkflowProperties.defaultZoneId()).thenReturn(ZoneId.of("Europe/Kyiv"));
+    }
 
     @AfterEach
     void clearSecurityContext() {
@@ -90,7 +102,8 @@ class StaffPerformanceAnalyticsServiceTest {
         when(metrics.sumDoneRevenue(appointments)).thenReturn(BigDecimal.valueOf(800));
         when(metrics.calculateAvgCheck(BigDecimal.valueOf(800), 1)).thenReturn(BigDecimal.valueOf(800));
         when(commissionCalculator.resolveSalaryType(artist)).thenReturn(SalaryType.PERCENT);
-        when(commissionCalculator.calculate(artist, BigDecimal.valueOf(800))).thenReturn(BigDecimal.valueOf(160));
+        when(commissionCalculator.calculateForPeriod(eq(artist), eq(BigDecimal.valueOf(800)), eq(from), eq(to), any()))
+                .thenReturn(BigDecimal.valueOf(160));
         when(utilizationCalculator.calculateScheduledHours(anyList(), eq(from), eq(to))).thenReturn(40.0);
         when(utilizationCalculator.calculateBookedHours(appointments)).thenReturn(8.0);
         when(metrics.calculateUtilizationRate(8.0, 40.0)).thenReturn(20.0);
@@ -178,7 +191,8 @@ class StaffPerformanceAnalyticsServiceTest {
         when(metrics.calculateAvgCheck(BigDecimal.valueOf(200), 1)).thenReturn(BigDecimal.valueOf(200));
         when(metrics.calculateAvgCheck(BigDecimal.valueOf(900), 1)).thenReturn(BigDecimal.valueOf(900));
         when(commissionCalculator.resolveSalaryType(any())).thenReturn(SalaryType.PERCENT);
-        when(commissionCalculator.calculate(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(commissionCalculator.calculateForPeriod(any(), any(), eq(from), eq(to), any()))
+                .thenReturn(BigDecimal.ZERO);
         when(utilizationCalculator.calculateScheduledHours(anyList(), eq(from), eq(to))).thenReturn(0.0);
         when(utilizationCalculator.calculateBookedHours(any())).thenReturn(0.0);
         when(metrics.calculateUtilizationRate(0.0, 0.0)).thenReturn(0.0);
