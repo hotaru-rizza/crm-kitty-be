@@ -3,6 +3,7 @@ package com.inkflow.crm.module.location.service;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
@@ -92,6 +93,7 @@ public class LocationService {
                 .orElseThrow(() -> ResourceNotFoundException.location(id.toString()));
 
         locationMapper.updateEntity(request, location);
+        ensureCanChangeActiveStatus(tenantId, location, request.getIsActive());
         location = locationRepository.save(location);
         log.info("Location updated: tenantId={} locationId={}", tenantId, id);
         auditRecorder.record(
@@ -110,6 +112,8 @@ public class LocationService {
 
         Location location = locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.location(id.toString()));
+
+        ensureCanDeleteLocation(tenantId);
 
         location.softDelete();
         locationRepository.save(location);
@@ -142,6 +146,22 @@ public class LocationService {
                 null,
                 staffList.size() + " майстрів"
         );
+    }
+
+    private void ensureCanDeleteLocation(UUID tenantId) {
+        if (locationRepository.countByTenantIdAndDeletedAtIsNull(tenantId) <= 1) {
+            throw BusinessRuleException.lastLocationCannotBeDeleted();
+        }
+    }
+
+    private void ensureCanChangeActiveStatus(UUID tenantId, Location location, Boolean requestedActive) {
+        if (!Boolean.FALSE.equals(requestedActive) || !Boolean.TRUE.equals(location.getIsActive())) {
+            return;
+        }
+
+        if (locationRepository.countByTenantIdAndIsActiveAndDeletedAtIsNull(tenantId, true) <= 1) {
+            throw BusinessRuleException.lastActiveLocationCannotBeDeactivated();
+        }
     }
 
     private LocationDetailDto.LocationStatsDto calculateStats(Location location) {

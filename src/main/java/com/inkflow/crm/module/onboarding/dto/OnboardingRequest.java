@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.onboarding.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -21,5 +22,17 @@ public class OnboardingRequest {
 
     private String teamSize;
 
+    private String companySize;
+
+    @Size(max = 50)
+    private String phone;
+
+    @Size(max = 100)
+    private String city;
+
+    @Size(max = 255)
     private String instagram;
+
+    @Valid
+    private OnboardingServiceDraftDto service;
 }

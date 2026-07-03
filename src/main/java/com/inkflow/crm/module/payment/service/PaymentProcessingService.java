@@ -218,9 +218,7 @@ public class PaymentProcessingService {
         }
 
         Client client = requireAppointmentClient(appointment, tenantId);
-        if (clientBalanceService.isBalanceCredit(client)) {
-            clientBalanceService.validateBalanceSpend(client, amount);
-        }
+        clientBalanceService.validateBalanceSpend(client, amount);
     }
 
     private PaymentType resolveLinePaymentType(PaymentLineRequest line) {
@@ -458,25 +456,14 @@ public class PaymentProcessingService {
                 .orElse(appointment.getClient());
 
         if (paymentMethod == PaymentMethod.BALANCE) {
-            if (clientBalanceService.isBalanceCredit(client)) {
-                clientBalanceService.record(
-                        client,
-                        transaction.getAmount().negate(),
-                        ClientBalanceReason.BALANCE_SPEND,
-                        appointment.getId(),
-                        transaction.getId(),
-                        null
-                );
-            } else {
-                clientBalanceService.record(
-                        client,
-                        transaction.getAmount(),
-                        ClientBalanceReason.PAYMENT,
-                        appointment.getId(),
-                        transaction.getId(),
-                        null
-                );
-            }
+            clientBalanceService.record(
+                    client,
+                    transaction.getAmount().negate(),
+                    ClientBalanceReason.BALANCE_SPEND,
+                    appointment.getId(),
+                    transaction.getId(),
+                    null
+            );
             return;
         }
 

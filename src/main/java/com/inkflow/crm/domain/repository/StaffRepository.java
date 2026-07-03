@@ -30,6 +30,7 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
 
     Optional<Staff> findByEmailAndTenantIdAndDeletedAtIsNull(String email, UUID tenantId);
 
+    @EntityGraph(attributePaths = {"locations"})
     Optional<Staff> findByAuthUserIdAndDeletedAtIsNull(String authUserId);
 
     boolean existsByEmailAndTenantIdAndDeletedAtIsNull(String email, UUID tenantId);

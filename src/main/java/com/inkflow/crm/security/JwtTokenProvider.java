@@ -54,8 +54,19 @@ public class JwtTokenProvider {
             verifyAndDecode(token);
             return true;
         } catch (Exception e) {
-            log.error("Invalid JWT token: {}", e.getMessage());
+            logInvalidToken(token, e);
             return false;
+        }
+    }
+
+    private void logInvalidToken(String token, Exception e) {
+        try {
+            DecodedJWT decoded = JWT.decode(token);
+            log.error("Invalid JWT token: {} | alg={} kid={} iss={} expectedIss={} sub={}",
+                    e.getMessage(), decoded.getAlgorithm(), decoded.getKeyId(),
+                    decoded.getIssuer(), jwtIssuer, decoded.getSubject());
+        } catch (Exception decodeError) {
+            log.error("Invalid JWT token (undecodable): {}", e.getMessage());
         }
     }
 

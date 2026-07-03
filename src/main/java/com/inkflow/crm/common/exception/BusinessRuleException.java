@@ -66,4 +66,12 @@ public class BusinessRuleException extends ApiException {
     public static BusinessRuleException reservationRequiresClientOrNone() {
         return new BusinessRuleException("Reservation slots cannot include services or payments");
     }
+
+    public static BusinessRuleException lastLocationCannotBeDeleted() {
+        return new BusinessRuleException("Неможливо видалити останню локацію");
+    }
+
+    public static BusinessRuleException lastActiveLocationCannotBeDeactivated() {
+        return new BusinessRuleException("Потрібна хоча б одна активна локація");
+    }
 }

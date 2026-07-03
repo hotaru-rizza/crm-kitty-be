@@ -9,6 +9,7 @@ import com.inkflow.crm.module.catalog.entity.Tattoo;
 import com.inkflow.crm.module.catalog.entity.TattooStatus;
 import com.inkflow.crm.module.catalog.entity.TattooStyle;
 import com.inkflow.crm.module.catalog.mapper.TattooMapper;
+import com.inkflow.crm.module.catalog.repository.StyleCoverView;
 import com.inkflow.crm.module.catalog.repository.TattooRepository;
 import com.inkflow.crm.module.catalog.repository.TattooStyleRepository;
 import org.junit.jupiter.api.Test;
@@ -59,20 +60,36 @@ class TattooCatalogServiceTest {
     }
 
     @Test
-    void getStyles_returnsActiveStyles() {
+    void getStyles_returnsActiveStylesWithCatalogCover() {
         TattooStyle style = new TattooStyle();
         style.setSlug("traditional");
         style.setName("Traditional");
+        style.setImageUrl("https://images.unsplash.com/broken.jpg");
+
+        StyleCoverView cover = new StyleCoverView() {
+            @Override
+            public String getTag() {
+                return "traditional";
+            }
+
+            @Override
+            public String getCoverUrl() {
+                return "https://cdn.example.com/traditional-thumb.jpg";
+            }
+        };
 
         when(tattooStyleRepository.findByActiveTrueOrderBySortOrderAsc()).thenReturn(List.of(style));
-        when(tattooMapper.toStyleDtoList(List.of(style))).thenReturn(List.of(
-                new TattooStyleDto(1L, "traditional", "Traditional", null, List.of())
-        ));
+        when(tattooRepository.findCoverUrlsByTags(List.of("traditional"))).thenReturn(List.of(cover));
+        when(tattooMapper.toStyleDto(style, "https://cdn.example.com/traditional-thumb.jpg")).thenReturn(
+                new TattooStyleDto(1L, "traditional", "Traditional",
+                        "https://cdn.example.com/traditional-thumb.jpg", List.of())
+        );
 
         List<TattooStyleDto> styles = tattooCatalogService.getStyles();
 
         assertEquals(1, styles.size());
         assertEquals("traditional", styles.getFirst().slug());
+        assertEquals("https://cdn.example.com/traditional-thumb.jpg", styles.getFirst().imageUrl());
     }
 
     @Test

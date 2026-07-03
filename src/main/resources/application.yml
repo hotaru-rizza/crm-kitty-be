@@ -54,6 +54,8 @@ inkflow:
   default-timezone: ${INKFLOW_DEFAULT_TIMEZONE:Europe/Kyiv}
   default-language: ${INKFLOW_DEFAULT_LANGUAGE:uk}
   default-start-page: ${INKFLOW_DEFAULT_START_PAGE:/calendar}
+  openapi:
+    enabled: ${OPENAPI_ENABLED:false}
   email:
     scheduler:
       fixed-rate-ms: ${INKFLOW_EMAIL_SCHEDULER_FIXED_RATE_MS:900000}
@@ -63,8 +65,6 @@ inkflow:
       batch-size: ${INKFLOW_EMAIL_OUTBOX_BATCH_SIZE:20}
       max-attempts: ${INKFLOW_EMAIL_OUTBOX_MAX_ATTEMPTS:5}
       base-backoff-ms: ${INKFLOW_EMAIL_OUTBOX_BASE_BACKOFF_MS:60000}
-  openapi:
-    enabled: ${OPENAPI_ENABLED:false}
   cors:
     allowed-origins:
       - ${FRONTEND_URL:http://localhost:5173}
@@ -181,82 +181,3 @@ sentry:
   environment: ${SENTRY_ENVIRONMENT:development}
   traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0.0}
   send-default-pii: false
-
----
-spring:
-  config:
-    activate:
-      on-profile: dev
-
-  datasource:
-    # Dev always uses remote Supabase — set SPRING_DATASOURCE_URL in IntelliJ / env (no localhost fallback).
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    hikari:
-      connection-timeout: 10000
-      initialization-fail-timeout: 10000
-
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: true
-
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-    baseline-version: 9
-    lock-retry-count: 3
-    connect-retries: 2
-    connect-retries-interval: 2s
-    postgresql:
-      transactional-lock: false
-
-r2:
-  verify-connection: false
-
-inkflow:
-  openapi:
-    enabled: true
-
-logging:
-  level:
-    com.inkflow: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    com.zaxxer.hikari: INFO
-    org.flywaydb: INFO
-
----
-spring:
-  config:
-    activate:
-      on-profile: prod
-
-  jpa:
-    hibernate:
-      ddl-auto: none
-    show-sql: false
-
-  flyway:
-    enabled: ${FLYWAY_ENABLED:true}
-    baseline-on-migrate: true
-    baseline-version: 9
-    locations: classpath:db/migration
-    validate-on-migrate: true
-
-logging:
-  level:
-    root: WARN
-    com.inkflow: INFO
-
----
-spring:
-  config:
-    activate:
-      on-profile: staging
-
-inkflow:
-  openapi:
-    enabled: true

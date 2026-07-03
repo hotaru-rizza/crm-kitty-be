@@ -156,7 +156,10 @@ public class ClientBalanceService {
 
     public void validateBalanceSpend(Client client, BigDecimal amount) {
         BigDecimal balance = client.getBalance() != null ? client.getBalance() : BigDecimal.ZERO;
-        if (balance.compareTo(BigDecimal.ZERO) > 0 && amount.compareTo(balance) > 0) {
+        if (balance.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleException("Insufficient client balance credit");
+        }
+        if (amount.compareTo(balance) > 0) {
             throw new BusinessRuleException("Insufficient client balance credit");
         }
     }

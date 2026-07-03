@@ -1,12 +1,15 @@
 package com.inkflow.crm.module.location.service;
 
 import com.inkflow.crm.common.exception.AccessDeniedException;
+import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TransactionRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.location.dto.AssignStaffRequest;
 import com.inkflow.crm.module.location.dto.CreateLocationRequest;
 import com.inkflow.crm.module.location.dto.UpdateLocationRequest;
@@ -50,6 +53,12 @@ class LocationServiceTest {
     @Mock
     private LocationMapper locationMapper;
 
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
+
     @InjectMocks
     private LocationService locationService;
 
@@ -72,6 +81,7 @@ class LocationServiceTest {
 
         when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
                 .thenReturn(Optional.of(location));
+        when(locationRepository.countByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(2L);
 
         locationService.deleteLocation(locationId);
 
@@ -138,6 +148,52 @@ class LocationServiceTest {
 
         assertThrows(ResourceNotFoundException.class,
                 () -> locationService.updateLocation(locationId, UpdateLocationRequest.builder().name("Updated").build()));
+    }
+
+    @Test
+    void deleteLocation_rejectsLastLocation() {
+        UUID tenantId = UUID.randomUUID();
+        UUID locationId = UUID.randomUUID();
+        authenticateOwner(tenantId);
+
+        Location location = Location.builder()
+                .id(locationId)
+                .tenantId(tenantId)
+                .name("Studio")
+                .build();
+
+        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+                .thenReturn(Optional.of(location));
+        when(locationRepository.countByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(1L);
+
+        assertThrows(BusinessRuleException.class, () -> locationService.deleteLocation(locationId));
+        verify(locationRepository, never()).save(any());
+    }
+
+    @Test
+    void updateLocation_rejectsDeactivatingLastActiveLocation() {
+        UUID tenantId = UUID.randomUUID();
+        UUID locationId = UUID.randomUUID();
+        authenticateAdmin(tenantId);
+
+        Location location = Location.builder()
+                .id(locationId)
+                .tenantId(tenantId)
+                .name("Studio")
+                .isActive(true)
+                .build();
+
+        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+                .thenReturn(Optional.of(location));
+        when(locationRepository.countByTenantIdAndIsActiveAndDeletedAtIsNull(tenantId, true)).thenReturn(1L);
+
+        UpdateLocationRequest request = UpdateLocationRequest.builder()
+                .name("Studio")
+                .isActive(false)
+                .build();
+
+        assertThrows(BusinessRuleException.class, () -> locationService.updateLocation(locationId, request));
+        verify(locationRepository, never()).save(any());
     }
 
     @Test

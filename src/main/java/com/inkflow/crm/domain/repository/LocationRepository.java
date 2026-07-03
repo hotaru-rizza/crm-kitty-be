@@ -17,5 +17,9 @@ public interface LocationRepository extends JpaRepository<Location, UUID> {
     Optional<Location> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
     List<Location> findByTenantIdAndIsActiveAndDeletedAtIsNull(UUID tenantId, Boolean isActive);
 
+    long countByTenantIdAndDeletedAtIsNull(UUID tenantId);
+
+    long countByTenantIdAndIsActiveAndDeletedAtIsNull(UUID tenantId, Boolean isActive);
+
     Optional<Location> findFirstByTenantIdAndIsActiveTrueAndDeletedAtIsNull(UUID tenantId);
 }

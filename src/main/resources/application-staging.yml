@@ -1,0 +1,23 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
+    baseline-version: 9
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+inkflow:
+  openapi:
+    enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.inkflow: DEBUG
+    org.springframework.security: WARN
+    org.flywaydb: INFO

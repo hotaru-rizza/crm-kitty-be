@@ -17,11 +17,10 @@
 -- ============================================================
 -- 1. TENANT
 -- ============================================================
-INSERT INTO tenants (id, name, subdomain, currency, timezone, language, client_dormancy_days, is_active, created_at, updated_at)
+INSERT INTO tenants (id, name, currency, timezone, language, client_dormancy_days, is_active, created_at, updated_at)
 VALUES (
     'a0000000-0000-0000-0000-000000000001',
     'InkFlow Studio',
-    'inkflow',
     'UAH',
     'Europe/Kyiv',
     'uk',

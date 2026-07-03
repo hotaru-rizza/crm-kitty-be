@@ -1,9 +1,13 @@
 package com.inkflow.crm.module.settings.service;
 
+import com.inkflow.crm.common.exception.AccessDeniedException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.enums.AccountType;
+import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.TenantRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.settings.dto.CompanySettingsDto;
 import com.inkflow.crm.module.settings.dto.UpdateCompanySettingsRequest;
 import com.inkflow.crm.security.UserPrincipal;
@@ -28,6 +32,12 @@ class SettingsServiceTest {
 
     @Mock
     private TenantRepository tenantRepository;
+
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
 
     @InjectMocks
     private SettingsService settingsService;
@@ -82,6 +92,48 @@ class SettingsServiceTest {
     }
 
     @Test
+    void updateCompanySettings_updatesAccountTypeForOwner() {
+        UUID tenantId = UUID.randomUUID();
+        authenticateOwner(tenantId);
+
+        Tenant tenant = Tenant.builder()
+                .id(tenantId)
+                .name("Ink Studio")
+                .accountType(AccountType.SOLO)
+                .build();
+
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(tenantRepository.save(tenant)).thenReturn(tenant);
+
+        UpdateCompanySettingsRequest request = new UpdateCompanySettingsRequest();
+        request.setAccountType("STUDIO");
+
+        CompanySettingsDto dto = settingsService.updateCompanySettings(request);
+
+        assertEquals("STUDIO", dto.getAccountType());
+        assertEquals(AccountType.STUDIO, tenant.getAccountType());
+    }
+
+    @Test
+    void updateCompanySettings_rejectsAccountTypeChangeForNonOwner() {
+        UUID tenantId = UUID.randomUUID();
+        authenticateAdmin(tenantId);
+
+        Tenant tenant = Tenant.builder()
+                .id(tenantId)
+                .name("Ink Studio")
+                .accountType(AccountType.SOLO)
+                .build();
+
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+
+        UpdateCompanySettingsRequest request = new UpdateCompanySettingsRequest();
+        request.setAccountType("STUDIO");
+
+        assertThrows(AccessDeniedException.class, () -> settingsService.updateCompanySettings(request));
+    }
+
+    @Test
     void getCompanySettings_rejectsMissingTenant() {
         UUID tenantId = UUID.randomUUID();
         authenticateOwner(tenantId);
@@ -95,7 +147,18 @@ class SettingsServiceTest {
         UserPrincipal principal = UserPrincipal.builder()
                 .id(UUID.randomUUID())
                 .tenantId(tenantId)
-                .role(com.inkflow.crm.domain.enums.UserRole.OWNER)
+                .role(UserRole.OWNER)
+                .build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
+        );
+    }
+
+    private void authenticateAdmin(UUID tenantId) {
+        UserPrincipal principal = UserPrincipal.builder()
+                .id(UUID.randomUUID())
+                .tenantId(tenantId)
+                .role(UserRole.ADMIN)
                 .build();
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())

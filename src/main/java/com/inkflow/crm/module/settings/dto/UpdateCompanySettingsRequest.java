@@ -6,4 +6,5 @@ import lombok.Data;
 public class UpdateCompanySettingsRequest {
     private String name;
     private String logoUrl;
+    private String accountType;
 }

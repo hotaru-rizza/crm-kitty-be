@@ -67,4 +67,14 @@ public interface TattooRepository extends JpaRepository<Tattoo, Long> {
             Collection<UUID> staffIds, TattooStatus status);
 
     List<Tattoo> findByStaffIdAndShowcaseTrueOrderBySortOrderAsc(UUID staffId);
+
+    @Query(value = """
+            SELECT DISTINCT ON (tag) tag,
+                   COALESCE(NULLIF(thumbnail_url, ''), image_url) AS cover_url
+            FROM tattoos, unnest(tags) AS tag
+            WHERE status = 'READY'
+              AND tag IN (:slugs)
+            ORDER BY tag, created_at DESC
+            """, nativeQuery = true)
+    List<StyleCoverView> findCoverUrlsByTags(@Param("slugs") List<String> slugs);
 }

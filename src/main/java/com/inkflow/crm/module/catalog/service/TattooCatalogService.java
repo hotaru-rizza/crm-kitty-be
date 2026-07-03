@@ -7,7 +7,9 @@ import com.inkflow.crm.module.catalog.dto.CatalogSeedResultDto;
 import com.inkflow.crm.module.catalog.dto.TattooDto;
 import com.inkflow.crm.module.catalog.dto.TattooStyleDto;
 import com.inkflow.crm.module.catalog.entity.TattooStatus;
+import com.inkflow.crm.module.catalog.entity.TattooStyle;
 import com.inkflow.crm.module.catalog.mapper.TattooMapper;
+import com.inkflow.crm.module.catalog.repository.StyleCoverView;
 import com.inkflow.crm.module.catalog.repository.TattooRepository;
 import com.inkflow.crm.module.catalog.repository.TattooStyleRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -65,9 +69,22 @@ public class TattooCatalogService {
 
     @Transactional(readOnly = true)
     public List<TattooStyleDto> getStyles() {
-        return tattooMapper.toStyleDtoList(
-                tattooStyleRepository.findByActiveTrueOrderBySortOrderAsc()
-        );
+        List<TattooStyle> styles = tattooStyleRepository.findByActiveTrueOrderBySortOrderAsc();
+        Map<String, String> coverBySlug = resolveStyleCovers(styles);
+
+        return styles.stream()
+                .map(style -> tattooMapper.toStyleDto(style, coverBySlug.get(style.getSlug())))
+                .toList();
+    }
+
+    private Map<String, String> resolveStyleCovers(List<TattooStyle> styles) {
+        if (styles.isEmpty()) {
+            return Map.of();
+        }
+
+        List<String> slugs = styles.stream().map(TattooStyle::getSlug).toList();
+        return tattooRepository.findCoverUrlsByTags(slugs).stream()
+                .collect(Collectors.toMap(StyleCoverView::getTag, StyleCoverView::getCoverUrl, (a, b) -> a));
     }
 
     @Transactional(readOnly = true)

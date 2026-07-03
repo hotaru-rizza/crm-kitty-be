@@ -29,8 +29,19 @@ public class ProjectDto {
     private Integer completedSessions;
     private String sketchImage;
     private Instant createdAt;
+    private LocationSummaryDto location;
     private List<PhotoDto> photos;
     private List<SessionDto> sessions;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LocationSummaryDto {
+        private UUID id;
+        private String name;
+        private String color;
+    }
 
     @Data
     @Builder
