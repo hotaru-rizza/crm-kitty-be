@@ -6,8 +6,6 @@ import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.EmailTemplate;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
-import com.inkflow.crm.domain.repository.AppointmentRepository;
-import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.EmailTemplateRepository;
 import com.inkflow.crm.module.email.enums.BuiltInTemplateKey;
 import com.inkflow.crm.module.email.enums.TriggerType;
@@ -19,7 +17,6 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,9 +27,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TriggerSchedulerTest {
 
-    @Mock private AppointmentRepository appointmentRepository;
-    @Mock private ClientRepository clientRepository;
     @Mock private EmailTemplateRepository emailTemplateRepository;
+    @Mock private ScheduledTriggerQueryService scheduledTriggerQueryService;
     @Mock private EmailTenantContextLoader tenantContextLoader;
     @Mock private TriggerVariableBuilder variableBuilder;
     @Mock private NotificationDispatcher notificationDispatcher;
@@ -69,7 +65,7 @@ class TriggerSchedulerTest {
                 .thenReturn(List.of());
         when(emailTemplateRepository.findByTriggerTypeAndEnabledTrue(TriggerType.CLIENT_INACTIVE))
                 .thenReturn(List.of());
-        when(appointmentRepository.findByTenantIdAndDateRange(eq(tenantId), any(), any()))
+        when(scheduledTriggerQueryService.findAppointmentsByDateRange(any(), any()))
                 .thenReturn(List.of(appointment));
 
         triggerScheduler.processScheduledTriggers();

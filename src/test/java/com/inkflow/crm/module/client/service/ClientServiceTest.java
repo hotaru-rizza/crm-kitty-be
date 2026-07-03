@@ -98,8 +98,8 @@ class ClientServiceTest {
                 .phone("+380991234567")
                 .build();
 
-        when(clientRepository.existsByEmailIgnoreCaseAndTenantIdAndDeletedAtIsNull("anna.koval@test.com", tenantId)).thenReturn(false);
-        when(clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull("+380991234567", tenantId)).thenReturn(false);
+        when(clientRepository.existsByEmailIgnoreCaseAndDeletedAtIsNull("anna.koval@test.com")).thenReturn(false);
+        when(clientRepository.existsByPhoneAndDeletedAtIsNull("+380991234567")).thenReturn(false);
         when(clientMapper.toEntity(request)).thenReturn(entity);
         when(clientRepository.save(entity)).thenReturn(saved);
         when(clientMapper.toDto(saved)).thenReturn(ClientDto.builder().id(saved.getId()).phone("+380991234567").build());
@@ -123,7 +123,7 @@ class ClientServiceTest {
                 .phone("+380991234567")
                 .build();
 
-        when(clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull("+380991234567", tenantId)).thenReturn(true);
+        when(clientRepository.existsByPhoneAndDeletedAtIsNull("+380991234567")).thenReturn(true);
 
         assertThrows(BusinessRuleException.class, () -> clientService.createClient(request));
     }
@@ -141,9 +141,9 @@ class ClientServiceTest {
                 .phone("+380991234567")
                 .build();
 
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId))
                 .thenReturn(Optional.of(client));
-        when(clientRepository.existsByPhoneAndTenantIdAndDeletedAtIsNull("+380999999999", tenantId))
+        when(clientRepository.existsByPhoneAndDeletedAtIsNull("+380999999999"))
                 .thenReturn(true);
 
         UpdateClientRequest request = UpdateClientRequest.builder()
@@ -187,7 +187,7 @@ class ClientServiceTest {
                 .phone("+380991234567")
                 .build();
 
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId))
                 .thenReturn(Optional.of(client));
 
         clientService.deleteClient(clientId);
@@ -201,7 +201,7 @@ class ClientServiceTest {
         UUID clientId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(clientRepository.findByIdWithCollections(clientId, tenantId)).thenReturn(Optional.empty());
+        when(clientRepository.findByIdWithCollections(clientId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> clientService.getClientById(clientId));
     }

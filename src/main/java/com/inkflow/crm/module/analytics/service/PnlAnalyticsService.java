@@ -37,7 +37,7 @@ public class PnlAnalyticsService {
     @Transactional(readOnly = true)
     public PnlDto getPnl(Instant from, Instant to) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<Appointment> appointments = appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to);
+        List<Appointment> appointments = appointmentRepository.findByDateRange( from, to);
 
         BigDecimal revenue = metrics.sumDoneRevenue(appointments);
         BigDecimal costOfSales = metrics.sumCostOfSales(appointments);
@@ -74,7 +74,7 @@ public class PnlAnalyticsService {
 
     private BigDecimal loadOtherExpenses(UUID tenantId, Instant from, Instant to) {
         BigDecimal otherExpenses = transactionRepository
-                .sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to);
+                .sumByTypeAndDateRange( TransactionType.EXPENSE, from, to);
         return otherExpenses != null ? otherExpenses : BigDecimal.ZERO;
     }
 
@@ -113,7 +113,7 @@ public class PnlAnalyticsService {
 
     private List<PnlDto.CategoryLine> buildExpenseBreakdown(UUID tenantId, Instant from, Instant to) {
         Map<String, TransactionCategoryConfig> configByKey = loadCategoryConfigIndex(tenantId);
-        List<Object[]> categoryTotals = transactionRepository.sumByCategoryAndDateRange(tenantId, from, to);
+        List<Object[]> categoryTotals = transactionRepository.sumByCategoryAndDateRange( from, to);
         List<PnlDto.CategoryLine> expenseBreakdown = new ArrayList<>();
 
         for (Object[] row : categoryTotals) {
@@ -129,7 +129,7 @@ public class PnlAnalyticsService {
 
     private Map<String, TransactionCategoryConfig> loadCategoryConfigIndex(UUID tenantId) {
         return categoryConfigRepository
-                .findByTenantIdAndDeletedAtIsNullOrderByIsDefaultDescLabelAsc(tenantId)
+                .findByDeletedAtIsNullOrderByIsDefaultDescLabelAsc()
                 .stream()
                 .collect(Collectors.toMap(
                         TransactionCategoryConfig::getCategoryKey,

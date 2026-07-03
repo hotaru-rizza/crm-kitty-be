@@ -52,8 +52,7 @@ class CategoryConfigServiceIntegrationTest {
 
         categoryConfigService.ensureDefaults(bundle.tenant().getId());
 
-        assertEquals(8, categoryConfigRepository.findByTenantIdAndDeletedAtIsNullOrderByIsDefaultDescLabelAsc(
-                bundle.tenant().getId()).size());
+        assertEquals(8, categoryConfigRepository.findByDeletedAtIsNullOrderByIsDefaultDescLabelAsc().size());
     }
 
     @Test
@@ -64,8 +63,7 @@ class CategoryConfigServiceIntegrationTest {
         categoryConfigService.ensureDefaults(tenantId);
         categoryConfigService.ensureDefaults(tenantId);
 
-        assertEquals(8, categoryConfigRepository.findByTenantIdAndDeletedAtIsNullOrderByIsDefaultDescLabelAsc(
-                tenantId).size());
+        assertEquals(8, categoryConfigRepository.findByDeletedAtIsNullOrderByIsDefaultDescLabelAsc().size());
     }
 
     @Test

@@ -40,11 +40,11 @@ public class ServiceService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         if (active != null) {
-            List<Service> services = serviceRepository.findByTenantIdAndIsActiveAndDeletedAtIsNull(tenantId, active);
+            List<Service> services = serviceRepository.findByIsActiveAndDeletedAtIsNull( active);
             return new PageResult<>(serviceMapper.toDtoList(services), null);
         }
 
-        Page<Service> page = serviceRepository.findByTenantIdAndDeletedAtIsNull(tenantId, pageRequest.toPageable());
+        Page<Service> page = serviceRepository.findByDeletedAtIsNull( pageRequest.toPageable());
         return new PageResult<>(serviceMapper.toDtoList(page.getContent()), PaginationDto.from(page));
     }
 

@@ -108,7 +108,7 @@ class StaffInviteServiceTest {
                 .calendarColor("#6366f1")
                 .build();
 
-        when(staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull("exists@test.com", tenantId))
+        when(staffRepository.existsByEmailAndDeletedAtIsNull("exists@test.com"))
                 .thenReturn(true);
 
         assertThrows(BusinessRuleException.class, () -> staffInviteService.inviteStaff(request));
@@ -126,8 +126,8 @@ class StaffInviteServiceTest {
                 .locationIds(List.of(UUID.randomUUID()))
                 .build();
 
-        when(staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull("pending@test.com", tenantId)).thenReturn(false);
-        when(staffInviteRepository.existsByEmailAndTenantIdAndAcceptedAtIsNull("pending@test.com", tenantId))
+        when(staffRepository.existsByEmailAndDeletedAtIsNull("pending@test.com")).thenReturn(false);
+        when(staffInviteRepository.existsByEmailAndAcceptedAtIsNull("pending@test.com"))
                 .thenReturn(true);
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
@@ -148,8 +148,8 @@ class StaffInviteServiceTest {
                 .locationIds(java.util.List.of(UUID.randomUUID()))
                 .build();
 
-        when(staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull("new@test.com", tenantId)).thenReturn(false);
-        when(staffInviteRepository.existsByEmailAndTenantIdAndAcceptedAtIsNull("new@test.com", tenantId)).thenReturn(false);
+        when(staffRepository.existsByEmailAndDeletedAtIsNull("new@test.com")).thenReturn(false);
+        when(staffInviteRepository.existsByEmailAndAcceptedAtIsNull("new@test.com")).thenReturn(false);
         when(staffInviteRepository.save(any(StaffInvite.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         String token = staffInviteService.inviteStaff(request);

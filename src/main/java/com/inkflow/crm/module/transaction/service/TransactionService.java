@@ -50,8 +50,7 @@ public class TransactionService {
             BigDecimal amountMax
     ) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Specification<Transaction> spec = TransactionSpecifications.filtered(
-                tenantId, type, category, from, to, staffIds, paymentMethod, amountMin, amountMax);
+        Specification<Transaction> spec = TransactionSpecifications.filtered( type, category, from, to, staffIds, paymentMethod, amountMin, amountMax);
         Page<Transaction> page = transactionRepository.findAll(spec, pageRequest.toPageable());
         List<TransactionDto> data = page.getContent().stream().map(transactionMapper::toDto).toList();
         return new PageResult<>(data, PaginationDto.from(page));
@@ -60,7 +59,7 @@ public class TransactionService {
     @Transactional(readOnly = true)
     public TransactionDto getTransactionById(UUID id) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Transaction transaction = transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        Transaction transaction = transactionRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.transaction(id.toString()));
         return transactionMapper.toDto(transaction);
     }
@@ -69,18 +68,18 @@ public class TransactionService {
     public TransactionDto createTransaction(CreateTransactionRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
-        Location location = locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getLocationId(), tenantId)
+        Location location = locationRepository.findByIdAndDeletedAtIsNull(request.getLocationId())
                 .orElseThrow(() -> ResourceNotFoundException.location(request.getLocationId().toString()));
 
         Appointment appointment = null;
         if (request.getAppointmentId() != null) {
-            appointment = appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getAppointmentId(), tenantId)
+            appointment = appointmentRepository.findByIdAndDeletedAtIsNull(request.getAppointmentId())
                     .orElseThrow(() -> ResourceNotFoundException.appointment(request.getAppointmentId().toString()));
         }
 
         Staff staff = null;
         if (request.getStaffId() != null) {
-            staff = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getStaffId(), tenantId)
+            staff = staffRepository.findByIdAndDeletedAtIsNull(request.getStaffId())
                     .orElseThrow(() -> ResourceNotFoundException.staff(request.getStaffId().toString()));
         }
 
@@ -114,7 +113,7 @@ public class TransactionService {
     public void deleteTransaction(UUID id) {
         SecurityUtils.requireOwner();
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        Transaction transaction = transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(id, tenantId)
+        Transaction transaction = transactionRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.transaction(id.toString()));
         transaction.softDelete();
         transactionRepository.save(transaction);
@@ -134,30 +133,30 @@ public class TransactionService {
         boolean filterByStaff = !staffFilter.isEmpty();
 
         BigDecimal totalIncome = nullToZero(filterByStaff
-                ? transactionRepository.sumByTypeAndDateRangeForStaffs(tenantId, TransactionType.INCOME, from, to, staffFilter)
-                : transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to));
+                ? transactionRepository.sumByTypeAndDateRangeForStaffs( TransactionType.INCOME, from, to, staffFilter)
+                : transactionRepository.sumByTypeAndDateRange( TransactionType.INCOME, from, to));
         BigDecimal totalExpenses = nullToZero(filterByStaff
-                ? transactionRepository.sumByTypeAndDateRangeForStaffs(tenantId, TransactionType.EXPENSE, from, to, staffFilter)
-                : transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to));
+                ? transactionRepository.sumByTypeAndDateRangeForStaffs( TransactionType.EXPENSE, from, to, staffFilter)
+                : transactionRepository.sumByTypeAndDateRange( TransactionType.EXPENSE, from, to));
 
         Map<String, BigDecimal> byCategory = new HashMap<>();
         for (Object[] row : filterByStaff
-                ? transactionRepository.sumByCategoryAndDateRangeForStaffs(tenantId, from, to, staffFilter)
-                : transactionRepository.sumByCategoryAndDateRange(tenantId, from, to)) {
+                ? transactionRepository.sumByCategoryAndDateRangeForStaffs( from, to, staffFilter)
+                : transactionRepository.sumByCategoryAndDateRange( from, to)) {
             byCategory.put((String) row[0], (BigDecimal) row[1]);
         }
 
         Map<String, BigDecimal> byPaymentMethod = new HashMap<>();
         for (Object[] row : filterByStaff
-                ? transactionRepository.sumByPaymentMethodAndDateRangeForStaffs(tenantId, from, to, staffFilter)
-                : transactionRepository.sumByPaymentMethodAndDateRange(tenantId, from, to)) {
+                ? transactionRepository.sumByPaymentMethodAndDateRangeForStaffs( from, to, staffFilter)
+                : transactionRepository.sumByPaymentMethodAndDateRange( from, to)) {
             byPaymentMethod.put(((PaymentMethod) row[0]).getValue(), (BigDecimal) row[1]);
         }
 
         List<FinanceStatsDto.ArtistRevenueDto> byArtist = new ArrayList<>();
         for (Object[] row : filterByStaff
-                ? transactionRepository.sumByArtistAndDateRangeForStaffs(tenantId, from, to, staffFilter)
-                : transactionRepository.sumByArtistAndDateRange(tenantId, from, to)) {
+                ? transactionRepository.sumByArtistAndDateRangeForStaffs( from, to, staffFilter)
+                : transactionRepository.sumByArtistAndDateRange( from, to)) {
             byArtist.add(FinanceStatsDto.ArtistRevenueDto.builder()
                     .artistId(((UUID) row[0]).toString())
                     .artistName(row[1] + " " + row[2])
@@ -176,8 +175,8 @@ public class TransactionService {
         }
 
         long incomeCount = filterByStaff
-                ? transactionRepository.countByTypeAndDateRangeForStaffs(tenantId, TransactionType.INCOME, from, to, staffFilter)
-                : transactionRepository.countByTypeAndDateRange(tenantId, TransactionType.INCOME, from, to);
+                ? transactionRepository.countByTypeAndDateRangeForStaffs( TransactionType.INCOME, from, to, staffFilter)
+                : transactionRepository.countByTypeAndDateRange( TransactionType.INCOME, from, to);
 
         return FinanceStatsDto.builder()
                 .totalIncome(totalIncome)

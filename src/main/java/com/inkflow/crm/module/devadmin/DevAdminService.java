@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.devadmin;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.repository.StaffRepository;
@@ -19,6 +20,7 @@ import java.util.UUID;
 @Service
 @Profile("dev")
 @RequiredArgsConstructor
+@BypassTenantFilter
 public class DevAdminService {
 
     private final TenantRepository tenantRepository;
@@ -120,7 +122,7 @@ public class DevAdminService {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
 
-        List<Staff> staffList = staffRepository.findByTenantIdAndDeletedAtIsNull(tenantId);
+        List<Staff> staffList = staffRepository.findByDeletedAtIsNull();
         List<StaffSummary> staffSummaries = staffList.stream()
                 .map(s -> new StaffSummary(s.getId(), s.getFirstName(), s.getLastName(), s.getEmail(), s.getRole().name(), s.getAuthUserId()))
                 .toList();

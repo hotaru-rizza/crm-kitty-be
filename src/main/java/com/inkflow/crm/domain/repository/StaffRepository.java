@@ -20,39 +20,36 @@ import java.util.UUID;
 public interface StaffRepository extends JpaRepository<Staff, UUID> {
 
     @EntityGraph(attributePaths = {"locations"})
-    Page<Staff> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
+    Page<Staff> findByDeletedAtIsNull(Pageable pageable);
 
     @EntityGraph(attributePaths = {"locations"})
-    List<Staff> findByTenantIdAndDeletedAtIsNull(UUID tenantId);
+    List<Staff> findByDeletedAtIsNull();
 
     @EntityGraph(attributePaths = {"locations", "schedules"})
-    Optional<Staff> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+    Optional<Staff> findByIdAndDeletedAtIsNull(UUID id);
 
-    Optional<Staff> findByEmailAndTenantIdAndDeletedAtIsNull(String email, UUID tenantId);
+    Optional<Staff> findByEmailAndDeletedAtIsNull(String email);
 
     @EntityGraph(attributePaths = {"locations"})
     Optional<Staff> findByAuthUserIdAndDeletedAtIsNull(String authUserId);
 
-    boolean existsByEmailAndTenantIdAndDeletedAtIsNull(String email, UUID tenantId);
+    boolean existsByEmailAndDeletedAtIsNull(String email);
 
-    List<Staff> findByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, StaffStatus status);
+    List<Staff> findByStatusAndDeletedAtIsNull(StaffStatus status);
 
-    long countByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, StaffStatus status);
+    long countByStatusAndDeletedAtIsNull(StaffStatus status);
 
-    long countByTenantIdAndDeletedAtIsNull(UUID tenantId);
+    long countByDeletedAtIsNull();
 
     @EntityGraph(attributePaths = {"locations"})
-    Page<Staff> findByTenantIdAndRoleAndDeletedAtIsNull(UUID tenantId, UserRole role, Pageable pageable);
+    Page<Staff> findByRoleAndDeletedAtIsNull(UserRole role, Pageable pageable);
 
     @Query("""
             SELECT s FROM Staff s
             WHERE s.id IN :ids
-              AND s.tenantId = :tenantId
               AND s.deletedAt IS NULL
             """)
-    List<Staff> findByIdInAndTenantIdAndDeletedAtIsNull(
-            @Param("ids") List<UUID> ids,
-            @Param("tenantId") UUID tenantId);
+    List<Staff> findByIdInAndDeletedAtIsNull(@Param("ids") List<UUID> ids);
 
     @Query("""
             SELECT s FROM Staff s
@@ -74,18 +71,16 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
     @EntityGraph(attributePaths = {"locations"})
     @Query("""
             SELECT s FROM Staff s
-            WHERE s.tenantId = :tenantId
-              AND s.role = 'ARTIST'
+            WHERE s.role = 'ARTIST'
               AND s.deletedAt IS NULL
             """)
-    List<Staff> findArtistsByTenantId(@Param("tenantId") UUID tenantId);
+    List<Staff> findArtists();
 
     @EntityGraph(attributePaths = {"locations"})
     @Query("""
             SELECT DISTINCT s FROM Staff s
             LEFT JOIN s.locations l
-            WHERE s.tenantId = :tenantId
-              AND s.deletedAt IS NULL
+            WHERE s.deletedAt IS NULL
               AND (COALESCE(:search, '') = ''
                    OR LOWER(s.firstName) LIKE LOWER(CONCAT('%', :search, '%'))
                    OR LOWER(s.lastName)  LIKE LOWER(CONCAT('%', :search, '%'))
@@ -95,7 +90,6 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
               AND (:accountStatus IS NULL OR s.accountStatus  = :accountStatus)
             """)
     Page<Staff> findWithFilters(
-            @Param("tenantId") UUID tenantId,
             @Param("search") String search,
             @Param("role") UserRole role,
             @Param("locationId") UUID locationId,

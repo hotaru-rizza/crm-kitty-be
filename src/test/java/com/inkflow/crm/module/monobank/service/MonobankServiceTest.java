@@ -341,7 +341,7 @@ class MonobankServiceTest {
                 .status(AppointmentStatus.CANCELLED)
                 .build();
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
 
         CreateOnlineInvoiceRequest request = new CreateOnlineInvoiceRequest();
@@ -374,7 +374,7 @@ class MonobankServiceTest {
                 .pageUrl("https://pay.monobank.ua/old")
                 .build();
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
         when(invoiceRepository.findByAppointmentIdAndStatus(appointmentId, "pending"))
                 .thenReturn(Optional.of(oldPending));

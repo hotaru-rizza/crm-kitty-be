@@ -32,7 +32,7 @@ class ServiceLookupTest {
         UUID serviceId = UUID.randomUUID();
         Service service = Service.builder().id(serviceId).tenantId(tenantId).title("Tattoo").build();
 
-        when(serviceRepository.findByIdAndTenantIdAndDeletedAtIsNull(serviceId, tenantId))
+        when(serviceRepository.findByIdAndDeletedAtIsNull(serviceId))
                 .thenReturn(Optional.of(service));
 
         Service result = serviceLookup.require(tenantId, serviceId);
@@ -45,7 +45,7 @@ class ServiceLookupTest {
         UUID tenantId = UUID.randomUUID();
         UUID serviceId = UUID.randomUUID();
 
-        when(serviceRepository.findByIdAndTenantIdAndDeletedAtIsNull(serviceId, tenantId))
+        when(serviceRepository.findByIdAndDeletedAtIsNull(serviceId))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> serviceLookup.require(tenantId, serviceId));
@@ -56,10 +56,10 @@ class ServiceLookupTest {
         UUID currentTenantId = UUID.randomUUID();
         UUID serviceId = UUID.randomUUID();
 
-        when(serviceRepository.findByIdAndTenantIdAndDeletedAtIsNull(serviceId, currentTenantId))
+        when(serviceRepository.findByIdAndDeletedAtIsNull(serviceId))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> serviceLookup.require(currentTenantId, serviceId));
-        verify(serviceRepository).findByIdAndTenantIdAndDeletedAtIsNull(serviceId, currentTenantId);
+        verify(serviceRepository).findByIdAndDeletedAtIsNull(serviceId);
     }
 }

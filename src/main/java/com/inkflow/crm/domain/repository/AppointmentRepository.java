@@ -21,16 +21,13 @@ import java.util.UUID;
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID>, JpaSpecificationExecutor<Appointment> {
 
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
-    Page<Appointment> findByTenantIdAndDeletedAtIsNull(UUID tenantId, Pageable pageable);
+    Page<Appointment> findByDeletedAtIsNull(Pageable pageable);
 
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
-    Page<Appointment> findByTenantIdAndLocationIdAndDeletedAtIsNull(UUID tenantId, UUID locationId, Pageable pageable);
+    Page<Appointment> findByLocationIdAndDeletedAtIsNull(UUID locationId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
-    Page<Appointment> findByTenantIdAndClientIdAndDeletedAtIsNullOrderByStartTimeDesc(UUID tenantId, UUID clientId, Pageable pageable);
-
-    @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
-    Optional<Appointment> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+    Page<Appointment> findByClientIdAndDeletedAtIsNullOrderByStartTimeDesc(UUID clientId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     Optional<Appointment> findByIdAndDeletedAtIsNull(UUID id);
@@ -39,7 +36,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
 
     List<Appointment> findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(UUID artistId, List<AppointmentStatus> statuses, Instant after);
 
-    long countByTenantIdAndLocationIdAndStartTimeBetweenAndDeletedAtIsNull(UUID tenantId, UUID locationId, Instant from, Instant to);
+    long countByLocationIdAndStartTimeBetweenAndDeletedAtIsNull(UUID locationId, Instant from, Instant to);
 
     @Override
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
@@ -48,29 +45,25 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     @Query("""
             SELECT a FROM Appointment a
-            WHERE a.tenantId = :tenantId
-              AND a.startTime >= :from
+            WHERE a.startTime >= :from
               AND a.startTime < :to
               AND a.deletedAt IS NULL
             ORDER BY a.startTime
             """)
-    List<Appointment> findByTenantIdAndDateRange(
-            @Param("tenantId") UUID tenantId,
+    List<Appointment> findByDateRange(
             @Param("from") Instant from,
             @Param("to") Instant to);
 
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     @Query("""
             SELECT a FROM Appointment a
-            WHERE a.tenantId = :tenantId
-              AND a.artist.id = :artistId
+            WHERE a.artist.id = :artistId
               AND a.startTime >= :from
               AND a.startTime < :to
               AND a.deletedAt IS NULL
             ORDER BY a.startTime
             """)
-    List<Appointment> findByTenantIdAndArtistIdAndDateRange(
-            @Param("tenantId") UUID tenantId,
+    List<Appointment> findByArtistIdAndDateRange(
             @Param("artistId") UUID artistId,
             @Param("from") Instant from,
             @Param("to") Instant to);
@@ -78,15 +71,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     @Query("""
             SELECT a FROM Appointment a
-            WHERE a.tenantId = :tenantId
-              AND a.location.id = :locationId
+            WHERE a.location.id = :locationId
               AND a.startTime >= :from
               AND a.startTime < :to
               AND a.deletedAt IS NULL
             ORDER BY a.startTime
             """)
-    List<Appointment> findByTenantIdAndLocationIdAndDateRange(
-            @Param("tenantId") UUID tenantId,
+    List<Appointment> findByLocationIdAndDateRange(
             @Param("locationId") UUID locationId,
             @Param("from") Instant from,
             @Param("to") Instant to);
@@ -157,8 +148,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
 
     @Query("""
             SELECT a.client.id FROM Appointment a
-            WHERE a.tenantId = :tenantId
-              AND a.deletedAt IS NULL
+            WHERE a.deletedAt IS NULL
               AND a.client.deletedAt IS NULL
               AND a.client.blacklisted = false
               AND (:artistId IS NULL OR a.artist.id = :artistId)
@@ -166,7 +156,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
             ORDER BY MAX(a.startTime) DESC
             """)
     List<UUID> findRecentClientIds(
-            @Param("tenantId") UUID tenantId,
             @Param("artistId") UUID artistId,
             Pageable pageable);
 }

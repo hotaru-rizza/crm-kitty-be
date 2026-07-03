@@ -125,8 +125,8 @@ class ProjectServiceTest {
                 .totalSessions(3)
                 .build();
 
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId)).thenReturn(Optional.of(client));
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(artistId, tenantId)).thenReturn(Optional.of(artist));
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId)).thenReturn(Optional.of(client));
+        when(staffRepository.findByIdAndDeletedAtIsNull(artistId)).thenReturn(Optional.of(artist));
         when(projectRepository.save(any(Project.class))).thenReturn(saved);
         when(galleryPhotoRepository.findByProjectId(saved.getId())).thenReturn(java.util.List.of());
         when(projectMapper.toSessionDtos(saved)).thenReturn(java.util.List.of());
@@ -145,7 +145,7 @@ class ProjectServiceTest {
         UUID projectId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.empty());
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> projectService.getProjectById(projectId));
     }
@@ -168,8 +168,8 @@ class ProjectServiceTest {
                 .totalSessions(3)
                 .build();
 
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId)).thenReturn(Optional.of(client));
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(artistId, tenantId)).thenReturn(Optional.of(artist));
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId)).thenReturn(Optional.of(client));
+        when(staffRepository.findByIdAndDeletedAtIsNull(artistId)).thenReturn(Optional.of(artist));
         when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
             Project project = invocation.getArgument(0);
             project.setId(UUID.randomUUID());
@@ -205,7 +205,7 @@ class ProjectServiceTest {
                 .totalSessions(3)
                 .build();
 
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId)).thenReturn(Optional.empty());
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> projectService.createProject(request));
     }
@@ -226,8 +226,8 @@ class ProjectServiceTest {
                 .totalSessions(3)
                 .build();
 
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId)).thenReturn(Optional.of(client));
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(artistId, tenantId)).thenReturn(Optional.empty());
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId)).thenReturn(Optional.of(client));
+        when(staffRepository.findByIdAndDeletedAtIsNull(artistId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> projectService.createProject(request));
     }
@@ -248,7 +248,7 @@ class ProjectServiceTest {
                 .client(testClient())
                 .build();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
         when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(galleryPhotoRepository.findByProjectId(projectId)).thenReturn(java.util.List.of());
         when(projectMapper.toSessionDtos(project)).thenReturn(java.util.List.of());
@@ -277,7 +277,7 @@ class ProjectServiceTest {
                 .client(testClient())
                 .build();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
         when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(galleryPhotoRepository.findByProjectId(projectId)).thenReturn(java.util.List.of());
         when(projectMapper.toSessionDtos(project)).thenReturn(java.util.List.of());
@@ -306,8 +306,8 @@ class ProjectServiceTest {
                 .totalSessions(3)
                 .build();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(missingArtistId, tenantId)).thenReturn(Optional.empty());
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
+        when(staffRepository.findByIdAndDeletedAtIsNull(missingArtistId)).thenReturn(Optional.empty());
 
         UpdateProjectRequest request = UpdateProjectRequest.builder().artistId(missingArtistId).build();
         assertThrows(ResourceNotFoundException.class, () -> projectService.updateProject(projectId, request));
@@ -330,7 +330,7 @@ class ProjectServiceTest {
                 .client(testClient())
                 .build();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
         when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(galleryPhotoRepository.findByProjectId(projectId)).thenReturn(java.util.List.of());
         when(projectMapper.toSessionDtos(project)).thenReturn(java.util.List.of());
@@ -359,7 +359,7 @@ class ProjectServiceTest {
                 .client(testClient())
                 .build();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
         when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         projectService.deleteProject(projectId);
@@ -384,7 +384,7 @@ class ProjectServiceTest {
                 .totalSessions(3)
                 .build();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
 
         assertThrows(BusinessRuleException.class, () -> projectService.deleteProject(projectId));
         verify(projectRepository, never()).save(any());
@@ -405,7 +405,7 @@ class ProjectServiceTest {
                 .totalSessions(3)
                 .build();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
         when(galleryPhotoRepository.findByProjectId(projectId)).thenReturn(List.of());
         when(projectMapper.toSessionDtos(project)).thenReturn(List.of());
         when(projectMapper.toDto(eq(project), eq(List.of()), eq(List.of())))
@@ -458,9 +458,9 @@ class ProjectServiceTest {
                 .totalSessions(3)
                 .build();
 
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId)).thenReturn(Optional.of(client));
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(artistId, tenantId)).thenReturn(Optional.of(artist));
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId)).thenReturn(Optional.of(location));
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId)).thenReturn(Optional.of(client));
+        when(staffRepository.findByIdAndDeletedAtIsNull(artistId)).thenReturn(Optional.of(artist));
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId)).thenReturn(Optional.of(location));
         when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
             Project project = invocation.getArgument(0);
             project.setId(UUID.randomUUID());
@@ -494,7 +494,7 @@ class ProjectServiceTest {
                 .client(testClient())
                 .build();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
         when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(galleryPhotoRepository.findByProjectId(projectId)).thenReturn(List.of());
         when(projectMapper.toSessionDtos(project)).thenReturn(List.of());
@@ -524,7 +524,7 @@ class ProjectServiceTest {
         UUID projectId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.empty());
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
                 () -> projectService.updateProject(projectId, UpdateProjectRequest.builder().title("New").build()));
@@ -536,7 +536,7 @@ class ProjectServiceTest {
         UUID projectId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.empty());
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> projectService.deleteProject(projectId));
     }
@@ -558,7 +558,7 @@ class ProjectServiceTest {
                 .client(testClient())
                 .build();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
         when(galleryPhotoRepository.save(any(GalleryPhoto.class))).thenAnswer(invocation -> {
             GalleryPhoto photo = invocation.getArgument(0);
             photo.setId(UUID.randomUUID());
@@ -596,7 +596,7 @@ class ProjectServiceTest {
                 .build();
         GalleryPhoto photo = GalleryPhoto.builder().id(photoId).tenantId(tenantId).project(project).build();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
         when(galleryPhotoRepository.findById(photoId)).thenReturn(Optional.of(photo));
 
         projectService.deletePhoto(projectId, photoId);
@@ -620,7 +620,7 @@ class ProjectServiceTest {
                 .totalSessions(3)
                 .build();
 
-        when(projectRepository.findByIdAndTenantIdAndDeletedAtIsNull(projectId, tenantId)).thenReturn(Optional.of(project));
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
         when(galleryPhotoRepository.findById(photoId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> projectService.deletePhoto(projectId, photoId));

@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.audit.scheduler;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.inkflow.crm.common.scheduler.SchedulerRunService;
 import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.repository.AuditLogRepository;
@@ -14,6 +15,7 @@ import java.time.temporal.ChronoUnit;
 
 @Slf4j
 @Component
+@BypassTenantFilter
 @RequiredArgsConstructor
 public class AuditRetentionScheduler {
 

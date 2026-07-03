@@ -15,10 +15,6 @@ public final class TransactionSpecifications {
 
     private TransactionSpecifications() {}
 
-    public static Specification<Transaction> belongsToTenant(UUID tenantId) {
-        return (root, query, cb) -> cb.equal(root.get("tenantId"), tenantId);
-    }
-
     public static Specification<Transaction> notDeleted() {
         return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
     }
@@ -82,7 +78,6 @@ public final class TransactionSpecifications {
     }
 
     public static Specification<Transaction> filtered(
-            UUID tenantId,
             String type,
             String category,
             Instant from,
@@ -103,7 +98,6 @@ public final class TransactionSpecifications {
                 : null;
 
         return Specification.allOf(
-                belongsToTenant(tenantId),
                 notDeleted(),
                 typeIs(transactionType),
                 categoryIs(transactionCategory),

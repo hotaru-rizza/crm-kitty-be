@@ -79,9 +79,9 @@ class LocationServiceTest {
                 .name("Studio")
                 .build();
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.of(location));
-        when(locationRepository.countByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(2L);
+        when(locationRepository.countByDeletedAtIsNull()).thenReturn(2L);
 
         locationService.deleteLocation(locationId);
 
@@ -118,7 +118,7 @@ class LocationServiceTest {
         UUID locationId = UUID.randomUUID();
         authenticateOwner(tenantId);
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> locationService.getLocationById(locationId));
@@ -143,7 +143,7 @@ class LocationServiceTest {
         UUID locationId = UUID.randomUUID();
         authenticateAdmin(tenantId);
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
@@ -162,9 +162,9 @@ class LocationServiceTest {
                 .name("Studio")
                 .build();
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.of(location));
-        when(locationRepository.countByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(1L);
+        when(locationRepository.countByDeletedAtIsNull()).thenReturn(1L);
 
         assertThrows(BusinessRuleException.class, () -> locationService.deleteLocation(locationId));
         verify(locationRepository, never()).save(any());
@@ -183,9 +183,9 @@ class LocationServiceTest {
                 .isActive(true)
                 .build();
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.of(location));
-        when(locationRepository.countByTenantIdAndIsActiveAndDeletedAtIsNull(tenantId, true)).thenReturn(1L);
+        when(locationRepository.countByIsActiveAndDeletedAtIsNull(true)).thenReturn(1L);
 
         UpdateLocationRequest request = UpdateLocationRequest.builder()
                 .name("Studio")
@@ -202,7 +202,7 @@ class LocationServiceTest {
         UUID locationId = UUID.randomUUID();
         authenticateOwner(tenantId);
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> locationService.deleteLocation(locationId));
@@ -228,7 +228,7 @@ class LocationServiceTest {
         UUID locationId = UUID.randomUUID();
         authenticateAdmin(tenantId);
 
-        when(locationRepository.findByIdAndTenantIdAndDeletedAtIsNull(locationId, tenantId))
+        when(locationRepository.findByIdAndDeletedAtIsNull(locationId))
                 .thenReturn(Optional.empty());
 
         AssignStaffRequest request = AssignStaffRequest.builder()

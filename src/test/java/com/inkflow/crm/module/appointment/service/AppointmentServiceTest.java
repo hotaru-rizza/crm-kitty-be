@@ -109,7 +109,7 @@ class AppointmentServiceTest {
         when(entityResolver.requireLocation(tenantId, locationId)).thenReturn(location);
         when(appointmentRepository.existsConflictingAppointment(artistId, start, end)).thenReturn(false);
         when(inkflowProperties.defaultZoneId()).thenReturn(ZoneId.of("Europe/Kyiv"));
-        when(leaveRequestRepository.findActiveLeaveForDate(eq(tenantId), eq(artistId), any())).thenReturn(List.of());
+        when(leaveRequestRepository.findActiveLeaveForDate(eq(artistId), any())).thenReturn(List.of());
 
         Appointment saved = Appointment.builder()
                 .id(UUID.randomUUID())
@@ -189,7 +189,7 @@ class AppointmentServiceTest {
         when(entityResolver.requireLocation(any(), any())).thenReturn(location(UUID.randomUUID()));
         when(appointmentRepository.existsConflictingAppointment(artistId, start, end)).thenReturn(false);
         when(inkflowProperties.defaultZoneId()).thenReturn(ZoneId.of("Europe/Kyiv"));
-        when(leaveRequestRepository.findActiveLeaveForDate(eq(tenantId), eq(artistId), any()))
+        when(leaveRequestRepository.findActiveLeaveForDate(eq(artistId), any()))
                 .thenReturn(List.of(new LeaveRequest()));
 
         CreateAppointmentRequest request = CreateAppointmentRequest.builder()
@@ -250,7 +250,7 @@ class AppointmentServiceTest {
         when(appointmentRepository.existsConflictingAppointmentExcluding(artistId, newStart, newEnd, appointmentId))
                 .thenReturn(false);
         when(inkflowProperties.defaultZoneId()).thenReturn(ZoneId.of("Europe/Kyiv"));
-        when(leaveRequestRepository.findActiveLeaveForDate(eq(tenantId), eq(artistId), any())).thenReturn(List.of());
+        when(leaveRequestRepository.findActiveLeaveForDate(eq(artistId), any())).thenReturn(List.of());
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(appointmentMapper.toDto(appointment)).thenReturn(AppointmentDto.builder().id(appointmentId).build());
 

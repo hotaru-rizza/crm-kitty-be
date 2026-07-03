@@ -64,7 +64,7 @@ class RequestServiceStatusTest {
                 .status(RequestStatus.NEW)
                 .build();
 
-        when(requestRepository.findByIdAndTenantId(requestId, tenantId))
+        when(requestRepository.findVisibleById(requestId))
                 .thenReturn(Optional.of(request));
         when(requestRepository.save(request)).thenReturn(request);
 
@@ -91,7 +91,7 @@ class RequestServiceStatusTest {
                 .status(RequestStatus.NEW)
                 .build();
 
-        when(requestRepository.findByIdAndTenantId(requestId, tenantId))
+        when(requestRepository.findVisibleById(requestId))
                 .thenReturn(Optional.of(request));
         when(requestRepository.save(request)).thenReturn(request);
 
@@ -116,7 +116,7 @@ class RequestServiceStatusTest {
                 .status(RequestStatus.NEW)
                 .build();
 
-        when(requestRepository.findByIdAndTenantId(requestId, tenantId))
+        when(requestRepository.findVisibleById(requestId))
                 .thenReturn(Optional.of(request));
         when(requestRepository.save(request)).thenReturn(request);
 
@@ -133,7 +133,7 @@ class RequestServiceStatusTest {
         UUID requestId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(requestRepository.findByIdAndTenantId(requestId, tenantId))
+        when(requestRepository.findVisibleById(requestId))
                 .thenReturn(Optional.empty());
 
         UpdateRequestStatusRequest update = UpdateRequestStatusRequest.builder()

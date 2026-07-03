@@ -76,7 +76,7 @@ class PnlAnalyticsServiceTest {
                 .artist(Staff.builder().id(artistId).firstName("Alex").lastName("Ink").build())
                 .build();
 
-        when(appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to)).thenReturn(List.of(done));
+        when(appointmentRepository.findByDateRange(from, to)).thenReturn(List.of(done));
         when(metrics.sumDoneRevenue(List.of(done))).thenReturn(BigDecimal.valueOf(1000));
         when(metrics.sumCostOfSales(List.of(done))).thenReturn(BigDecimal.valueOf(200));
         when(metrics.roundOneDecimal(80.0)).thenReturn(80.0);
@@ -84,11 +84,11 @@ class PnlAnalyticsServiceTest {
         when(metrics.toPercent(any(), any())).thenReturn(BigDecimal.valueOf(80));
         when(commissionCalculator.resolveSalaryType(any())).thenReturn(SalaryType.PERCENT);
         when(commissionCalculator.calculate(any(), any())).thenReturn(BigDecimal.valueOf(100));
-        when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to))
                 .thenReturn(BigDecimal.valueOf(50));
-        when(categoryConfigRepository.findByTenantIdAndDeletedAtIsNullOrderByIsDefaultDescLabelAsc(tenantId))
+        when(categoryConfigRepository.findByDeletedAtIsNullOrderByIsDefaultDescLabelAsc())
                 .thenReturn(List.of());
-        when(transactionRepository.sumByCategoryAndDateRange(tenantId, from, to)).thenReturn(List.of());
+        when(transactionRepository.sumByCategoryAndDateRange(from, to)).thenReturn(List.of());
 
         PnlDto pnl = pnlAnalyticsService.getPnl(from, to);
 
@@ -109,16 +109,16 @@ class PnlAnalyticsServiceTest {
         Instant from = Instant.parse("2026-06-01T00:00:00Z");
         Instant to = Instant.parse("2026-06-30T23:59:59Z");
 
-        when(appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to)).thenReturn(List.of());
+        when(appointmentRepository.findByDateRange(from, to)).thenReturn(List.of());
         when(metrics.sumDoneRevenue(List.of())).thenReturn(BigDecimal.ZERO);
         when(metrics.sumCostOfSales(List.of())).thenReturn(BigDecimal.ZERO);
         when(metrics.roundOneDecimal(0.0)).thenReturn(0.0);
         when(metrics.toPercent(any(), any())).thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to))
                 .thenReturn(null);
-        when(categoryConfigRepository.findByTenantIdAndDeletedAtIsNullOrderByIsDefaultDescLabelAsc(tenantId))
+        when(categoryConfigRepository.findByDeletedAtIsNullOrderByIsDefaultDescLabelAsc())
                 .thenReturn(List.of());
-        when(transactionRepository.sumByCategoryAndDateRange(tenantId, from, to)).thenReturn(List.of());
+        when(transactionRepository.sumByCategoryAndDateRange(from, to)).thenReturn(List.of());
 
         PnlDto pnl = pnlAnalyticsService.getPnl(from, to);
 
@@ -140,18 +140,18 @@ class PnlAnalyticsServiceTest {
                 .finalPrice(BigDecimal.valueOf(500))
                 .build();
 
-        when(appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to))
+        when(appointmentRepository.findByDateRange(from, to))
                 .thenReturn(List.of(withoutArtist));
         when(metrics.sumDoneRevenue(List.of(withoutArtist))).thenReturn(BigDecimal.valueOf(500));
         when(metrics.sumCostOfSales(List.of(withoutArtist))).thenReturn(BigDecimal.ZERO);
         when(metrics.roundOneDecimal(any(Double.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(metrics.toPercent(any(), any())).thenReturn(BigDecimal.valueOf(100));
         when(metrics.hasArtist(withoutArtist)).thenReturn(false);
-        when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to))
                 .thenReturn(BigDecimal.ZERO);
-        when(categoryConfigRepository.findByTenantIdAndDeletedAtIsNullOrderByIsDefaultDescLabelAsc(tenantId))
+        when(categoryConfigRepository.findByDeletedAtIsNullOrderByIsDefaultDescLabelAsc())
                 .thenReturn(List.of());
-        when(transactionRepository.sumByCategoryAndDateRange(tenantId, from, to)).thenReturn(List.of());
+        when(transactionRepository.sumByCategoryAndDateRange(from, to)).thenReturn(List.of());
 
         PnlDto pnl = pnlAnalyticsService.getPnl(from, to);
 
@@ -167,14 +167,14 @@ class PnlAnalyticsServiceTest {
         Instant from = Instant.parse("2026-06-01T00:00:00Z");
         Instant to = Instant.parse("2026-06-30T23:59:59Z");
 
-        when(appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to)).thenReturn(List.of());
+        when(appointmentRepository.findByDateRange(from, to)).thenReturn(List.of());
         when(metrics.sumDoneRevenue(List.of())).thenReturn(BigDecimal.ZERO);
         when(metrics.sumCostOfSales(List.of())).thenReturn(BigDecimal.ZERO);
         when(metrics.roundOneDecimal(0.0)).thenReturn(0.0);
         when(metrics.toPercent(any(), any())).thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.sumByTypeAndDateRange(tenantId, TransactionType.EXPENSE, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to))
                 .thenReturn(BigDecimal.valueOf(120));
-        when(categoryConfigRepository.findByTenantIdAndDeletedAtIsNullOrderByIsDefaultDescLabelAsc(tenantId))
+        when(categoryConfigRepository.findByDeletedAtIsNullOrderByIsDefaultDescLabelAsc())
                 .thenReturn(List.of(
                         TransactionCategoryConfig.builder()
                                 .categoryKey(TransactionCategory.RENT.getValue())
@@ -188,7 +188,7 @@ class PnlAnalyticsServiceTest {
                                 .plType("REVENUE")
                                 .build()
                 ));
-        when(transactionRepository.sumByCategoryAndDateRange(tenantId, from, to)).thenReturn(List.of(
+        when(transactionRepository.sumByCategoryAndDateRange(from, to)).thenReturn(List.of(
                 new Object[]{"rent", BigDecimal.valueOf(120)},
                 new Object[]{"service", BigDecimal.valueOf(900)}
         ));

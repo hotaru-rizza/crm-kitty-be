@@ -100,9 +100,9 @@ class PaymentProcessingServiceTest {
 
         Appointment appointment = appointment(appointmentId, tenantId);
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(userId, tenantId))
+        when(staffRepository.findByIdAndDeletedAtIsNull(userId))
                 .thenReturn(Optional.of(Staff.builder().id(userId).build()));
         when(summaryCalculator.calculate(appointment)).thenReturn(summary(appointmentId, BigDecimal.valueOf(1000)));
         when(receiptNumberGenerator.generate()).thenReturn("RCP-001");
@@ -139,7 +139,7 @@ class PaymentProcessingServiceTest {
         Appointment appointment = appointment(appointmentId, tenantId);
         appointment.setStatus(AppointmentStatus.CANCELLED);
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
 
         ProcessPaymentRequest request = ProcessPaymentRequest.builder()
@@ -159,7 +159,7 @@ class PaymentProcessingServiceTest {
 
         Appointment appointment = appointment(appointmentId, tenantId);
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
         when(summaryCalculator.calculate(appointment)).thenReturn(summary(appointmentId, BigDecimal.valueOf(1000)));
 
@@ -195,7 +195,7 @@ class PaymentProcessingServiceTest {
         UUID appointmentId = UUID.randomUUID();
         authenticate(tenantId, UUID.randomUUID());
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment(appointmentId, tenantId)));
         when(summaryCalculator.calculate(any())).thenReturn(summary(appointmentId, BigDecimal.valueOf(1000)));
 
@@ -215,7 +215,7 @@ class PaymentProcessingServiceTest {
         authenticate(tenantId, UUID.randomUUID());
 
         Appointment appointment = appointment(appointmentId, tenantId);
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
         when(summaryCalculator.calculate(appointment)).thenReturn(summary(appointmentId, BigDecimal.valueOf(1000)));
         when(receiptNumberGenerator.generate()).thenReturn("RCP-SPLIT");
@@ -254,7 +254,7 @@ class PaymentProcessingServiceTest {
         Appointment appointment = appointment(appointmentId, tenantId);
         appointment.setPrepayment(BigDecimal.valueOf(100));
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
         when(summaryCalculator.calculate(appointment)).thenReturn(summary(appointmentId, BigDecimal.valueOf(900)));
         when(receiptNumberGenerator.generate()).thenReturn("RCP-DEP");
@@ -283,7 +283,7 @@ class PaymentProcessingServiceTest {
         authenticate(tenantId, UUID.randomUUID());
 
         Appointment appointment = appointment(appointmentId, tenantId);
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
         when(summaryCalculator.calculate(appointment)).thenReturn(summary(appointmentId, BigDecimal.valueOf(1000)));
         when(receiptNumberGenerator.generate()).thenReturn("RCP-001", "RCP-TIP");
@@ -321,7 +321,7 @@ class PaymentProcessingServiceTest {
         authenticate(tenantId, UUID.randomUUID());
 
         Appointment appointment = appointment(appointmentId, tenantId);
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
         when(summaryCalculator.calculate(appointment)).thenReturn(summary(appointmentId, BigDecimal.valueOf(1000)));
         when(receiptNumberGenerator.generate()).thenReturn("RCP-1", "RCP-2");
@@ -365,7 +365,7 @@ class PaymentProcessingServiceTest {
         UUID appointmentId = UUID.randomUUID();
         authenticate(tenantId, UUID.randomUUID());
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment(appointmentId, tenantId)));
         when(summaryCalculator.calculate(any())).thenReturn(summary(appointmentId, BigDecimal.valueOf(1000)));
 
@@ -388,7 +388,7 @@ class PaymentProcessingServiceTest {
         UUID appointmentId = UUID.randomUUID();
         authenticate(tenantId, UUID.randomUUID());
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment(appointmentId, tenantId)));
         when(summaryCalculator.calculate(any())).thenReturn(summary(appointmentId, BigDecimal.valueOf(1000)));
 
@@ -422,9 +422,9 @@ class PaymentProcessingServiceTest {
         Appointment appointment = appointment(appointmentId, tenantId);
         appointment.setClient(client);
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId))
                 .thenReturn(Optional.of(client));
         doThrow(new BusinessRuleException("Insufficient client balance credit"))
                 .when(clientBalanceService)
@@ -461,9 +461,9 @@ class PaymentProcessingServiceTest {
         Appointment appointment = appointment(appointmentId, tenantId);
         appointment.setClient(client);
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId))
                 .thenReturn(Optional.of(client));
         when(summaryCalculator.calculate(appointment)).thenReturn(summary(appointmentId, BigDecimal.valueOf(900)));
         when(receiptNumberGenerator.generate()).thenReturn("RCP-BAL");
@@ -519,9 +519,9 @@ class PaymentProcessingServiceTest {
         Appointment appointment = appointment(appointmentId, tenantId);
         appointment.setClient(client);
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment));
-        when(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId))
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId))
                 .thenReturn(Optional.of(client));
         doThrow(new BusinessRuleException("Insufficient client balance credit"))
                 .when(clientBalanceService)
@@ -549,7 +549,7 @@ class PaymentProcessingServiceTest {
         UUID appointmentId = UUID.randomUUID();
         authenticate(tenantId, UUID.randomUUID());
 
-        when(appointmentRepository.findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId))
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.empty());
 
         ProcessPaymentRequest request = ProcessPaymentRequest.builder()

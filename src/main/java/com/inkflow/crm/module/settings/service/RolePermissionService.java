@@ -52,7 +52,7 @@ public class RolePermissionService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UserRole role = UserRole.fromValue(roleValue);
 
-        rolePermissionRepository.deleteByTenantIdAndRole(tenantId, role);
+        rolePermissionRepository.deleteByRole( role);
         saveGrantedPermissions(tenantId, role, request.getPermissions());
 
         log.info("Role permissions updated: tenantId={} role={} count={}",
@@ -79,7 +79,7 @@ public class RolePermissionService {
             return true;
         }
 
-        return rolePermissionRepository.findByTenantIdAndRoleAndPermission(tenantId, role, permission)
+        return rolePermissionRepository.findByRoleAndPermission( role, permission)
                 .map(RolePermission::getGranted)
                 .orElse(false);
     }
@@ -92,14 +92,14 @@ public class RolePermissionService {
 
         initializeDefaultPermissionsIfNeeded(tenantId);
 
-        return rolePermissionRepository.findByTenantIdAndRole(tenantId, role).stream()
+        return rolePermissionRepository.findByRole(role).stream()
                 .filter(RolePermission::getGranted)
                 .map(RolePermission::getPermission)
                 .toList();
     }
 
     private void initializeDefaultPermissionsIfNeeded(UUID tenantId) {
-        if (!rolePermissionRepository.findByTenantId(tenantId).isEmpty()) {
+        if (rolePermissionRepository.count() > 0) {
             return;
         }
 
@@ -133,7 +133,7 @@ public class RolePermissionService {
     }
 
     private RolePermissionsDto toRolePermissionsDto(UUID tenantId, UserRole role) {
-        List<String> permissions = rolePermissionRepository.findByTenantIdAndRole(tenantId, role).stream()
+        List<String> permissions = rolePermissionRepository.findByRole( role).stream()
                 .filter(RolePermission::getGranted)
                 .map(RolePermission::getPermission)
                 .toList();

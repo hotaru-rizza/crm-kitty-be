@@ -32,8 +32,7 @@ public class StaffEarningsService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Staff staff = staffLookup.requireStaff(staffId);
 
-        List<Appointment> appointments = appointmentRepository.findByTenantIdAndArtistIdAndDateRange(
-                tenantId, staffId, from, to);
+        List<Appointment> appointments = appointmentRepository.findByArtistIdAndDateRange( staffId, from, to);
 
         BigDecimal revenue = metricsCalculator.sumDoneRevenue(appointments);
         int completedCount = metricsCalculator.countCompleted(appointments);

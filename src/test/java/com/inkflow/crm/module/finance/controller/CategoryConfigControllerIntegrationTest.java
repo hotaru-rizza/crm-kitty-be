@@ -147,7 +147,7 @@ class CategoryConfigControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.label").value("Custom Rent"));
 
         var persisted = categoryConfigRepository
-                .findByTenantIdAndCategoryKeyAndDeletedAtIsNull(bundle.tenant().getId(), "custom_rent")
+                .findByCategoryKeyAndDeletedAtIsNull("custom_rent")
                 .orElseThrow();
         assertEquals("Custom Rent", persisted.getLabel());
         assertEquals("#f97316", persisted.getColor());

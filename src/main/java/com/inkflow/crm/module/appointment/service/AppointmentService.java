@@ -76,7 +76,7 @@ public class AppointmentService {
     public List<AppointmentDto> getClientHistory(UUID clientId, PageRequest pageRequest) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Page<Appointment> page = appointmentRepository
-                .findByTenantIdAndClientIdAndDeletedAtIsNullOrderByStartTimeDesc(tenantId, clientId, pageRequest.toPageable());
+                .findByClientIdAndDeletedAtIsNullOrderByStartTimeDesc( clientId, pageRequest.toPageable());
         return page.getContent().stream().map(appointmentMapper::toDto).toList();
     }
 
@@ -91,9 +91,7 @@ public class AppointmentService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         List<UUID> artistIds = resolveArtistIds(tenantId, request.getArtistIds());
 
-        Specification<Appointment> spec = Specification
-                .where(AppointmentSpecifications.belongsToTenant(tenantId))
-                .and(AppointmentSpecifications.notDeleted())
+        Specification<Appointment> spec = Specification.where(AppointmentSpecifications.notDeleted())
                 .and(AppointmentSpecifications.startTimeAfter(request.getFrom()))
                 .and(AppointmentSpecifications.startTimeBefore(request.getTo()))
                 .and(AppointmentSpecifications.withArtists(artistIds))
@@ -286,9 +284,7 @@ public class AppointmentService {
         Instant to = filter.to() != null ? Instant.parse(filter.to()) : null;
         List<UUID> artistIds = resolveArtistIds(tenantId, filter.artistIds());
 
-        Specification<Appointment> spec = Specification
-                .where(AppointmentSpecifications.belongsToTenant(tenantId))
-                .and(AppointmentSpecifications.notDeleted())
+        Specification<Appointment> spec = Specification.where(AppointmentSpecifications.notDeleted())
                 .and(AppointmentSpecifications.withLocation(filter.locationId()))
                 .and(AppointmentSpecifications.withArtists(artistIds))
                 .and(AppointmentSpecifications.withService(filter.serviceId()))
@@ -325,7 +321,7 @@ public class AppointmentService {
      */
     private void validateArtistAvailable(UUID tenantId, UUID artistId, Instant startTime) {
         LocalDate date = startTime.atZone(inkflowProperties.defaultZoneId()).toLocalDate();
-        List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate(tenantId, artistId, date);
+        List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate( artistId, date);
         if (!activeLeaves.isEmpty()) {
             throw BusinessRuleException.artistOnLeave();
         }

@@ -181,8 +181,7 @@ class StaffControllerIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.email").value("new-member@test.com"));
 
-        assertTrue(staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull(
-                "new-member@test.com", bundle.tenant().getId()));
+        assertTrue(staffRepository.existsByEmailAndDeletedAtIsNull("new-member@test.com"));
     }
 
     @Test
@@ -273,8 +272,7 @@ class StaffControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
-        assertTrue(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                artist.getId(), bundle.tenant().getId()).isEmpty());
+        assertTrue(staffRepository.findByIdAndDeletedAtIsNull(artist.getId()).isEmpty());
         Staff deleted = staffRepository.findById(artist.getId()).orElseThrow();
         assertNotNull(deleted.getDeletedAt());
     }
@@ -642,7 +640,7 @@ class StaffControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.token").isNotEmpty());
 
         StaffInvite invite = staffInviteRepository
-                .findByEmailAndTenantIdAndAcceptedAtIsNull("invite-target@test.com", bundle.tenant().getId())
+                .findByEmailAndAcceptedAtIsNull("invite-target@test.com")
                 .orElseThrow();
         assertEquals("invite-target@test.com", invite.getEmail());
         assertEquals(UserRole.ARTIST, invite.getRole());
@@ -689,8 +687,7 @@ class StaffControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.firstName").value("Invited"))
                 .andExpect(jsonPath("$.data.lastName").value("Artist"));
 
-        assertTrue(staffRepository.existsByEmailAndTenantIdAndDeletedAtIsNull(
-                "accepted-artist@test.com", bundle.tenant().getId()));
+        assertTrue(staffRepository.existsByEmailAndDeletedAtIsNull("accepted-artist@test.com"));
 
         StaffInvite invite = staffInviteRepository.findByToken(token).orElseThrow();
         assertNotNull(invite.getAcceptedAt());

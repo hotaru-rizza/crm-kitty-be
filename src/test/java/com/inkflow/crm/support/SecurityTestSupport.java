@@ -3,6 +3,7 @@ package com.inkflow.crm.support;
 import com.inkflow.crm.support.TestSecurityHeaders;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.UserRole;
+import com.inkflow.crm.security.TenantContext;
 import com.inkflow.crm.security.UserPrincipal;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,6 +29,10 @@ public final class SecurityTestSupport {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
         );
+
+        TenantContext.setCurrentTenant(tenantId);
+        TenantContext.setCurrentUser(userId);
+        TenantContext.setCurrentRole(role);
     }
 
     public static void authenticate(Staff staff) {
@@ -36,6 +41,7 @@ public final class SecurityTestSupport {
 
     public static void clearAuthentication() {
         SecurityContextHolder.clearContext();
+        TenantContext.clear();
     }
 
     public static RequestPostProcessor crmUser(UUID userId, UUID tenantId, UserRole role) {

@@ -28,7 +28,7 @@ public class ClientAnalyticsQueryService {
     @Transactional(readOnly = true)
     public ClientAnalyticsDto getClientAnalytics(Instant from, Instant to, String groupBy) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<Appointment> appointments = appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to);
+        List<Appointment> appointments = appointmentRepository.findByDateRange( from, to);
 
         Set<UUID> clientIdsInRange = collectClientIds(appointments);
         Set<UUID> existingClientIds = loadExistingClientIds(tenantId, from);
@@ -56,7 +56,7 @@ public class ClientAnalyticsQueryService {
 
     private Set<UUID> loadExistingClientIds(UUID tenantId, Instant before) {
         return appointmentRepository
-                .findByTenantIdAndDateRange(tenantId, Instant.EPOCH, before)
+                .findByDateRange( Instant.EPOCH, before)
                 .stream()
                 .filter(metrics::hasClient)
                 .map(appointment -> appointment.getClient().getId())

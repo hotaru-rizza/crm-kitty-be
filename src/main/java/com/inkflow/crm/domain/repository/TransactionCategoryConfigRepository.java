@@ -11,9 +11,9 @@ import java.util.UUID;
 @Repository
 public interface TransactionCategoryConfigRepository extends JpaRepository<TransactionCategoryConfig, UUID> {
 
-    List<TransactionCategoryConfig> findByTenantIdAndDeletedAtIsNullOrderByIsDefaultDescLabelAsc(UUID tenantId);
+    List<TransactionCategoryConfig> findByDeletedAtIsNullOrderByIsDefaultDescLabelAsc();
 
-    Optional<TransactionCategoryConfig> findByTenantIdAndCategoryKeyAndDeletedAtIsNull(UUID tenantId, String categoryKey);
+    Optional<TransactionCategoryConfig> findByCategoryKeyAndDeletedAtIsNull(String categoryKey);
 
-    boolean existsByTenantIdAndDeletedAtIsNull(UUID tenantId);
+    boolean existsByDeletedAtIsNull();
 }

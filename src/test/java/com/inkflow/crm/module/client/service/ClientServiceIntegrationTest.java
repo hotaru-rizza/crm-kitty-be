@@ -12,7 +12,9 @@ import com.inkflow.crm.module.client.dto.UpdateClientRequest;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
 import com.inkflow.crm.support.IntegrationTestData.TenantBundle;
+import com.inkflow.crm.support.PersistenceTestSupport;
 import com.inkflow.crm.support.SecurityTestSupport;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,9 @@ class ClientServiceIntegrationTest {
     @Autowired
     private LocationRepository locationRepository;
 
+    @Autowired
+    private EntityManager entityManager;
+
     @AfterEach
     void tearDown() {
         SecurityTestSupport.clearAuthentication();
@@ -64,8 +69,7 @@ class ClientServiceIntegrationTest {
 
         assertEquals("+380501112233", created.getPhone());
 
-        var persisted = clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                created.getId(), bundle.tenant().getId()).orElseThrow();
+        var persisted = clientRepository.findByIdAndDeletedAtIsNull(created.getId()).orElseThrow();
         assertEquals("+380501112233", persisted.getPhone());
         assertEquals(false, persisted.isBlacklisted());
         assertEquals(bundle.tenant().getId(), persisted.getTenantId());
@@ -104,6 +108,7 @@ class ClientServiceIntegrationTest {
     void getClientById_rejectsClientFromAnotherTenant() {
         TenantBundle tenantA = seedTenant();
         TenantBundle tenantB = seedTenant();
+        PersistenceTestSupport.clearPersistenceContext(entityManager);
 
         SecurityTestSupport.authenticate(tenantA.owner());
 
@@ -112,8 +117,7 @@ class ClientServiceIntegrationTest {
                 () -> clientService.getClientById(tenantB.client().getId())
         );
 
-        assertTrue(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                tenantB.client().getId(), tenantB.tenant().getId()).isPresent());
+        assertTrue(clientRepository.findById(tenantB.client().getId()).isPresent());
     }
 
     @Test
@@ -127,8 +131,8 @@ class ClientServiceIntegrationTest {
 
         assertEquals("+380679998877", updated.getPhone());
 
-        var persisted = clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                bundle.client().getId(), bundle.tenant().getId()).orElseThrow();
+        var persisted = clientRepository.findByIdAndDeletedAtIsNull(
+                bundle.client().getId()).orElseThrow();
         assertEquals("+380679998877", persisted.getPhone());
     }
 
@@ -139,8 +143,8 @@ class ClientServiceIntegrationTest {
 
         clientService.deleteClient(bundle.client().getId());
 
-        assertTrue(clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(
-                bundle.client().getId(), bundle.tenant().getId()).isEmpty());
+        assertTrue(clientRepository.findByIdAndDeletedAtIsNull(
+                bundle.client().getId()).isEmpty());
 
         var softDeleted = clientRepository.findById(bundle.client().getId()).orElseThrow();
         assertNotNull(softDeleted.getDeletedAt());

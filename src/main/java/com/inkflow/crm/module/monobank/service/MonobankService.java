@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.monobank.service;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
@@ -48,7 +49,7 @@ public class MonobankService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         Appointment appointment = appointmentRepository
-                .findByIdAndTenantIdAndDeletedAtIsNull(request.getAppointmentId(), tenantId)
+                .findByIdAndDeletedAtIsNull(request.getAppointmentId())
                 .orElseThrow(() -> ResourceNotFoundException.appointment(request.getAppointmentId().toString()));
 
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
@@ -113,6 +114,7 @@ public class MonobankService {
         return toDto(invoice);
     }
 
+    @BypassTenantFilter
     @Transactional
     public void handleWebhook(MonobankWebhookPayload payload) {
         if (payload == null || payload.getInvoiceId() == null || payload.getInvoiceId().isBlank()) {

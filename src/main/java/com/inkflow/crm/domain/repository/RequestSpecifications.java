@@ -13,10 +13,6 @@ public final class RequestSpecifications {
 
     private RequestSpecifications() {}
 
-    public static Specification<Request> belongsToTenant(UUID tenantId) {
-        return (root, query, cb) -> cb.equal(root.get("tenantId"), tenantId);
-    }
-
     public static Specification<Request> statusIs(RequestStatus status) {
         if (status == null) {
             return null;

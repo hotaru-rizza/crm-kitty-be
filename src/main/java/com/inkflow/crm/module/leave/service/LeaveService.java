@@ -54,13 +54,13 @@ public class LeaveService {
     @Transactional(readOnly = true)
     public List<LeaveRequestDto> getLeavesByStaffId(UUID staffId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        return leaveMapper.toDtoList(leaveRequestRepository.findByStaffId(tenantId, staffId));
+        return leaveMapper.toDtoList(leaveRequestRepository.findByStaffId( staffId));
     }
 
     @Transactional(readOnly = true)
     public List<LeaveRequestDto> getLeavesByStaffIdAndDateRange(UUID staffId, LocalDate startDate, LocalDate endDate) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        return leaveMapper.toDtoList(leaveRequestRepository.findByStaffIdAndDateRange(tenantId, staffId, startDate, endDate));
+        return leaveMapper.toDtoList(leaveRequestRepository.findByStaffIdAndDateRange( staffId, startDate, endDate));
     }
 
     @Transactional(readOnly = true)
@@ -101,9 +101,9 @@ public class LeaveService {
     public long getPendingCount(UUID locationId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         if (locationId != null) {
-            return leaveRequestRepository.countPendingByLocation(tenantId, locationId);
+            return leaveRequestRepository.countPendingByLocation( locationId);
         }
-        return leaveRequestRepository.countPending(tenantId);
+        return leaveRequestRepository.countPending();
     }
 
     @Transactional
@@ -111,7 +111,7 @@ public class LeaveService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UUID currentUserId = SecurityUtils.getCurrentUserId();
 
-        Staff staff = staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(request.getStaffId(), tenantId)
+        Staff staff = staffRepository.findByIdAndDeletedAtIsNull(request.getStaffId())
                 .orElseThrow(() -> ResourceNotFoundException.staff(request.getStaffId().toString()));
 
         validateDateRange(request.getStartDate(), request.getEndDate());
@@ -239,13 +239,13 @@ public class LeaveService {
     @Transactional(readOnly = true)
     public boolean isStaffOnLeave(UUID staffId, LocalDate date) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        return !leaveRequestRepository.findActiveLeaveForDate(tenantId, staffId, date).isEmpty();
+        return !leaveRequestRepository.findActiveLeaveForDate( staffId, date).isEmpty();
     }
 
     @Transactional(readOnly = true)
     public List<LeaveRequestDto> getApprovedLeavesForDateRange(LocalDate from, LocalDate to) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        return leaveMapper.toDtoList(leaveRequestRepository.findApprovedInRange(tenantId, from, to));
+        return leaveMapper.toDtoList(leaveRequestRepository.findApprovedInRange( from, to));
     }
 
     private LeaveQueryParts buildFilterQuery(
@@ -313,7 +313,7 @@ public class LeaveService {
             LocalDate end,
             UUID excludeId,
             String leaveLabel) {
-        List<LeaveRequest> overlapping = leaveRequestRepository.findOverlappingLeaves(tenantId, staffId, start, end);
+        List<LeaveRequest> overlapping = leaveRequestRepository.findOverlappingLeaves( staffId, start, end);
         boolean hasConflict = overlapping.stream()
                 .anyMatch(leave -> excludeId == null || !leave.getId().equals(excludeId));
 
@@ -360,7 +360,7 @@ public class LeaveService {
         }
 
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        return staffRepository.countByTenantIdAndDeletedAtIsNull(tenantId) <= 1;
+        return staffRepository.countByDeletedAtIsNull() <= 1;
     }
 
     private LeaveRequest requireLeave(UUID id) {

@@ -28,7 +28,7 @@ public class ServicePopularityAnalyticsService {
     @Transactional(readOnly = true)
     public List<ServicePopularityDto> getServicePopularity(Instant from, Instant to) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<Appointment> appointments = appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to);
+        List<Appointment> appointments = appointmentRepository.findByDateRange( from, to);
 
         return groupAppointmentsByService(appointments).values().stream()
                 .map(this::toPopularityDto)

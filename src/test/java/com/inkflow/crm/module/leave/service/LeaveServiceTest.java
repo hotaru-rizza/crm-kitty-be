@@ -83,7 +83,7 @@ class LeaveServiceTest {
         authenticate(tenantId, staffId);
 
         Staff staff = Staff.builder().id(staffId).tenantId(tenantId).build();
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.of(staff));
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId)).thenReturn(Optional.of(staff));
 
         CreateLeaveRequest request = CreateLeaveRequest.builder()
                 .staffId(staffId)
@@ -102,7 +102,7 @@ class LeaveServiceTest {
         authenticate(tenantId, staffId);
 
         Staff staff = Staff.builder().id(staffId).tenantId(tenantId).build();
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.of(staff));
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId)).thenReturn(Optional.of(staff));
 
         CreateLeaveRequest request = CreateLeaveRequest.builder()
                 .staffId(staffId)
@@ -130,8 +130,8 @@ class LeaveServiceTest {
                 .endDate(LocalDate.of(2026, 6, 12))
                 .build();
 
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.of(staff));
-        when(leaveRequestRepository.findOverlappingLeaves(tenantId, staffId,
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId)).thenReturn(Optional.of(staff));
+        when(leaveRequestRepository.findOverlappingLeaves(staffId,
                 LocalDate.of(2026, 6, 11), LocalDate.of(2026, 6, 13))).thenReturn(List.of(existing));
 
         CreateLeaveRequest request = CreateLeaveRequest.builder()
@@ -150,7 +150,7 @@ class LeaveServiceTest {
         UUID staffId = UUID.randomUUID();
         authenticate(tenantId, staffId);
 
-        when(leaveRequestRepository.findActiveLeaveForDate(tenantId, staffId, LocalDate.of(2026, 6, 15)))
+        when(leaveRequestRepository.findActiveLeaveForDate(staffId, LocalDate.of(2026, 6, 15)))
                 .thenReturn(List.of(LeaveRequest.builder().build()));
 
         assertTrue(leaveService.isStaffOnLeave(staffId, LocalDate.of(2026, 6, 15)));
@@ -162,7 +162,7 @@ class LeaveServiceTest {
         UUID staffId = UUID.randomUUID();
         authenticate(tenantId, staffId);
 
-        when(leaveRequestRepository.findActiveLeaveForDate(tenantId, staffId, LocalDate.of(2026, 6, 15)))
+        when(leaveRequestRepository.findActiveLeaveForDate(staffId, LocalDate.of(2026, 6, 15)))
                 .thenReturn(List.of());
 
         assertFalse(leaveService.isStaffOnLeave(staffId, LocalDate.of(2026, 6, 15)));
@@ -173,7 +173,7 @@ class LeaveServiceTest {
         UUID tenantId = UUID.randomUUID();
         authenticate(tenantId, UUID.randomUUID());
 
-        when(leaveRequestRepository.countPending(tenantId)).thenReturn(3L);
+        when(leaveRequestRepository.countPending()).thenReturn(3L);
 
         assertEquals(3L, leaveService.getPendingCount(null));
     }
@@ -184,10 +184,10 @@ class LeaveServiceTest {
         UUID locationId = UUID.randomUUID();
         authenticate(tenantId, UUID.randomUUID());
 
-        when(leaveRequestRepository.countPendingByLocation(tenantId, locationId)).thenReturn(2L);
+        when(leaveRequestRepository.countPendingByLocation(locationId)).thenReturn(2L);
 
         assertEquals(2L, leaveService.getPendingCount(locationId));
-        verify(leaveRequestRepository).countPendingByLocation(tenantId, locationId);
+        verify(leaveRequestRepository).countPendingByLocation(locationId);
     }
 
     @Test
@@ -196,7 +196,7 @@ class LeaveServiceTest {
         UUID staffId = UUID.randomUUID();
         authenticate(tenantId, UUID.randomUUID());
 
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.empty());
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId)).thenReturn(Optional.empty());
 
         CreateLeaveRequest request = CreateLeaveRequest.builder()
                 .staffId(staffId)
@@ -218,10 +218,10 @@ class LeaveServiceTest {
         Staff staff = Staff.builder().id(staffId).tenantId(tenantId).build();
         Staff artist = Staff.builder().id(artistUserId).role(UserRole.ARTIST).build();
 
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.of(staff));
-        when(leaveRequestRepository.findOverlappingLeaves(any(), any(), any(), any())).thenReturn(List.of());
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId)).thenReturn(Optional.of(staff));
+        when(leaveRequestRepository.findOverlappingLeaves(any(), any(), any())).thenReturn(List.of());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(artistUserId.toString())).thenReturn(Optional.of(artist));
-        when(staffRepository.countByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(2L);
+        when(staffRepository.countByDeletedAtIsNull()).thenReturn(2L);
         when(leaveRequestRepository.save(any())).thenAnswer(invocation -> {
             LeaveRequest saved = invocation.getArgument(0);
             saved.setId(UUID.randomUUID());
@@ -254,10 +254,10 @@ class LeaveServiceTest {
         Staff staff = Staff.builder().id(staffId).tenantId(tenantId).build();
         Staff artist = Staff.builder().id(artistUserId).role(UserRole.ARTIST).build();
 
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.of(staff));
-        when(leaveRequestRepository.findOverlappingLeaves(any(), any(), any(), any())).thenReturn(List.of());
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId)).thenReturn(Optional.of(staff));
+        when(leaveRequestRepository.findOverlappingLeaves(any(), any(), any())).thenReturn(List.of());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(artistUserId.toString())).thenReturn(Optional.of(artist));
-        when(staffRepository.countByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(1L);
+        when(staffRepository.countByDeletedAtIsNull()).thenReturn(1L);
         when(leaveRequestRepository.save(any())).thenAnswer(invocation -> {
             LeaveRequest saved = invocation.getArgument(0);
             saved.setId(UUID.randomUUID());

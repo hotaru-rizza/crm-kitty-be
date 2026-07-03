@@ -40,9 +40,7 @@ public class ClientBalanceService {
         Client client = requireClient(clientId, tenantId);
 
         var entries = balanceEntryRepository
-                .findByClientIdAndTenantIdAndDeletedAtIsNullOrderByCreatedAtDesc(
-                        clientId,
-                        tenantId,
+                .findByClientIdAndDeletedAtIsNullOrderByCreatedAtDesc(clientId,
                         PageRequest.of(0, DEFAULT_ENTRY_PAGE_SIZE))
                 .map(clientBalanceMapper::toEntryDto)
                 .getContent();
@@ -93,7 +91,7 @@ public class ClientBalanceService {
     @Transactional
     public void chargeAppointmentOnCompletion(UUID appointmentId, UUID tenantId) {
         Appointment appointment = appointmentRepository
-                .findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId)
+                .findByIdAndDeletedAtIsNull(appointmentId)
                 .orElseThrow(() -> ResourceNotFoundException.appointment(appointmentId.toString()));
 
         if (appointment.getClient() == null || appointment.isReservation() || appointment.getBalanceChargedAt() != null) {
@@ -123,7 +121,7 @@ public class ClientBalanceService {
     @Transactional
     public void reverseAppointmentCharge(UUID appointmentId, UUID tenantId) {
         Appointment appointment = appointmentRepository
-                .findByIdAndTenantIdAndDeletedAtIsNull(appointmentId, tenantId)
+                .findByIdAndDeletedAtIsNull(appointmentId)
                 .orElseThrow(() -> ResourceNotFoundException.appointment(appointmentId.toString()));
 
         if (appointment.getClient() == null || appointment.isReservation() || appointment.getBalanceChargedAt() == null) {
@@ -170,7 +168,7 @@ public class ClientBalanceService {
     }
 
     private Client requireClient(UUID clientId, UUID tenantId) {
-        return clientRepository.findByIdAndTenantIdAndDeletedAtIsNull(clientId, tenantId)
+        return clientRepository.findByIdAndDeletedAtIsNull(clientId)
                 .orElseThrow(() -> ResourceNotFoundException.client(clientId.toString()));
     }
 }

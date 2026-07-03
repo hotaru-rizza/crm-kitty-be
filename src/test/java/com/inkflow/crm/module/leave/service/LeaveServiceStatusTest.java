@@ -94,7 +94,7 @@ class LeaveServiceStatusTest {
                 .build();
 
         when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
-        when(leaveRequestRepository.findOverlappingLeaves(tenantId, staffId,
+        when(leaveRequestRepository.findOverlappingLeaves(staffId,
                 LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 3))).thenReturn(List.of());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(managerId.toString()))
                 .thenReturn(Optional.of(Staff.builder().id(managerId).role(UserRole.OWNER).build()));
@@ -144,8 +144,8 @@ class LeaveServiceStatusTest {
         Staff staff = Staff.builder().id(staffId).tenantId(tenantId).build();
         Staff owner = Staff.builder().id(ownerId).role(UserRole.OWNER).build();
 
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.of(staff));
-        when(leaveRequestRepository.findOverlappingLeaves(any(), any(), any(), any())).thenReturn(List.of());
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId)).thenReturn(Optional.of(staff));
+        when(leaveRequestRepository.findOverlappingLeaves(any(), any(), any())).thenReturn(List.of());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(ownerId.toString())).thenReturn(Optional.of(owner));
         when(leaveRequestRepository.save(any())).thenAnswer(invocation -> {
             LeaveRequest saved = invocation.getArgument(0);
@@ -216,7 +216,7 @@ class LeaveServiceStatusTest {
                 .build();
 
         when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
-        when(leaveRequestRepository.findOverlappingLeaves(tenantId, staffId,
+        when(leaveRequestRepository.findOverlappingLeaves(staffId,
                 LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 3))).thenReturn(List.of(conflicting));
 
         UpdateLeaveStatusRequest request = new UpdateLeaveStatusRequest();
@@ -245,7 +245,7 @@ class LeaveServiceStatusTest {
                 .build();
 
         when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
-        when(leaveRequestRepository.findOverlappingLeaves(tenantId, staffId,
+        when(leaveRequestRepository.findOverlappingLeaves(staffId,
                 LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 3))).thenReturn(List.of(leave));
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(managerId.toString()))
                 .thenReturn(Optional.of(Staff.builder().id(managerId).role(UserRole.OWNER).build()));
@@ -336,8 +336,8 @@ class LeaveServiceStatusTest {
 
         Staff staff = Staff.builder().id(staffId).tenantId(tenantId).build();
 
-        when(staffRepository.findByIdAndTenantIdAndDeletedAtIsNull(staffId, tenantId)).thenReturn(Optional.of(staff));
-        when(leaveRequestRepository.findOverlappingLeaves(any(), any(), any(), any())).thenReturn(List.of());
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId)).thenReturn(Optional.of(staff));
+        when(leaveRequestRepository.findOverlappingLeaves(any(), any(), any())).thenReturn(List.of());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(userId.toString())).thenReturn(Optional.empty());
         when(leaveRequestRepository.save(any())).thenAnswer(invocation -> {
             LeaveRequest saved = invocation.getArgument(0);

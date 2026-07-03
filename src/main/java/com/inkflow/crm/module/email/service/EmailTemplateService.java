@@ -38,7 +38,7 @@ public class EmailTemplateService {
 
     @Transactional(readOnly = true)
     public List<EmailTemplateResponseDto> list(UUID tenantId) {
-        return emailTemplateRepository.findByTenantIdOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc(tenantId).stream()
+        return emailTemplateRepository.findAllByOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc().stream()
                 .map(this::toDto)
                 .toList();
     }
@@ -174,7 +174,7 @@ public class EmailTemplateService {
     }
 
     private EmailTemplate requireTemplate(UUID tenantId, UUID templateId) {
-        return emailTemplateRepository.findByIdAndTenantId(templateId, tenantId)
+        return emailTemplateRepository.findById(templateId)
                 .orElseThrow(() -> new BusinessRuleException(ErrorCode.NOT_FOUND, "Email template not found"));
     }
 

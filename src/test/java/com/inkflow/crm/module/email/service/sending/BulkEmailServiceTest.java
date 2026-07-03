@@ -74,8 +74,7 @@ class BulkEmailServiceTest {
                 .id(withoutEmailId).tenantId(TENANT_ID)
                 .firstName("Bob").lastName("Ink").build();
 
-        when(clientRepository.findByIdInAndTenantIdAndDeletedAtIsNull(
-                List.of(withEmailId, withoutEmailId), TENANT_ID))
+        when(clientRepository.findByIdInAndDeletedAtIsNull(List.of(withEmailId, withoutEmailId)))
                 .thenReturn(List.of(withEmail, withoutEmail));
 
         SendEmailResultDto result = bulkEmailService.sendBulk(TENANT_ID,
@@ -96,7 +95,7 @@ class BulkEmailServiceTest {
         Staff staff = Staff.builder().id(staffId).tenantId(TENANT_ID)
                 .email("artist@test.com").firstName("Alex").lastName("Tat").build();
 
-        when(staffRepository.findByIdInAndTenantIdAndDeletedAtIsNull(List.of(staffId), TENANT_ID))
+        when(staffRepository.findByIdInAndDeletedAtIsNull(List.of(staffId)))
                 .thenReturn(List.of(staff));
 
         SendEmailResultDto result = bulkEmailService.sendBulk(TENANT_ID,
@@ -122,7 +121,7 @@ class BulkEmailServiceTest {
                 .id(id2).tenantId(TENANT_ID)
                 .email("two@test.com").firstName("Bob").lastName("Two").build();
 
-        when(clientRepository.findByIdInAndTenantIdAndDeletedAtIsNull(List.of(id1, id2), TENANT_ID))
+        when(clientRepository.findByIdInAndDeletedAtIsNull(List.of(id1, id2)))
                 .thenReturn(List.of(clientOne, clientTwo));
 
         bulkEmailService.sendBulk(TENANT_ID,

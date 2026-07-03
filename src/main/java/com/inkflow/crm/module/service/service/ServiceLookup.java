@@ -15,7 +15,7 @@ public class ServiceLookup {
     private final ServiceRepository serviceRepository;
 
     public Service require(UUID tenantId, UUID serviceId) {
-        return serviceRepository.findByIdAndTenantIdAndDeletedAtIsNull(serviceId, tenantId)
+        return serviceRepository.findByIdAndDeletedAtIsNull(serviceId)
                 .orElseThrow(() -> ResourceNotFoundException.service(serviceId.toString()));
     }
 }

@@ -11,10 +11,6 @@ public final class AppointmentSpecifications {
 
     private AppointmentSpecifications() {}
 
-    public static Specification<Appointment> belongsToTenant(UUID tenantId) {
-        return (root, query, cb) -> cb.equal(root.get("tenantId"), tenantId);
-    }
-
     public static Specification<Appointment> notDeleted() {
         return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
     }

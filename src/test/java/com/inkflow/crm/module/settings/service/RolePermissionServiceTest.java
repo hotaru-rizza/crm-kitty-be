@@ -72,8 +72,7 @@ class RolePermissionServiceTest {
                 .granted(true)
                 .build();
 
-        when(rolePermissionRepository.findByTenantIdAndRoleAndPermission(
-                tenantId, UserRole.ARTIST, Permission.REQUESTS_CREATE.getValue()))
+        when(rolePermissionRepository.findByRoleAndPermission(UserRole.ARTIST, Permission.REQUESTS_CREATE.getValue()))
                 .thenReturn(Optional.of(granted));
 
         assertTrue(rolePermissionService.hasPermission(tenantId, UserRole.ARTIST, Permission.REQUESTS_CREATE.getValue()));
@@ -83,8 +82,7 @@ class RolePermissionServiceTest {
     void hasPermission_returnsFalseWhenMissing() {
         UUID tenantId = UUID.randomUUID();
 
-        when(rolePermissionRepository.findByTenantIdAndRoleAndPermission(
-                tenantId, UserRole.ARTIST, Permission.REQUESTS_CREATE.getValue()))
+        when(rolePermissionRepository.findByRoleAndPermission(UserRole.ARTIST, Permission.REQUESTS_CREATE.getValue()))
                 .thenReturn(Optional.empty());
 
         assertFalse(rolePermissionService.hasPermission(tenantId, UserRole.ARTIST, Permission.REQUESTS_CREATE.getValue()));
@@ -100,8 +98,7 @@ class RolePermissionServiceTest {
                 .granted(false)
                 .build();
 
-        when(rolePermissionRepository.findByTenantIdAndRoleAndPermission(
-                tenantId, UserRole.ARTIST, Permission.REQUESTS_CREATE.getValue()))
+        when(rolePermissionRepository.findByRoleAndPermission(UserRole.ARTIST, Permission.REQUESTS_CREATE.getValue()))
                 .thenReturn(Optional.of(denied));
 
         assertFalse(rolePermissionService.hasPermission(tenantId, UserRole.ARTIST, Permission.REQUESTS_CREATE.getValue()));
@@ -135,8 +132,8 @@ class RolePermissionServiceTest {
                         .build()
         );
 
-        when(rolePermissionRepository.findByTenantId(tenantId)).thenReturn(List.of(artistPermissions.getFirst()));
-        when(rolePermissionRepository.findByTenantIdAndRole(tenantId, UserRole.ARTIST)).thenReturn(artistPermissions);
+        when(rolePermissionRepository.count()).thenReturn(1L);
+        when(rolePermissionRepository.findByRole(UserRole.ARTIST)).thenReturn(artistPermissions);
 
         List<String> permissions = rolePermissionService.getGrantedPermissions(tenantId, UserRole.ARTIST);
 
@@ -158,7 +155,7 @@ class RolePermissionServiceTest {
 
         assertEquals("artist", updated.getRole());
         assertEquals(request.getPermissions(), updated.getPermissions());
-        verify(rolePermissionRepository).deleteByTenantIdAndRole(tenantId, UserRole.ARTIST);
+        verify(rolePermissionRepository).deleteByRole(UserRole.ARTIST);
         verify(rolePermissionRepository, times(2)).save(any(RolePermission.class));
     }
 

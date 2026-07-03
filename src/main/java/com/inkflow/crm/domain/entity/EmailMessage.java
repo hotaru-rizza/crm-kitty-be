@@ -3,6 +3,7 @@ package com.inkflow.crm.domain.entity;
 import com.inkflow.crm.domain.enums.EmailMessageStatus;
 import com.inkflow.crm.module.email.enums.TriggerType;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 
 import java.time.Instant;
@@ -21,6 +22,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class EmailMessage {
 
     @Id

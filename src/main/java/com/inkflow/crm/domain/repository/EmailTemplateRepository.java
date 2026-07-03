@@ -12,15 +12,11 @@ import java.util.UUID;
 @Repository
 public interface EmailTemplateRepository extends JpaRepository<EmailTemplate, UUID> {
 
-    List<EmailTemplate> findByTenantIdOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc(UUID tenantId);
-
-    List<EmailTemplate> findByTenantIdAndTriggerTypeAndEnabledTrue(UUID tenantId, TriggerType triggerType);
+    List<EmailTemplate> findAllByOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc();
 
     List<EmailTemplate> findByTriggerTypeAndEnabledTrue(TriggerType triggerType);
 
-    Optional<EmailTemplate> findByIdAndTenantId(UUID id, UUID tenantId);
+    Optional<EmailTemplate> findByBuiltinKey(String builtinKey);
 
-    Optional<EmailTemplate> findByTenantIdAndBuiltinKey(UUID tenantId, String builtinKey);
-
-    boolean existsByTenantIdAndBuiltinKey(UUID tenantId, String builtinKey);
+    boolean existsByBuiltinKey(String builtinKey);
 }

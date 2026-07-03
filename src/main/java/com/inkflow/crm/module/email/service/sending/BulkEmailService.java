@@ -169,7 +169,7 @@ public class BulkEmailService {
             return List.of();
         }
 
-        return clientRepository.findByIdInAndTenantIdAndDeletedAtIsNull(ids, tenantId).stream()
+        return clientRepository.findByIdInAndDeletedAtIsNull(ids).stream()
                 .filter(client -> hasEmail(client.getEmail()))
                 .map(client -> EmailRecipient.of(client.getEmail(), client.getFullName()))
                 .toList();
@@ -180,7 +180,7 @@ public class BulkEmailService {
             return List.of();
         }
 
-        return staffRepository.findByIdInAndTenantIdAndDeletedAtIsNull(ids, tenantId).stream()
+        return staffRepository.findByIdInAndDeletedAtIsNull(ids).stream()
                 .filter(staff -> hasEmail(staff.getEmail()))
                 .map(staff -> EmailRecipient.of(staff.getEmail(), staff.getFullName()))
                 .toList();

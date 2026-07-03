@@ -63,7 +63,7 @@ class AppointmentAnalyticsQueryServiceTest {
                 .build();
         List<Appointment> appointments = List.of(appointment);
 
-        when(appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to)).thenReturn(appointments);
+        when(appointmentRepository.findByDateRange(from, to)).thenReturn(appointments);
         when(metrics.countTotal(appointments)).thenReturn(1);
         when(metrics.countCompleted(appointments)).thenReturn(1);
         when(metrics.countCancelled(appointments)).thenReturn(0);
@@ -98,7 +98,7 @@ class AppointmentAnalyticsQueryServiceTest {
                 .build();
         List<Appointment> appointments = List.of(withoutClient);
 
-        when(appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to)).thenReturn(appointments);
+        when(appointmentRepository.findByDateRange(from, to)).thenReturn(appointments);
         when(metrics.countTotal(appointments)).thenReturn(1);
         when(metrics.countCompleted(appointments)).thenReturn(1);
         when(metrics.countCancelled(appointments)).thenReturn(0);
@@ -199,7 +199,7 @@ class AppointmentAnalyticsQueryServiceTest {
         Instant to = Instant.parse("2026-06-30T23:59:59Z");
         List<Appointment> appointments = List.of();
 
-        when(appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to)).thenReturn(appointments);
+        when(appointmentRepository.findByDateRange(from, to)).thenReturn(appointments);
         when(metrics.countTotal(appointments)).thenReturn(0);
         when(metrics.countCompleted(appointments)).thenReturn(0);
         when(metrics.countCancelled(appointments)).thenReturn(0);
@@ -215,7 +215,7 @@ class AppointmentAnalyticsQueryServiceTest {
     }
 
     private void stubEmptyMetrics(List<Appointment> appointments, UUID tenantId, Instant from, Instant to) {
-        when(appointmentRepository.findByTenantIdAndDateRange(tenantId, from, to)).thenReturn(appointments);
+        when(appointmentRepository.findByDateRange(from, to)).thenReturn(appointments);
         when(metrics.countTotal(appointments)).thenReturn(appointments.size());
         when(metrics.countCompleted(appointments)).thenReturn(0);
         when(metrics.countCancelled(appointments)).thenReturn(0);

@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.catalog.service;
 
+import com.inkflow.crm.config.BypassTenantFilter;
 import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
@@ -25,6 +26,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@BypassTenantFilter
 @RequiredArgsConstructor
 public class PublicArtistService {
 

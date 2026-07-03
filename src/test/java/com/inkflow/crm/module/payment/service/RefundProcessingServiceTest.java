@@ -81,7 +81,7 @@ class RefundProcessingServiceTest {
                 .isRefunded(false)
                 .build();
 
-        when(transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(transactionId, tenantId))
+        when(transactionRepository.findByIdAndDeletedAtIsNull(transactionId))
                 .thenReturn(Optional.of(original));
 
         ProcessRefundRequest request = ProcessRefundRequest.builder()
@@ -109,7 +109,7 @@ class RefundProcessingServiceTest {
                 .isRefunded(false)
                 .build();
 
-        when(transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(transactionId, tenantId))
+        when(transactionRepository.findByIdAndDeletedAtIsNull(transactionId))
                 .thenReturn(Optional.of(original));
         when(receiptNumberGenerator.generate()).thenReturn("RCP-REF");
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
@@ -160,7 +160,7 @@ class RefundProcessingServiceTest {
                 .appointment(appointment)
                 .build();
 
-        when(transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(transactionId, tenantId))
+        when(transactionRepository.findByIdAndDeletedAtIsNull(transactionId))
                 .thenReturn(Optional.of(original));
         when(receiptNumberGenerator.generate()).thenReturn("RCP-REF");
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
@@ -201,7 +201,7 @@ class RefundProcessingServiceTest {
                 .isRefunded(true)
                 .build();
 
-        when(transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(transactionId, tenantId))
+        when(transactionRepository.findByIdAndDeletedAtIsNull(transactionId))
                 .thenReturn(Optional.of(original));
 
         ProcessRefundRequest request = ProcessRefundRequest.builder()
@@ -218,7 +218,7 @@ class RefundProcessingServiceTest {
         UUID transactionId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(transactionRepository.findByIdAndTenantIdAndDeletedAtIsNull(transactionId, tenantId))
+        when(transactionRepository.findByIdAndDeletedAtIsNull(transactionId))
                 .thenReturn(Optional.empty());
 
         ProcessRefundRequest request = ProcessRefundRequest.builder()

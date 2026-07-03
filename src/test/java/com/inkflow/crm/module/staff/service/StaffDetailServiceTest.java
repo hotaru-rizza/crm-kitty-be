@@ -104,8 +104,8 @@ class StaffDetailServiceTest {
         Appointment upcomingAppointment = Appointment.builder().id(UUID.randomUUID()).build();
 
         when(staffLookup.requireStaff(staffId)).thenReturn(staff);
-        when(appointmentRepository.findByTenantIdAndArtistIdAndDateRange(
-                eq(tenantId), eq(staffId), any(Instant.class), any(Instant.class)))
+        when(appointmentRepository.findByArtistIdAndDateRange(
+                eq(staffId), any(Instant.class), any(Instant.class)))
                 .thenReturn(List.of(monthAppointment, monthAppointment));
         when(appointmentRepository.findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(
                 eq(staffId),
@@ -118,8 +118,8 @@ class StaffDetailServiceTest {
         assertEquals(2, detail.getStats().getAppointmentsThisMonth());
         assertEquals(1, detail.getStats().getUpcomingAppointments());
 
-        verify(appointmentRepository).findByTenantIdAndArtistIdAndDateRange(
-                eq(tenantId), eq(staffId), instantCaptor.capture(), instantCaptor.capture());
+        verify(appointmentRepository).findByArtistIdAndDateRange(
+                eq(staffId), instantCaptor.capture(), instantCaptor.capture());
         List<Instant> monthRange = instantCaptor.getAllValues();
         assertEquals(2, monthRange.size());
         assertTrue(monthRange.getFirst().isBefore(monthRange.get(1)));
@@ -190,8 +190,8 @@ class StaffDetailServiceTest {
     }
 
     private void stubEmptyAppointments(UUID staffId, UUID tenantId) {
-        when(appointmentRepository.findByTenantIdAndArtistIdAndDateRange(
-                eq(tenantId), eq(staffId), any(Instant.class), any(Instant.class)))
+        when(appointmentRepository.findByArtistIdAndDateRange(
+                eq(staffId), any(Instant.class), any(Instant.class)))
                 .thenReturn(List.of());
         when(appointmentRepository.findByArtistIdAndStatusInAndStartTimeAfterAndDeletedAtIsNull(
                 eq(staffId),
