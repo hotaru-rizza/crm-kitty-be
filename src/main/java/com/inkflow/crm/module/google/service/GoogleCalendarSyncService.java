@@ -96,7 +96,7 @@ public class GoogleCalendarSyncService {
         try {
             GoogleTokenResponse tokenResponse = exchangeAuthorizationCode(code);
 
-            Staff staff = staffRepository.findById(staffId)
+            Staff staff = staffRepository.findByIdAndDeletedAtIsNull(staffId)
                     .orElseThrow(() -> ResourceNotFoundException.staff(staffId.toString()));
 
             staff.setGoogleAccessToken(tokenResponse.getAccessToken());
@@ -204,7 +204,7 @@ public class GoogleCalendarSyncService {
 
     @Transactional
     protected void saveEventId(UUID appointmentId, String googleEventId) {
-        appointmentRepository.findById(appointmentId).ifPresent(a -> {
+        appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId).ifPresent(a -> {
             a.setGoogleEventId(googleEventId);
             appointmentRepository.save(a);
         });

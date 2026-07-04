@@ -4,10 +4,12 @@ import com.inkflow.crm.module.notification.entity.Notification;
 import com.inkflow.crm.module.notification.entity.NotificationChannel;
 import com.inkflow.crm.module.notification.entity.NotificationType;
 import com.inkflow.crm.module.notification.repository.NotificationRepository;
+import com.inkflow.crm.security.SecurityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -24,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -124,15 +127,20 @@ class NotificationServiceTest {
     @Test
     void markAsRead_updatesExistingNotification() {
         UUID notificationId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         Notification notification = Notification.builder().id(notificationId).isRead(false).build();
 
-        when(notificationRepository.findById(notificationId)).thenReturn(Optional.of(notification));
-        when(notificationRepository.save(notification)).thenReturn(notification);
+        try (MockedStatic<SecurityUtils> securityUtils = mockStatic(SecurityUtils.class)) {
+            securityUtils.when(SecurityUtils::getCurrentUserId).thenReturn(userId);
+            when(notificationRepository.findByIdAndRecipientId(notificationId, userId))
+                    .thenReturn(Optional.of(notification));
+            when(notificationRepository.save(notification)).thenReturn(notification);
 
-        notificationService.markAsRead(notificationId);
+            notificationService.markAsRead(notificationId);
 
-        assertTrue(notification.getIsRead());
-        verify(notificationRepository).save(notification);
+            assertTrue(notification.getIsRead());
+            verify(notificationRepository).save(notification);
+        }
     }
 
     @Test
@@ -164,11 +172,16 @@ class NotificationServiceTest {
     @Test
     void markAsRead_doesNothingWhenNotificationMissing() {
         UUID notificationId = UUID.randomUUID();
-        when(notificationRepository.findById(notificationId)).thenReturn(Optional.empty());
+        UUID userId = UUID.randomUUID();
 
-        notificationService.markAsRead(notificationId);
+        try (MockedStatic<SecurityUtils> securityUtils = mockStatic(SecurityUtils.class)) {
+            securityUtils.when(SecurityUtils::getCurrentUserId).thenReturn(userId);
+            when(notificationRepository.findByIdAndRecipientId(notificationId, userId)).thenReturn(Optional.empty());
 
-        verify(notificationRepository, never()).save(any());
+            notificationService.markAsRead(notificationId);
+
+            verify(notificationRepository, never()).save(any());
+        }
     }
 
     @Test

@@ -294,7 +294,7 @@ class LeaveServiceTest {
                 .staff(Staff.builder().id(UUID.randomUUID()).build())
                 .build();
 
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> leaveService.getLeaveById(leaveId));
     }
@@ -305,14 +305,7 @@ class LeaveServiceTest {
         UUID leaveId = UUID.randomUUID();
         authenticate(tenantId, UUID.randomUUID());
 
-        LeaveRequest leave = LeaveRequest.builder()
-                .id(leaveId)
-                .tenantId(tenantId)
-                .deletedAt(Instant.now())
-                .staff(Staff.builder().id(UUID.randomUUID()).build())
-                .build();
-
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> leaveService.getLeaveById(leaveId));
     }
@@ -330,7 +323,7 @@ class LeaveServiceTest {
                 .status(LeaveStatus.APPROVED)
                 .build();
 
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.of(leave));
         when(leaveRequestRepository.save(leave)).thenReturn(leave);
 
         leaveService.deleteLeave(leaveId);

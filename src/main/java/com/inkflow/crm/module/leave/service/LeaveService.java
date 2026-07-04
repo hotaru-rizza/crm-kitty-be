@@ -364,13 +364,7 @@ public class LeaveService {
     }
 
     private LeaveRequest requireLeave(UUID id) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        LeaveRequest leave = leaveRequestRepository.findById(id)
+        return leaveRequestRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.NOT_FOUND, "Leave request not found: " + id));
-
-        if (!tenantId.equals(leave.getTenantId()) || leave.getDeletedAt() != null) {
-            throw new ResourceNotFoundException(ErrorCode.NOT_FOUND, "Leave request not found: " + id);
-        }
-        return leave;
     }
 }

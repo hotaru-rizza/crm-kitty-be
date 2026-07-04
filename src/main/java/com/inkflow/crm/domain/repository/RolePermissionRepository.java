@@ -16,5 +16,5 @@ public interface RolePermissionRepository extends JpaRepository<RolePermission, 
 
     Optional<RolePermission> findByRoleAndPermission(UserRole role, String permission);
 
-    void deleteByRole(UserRole role);
+    boolean existsByTenantId(UUID tenantId);
 }

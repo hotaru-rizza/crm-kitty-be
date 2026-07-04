@@ -174,7 +174,7 @@ public class ProjectService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Project project = requireProject(tenantId, projectId);
 
-        GalleryPhoto photo = galleryPhotoRepository.findById(photoId)
+        GalleryPhoto photo = galleryPhotoRepository.findByIdAndProjectId(photoId, projectId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         ErrorCode.PROJECT_NOT_FOUND, "Photo not found: " + photoId));
 

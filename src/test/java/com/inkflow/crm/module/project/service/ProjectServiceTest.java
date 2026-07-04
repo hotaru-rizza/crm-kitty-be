@@ -597,7 +597,7 @@ class ProjectServiceTest {
         GalleryPhoto photo = GalleryPhoto.builder().id(photoId).tenantId(tenantId).project(project).build();
 
         when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
-        when(galleryPhotoRepository.findById(photoId)).thenReturn(Optional.of(photo));
+        when(galleryPhotoRepository.findByIdAndProjectId(photoId, projectId)).thenReturn(Optional.of(photo));
 
         projectService.deletePhoto(projectId, photoId);
 
@@ -621,7 +621,7 @@ class ProjectServiceTest {
                 .build();
 
         when(projectRepository.findByIdAndDeletedAtIsNull(projectId)).thenReturn(Optional.of(project));
-        when(galleryPhotoRepository.findById(photoId)).thenReturn(Optional.empty());
+        when(galleryPhotoRepository.findByIdAndProjectId(photoId, projectId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> projectService.deletePhoto(projectId, photoId));
     }

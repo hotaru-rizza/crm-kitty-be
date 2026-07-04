@@ -76,13 +76,18 @@ public class DevAdminService {
         deleteTenantRows("subscriptions", tenantId);
         deleteTenantRows("transaction_category_configs", tenantId);
 
+        // 3. Legacy / optional tables with direct FK to tenants (schema version dependent)
+        deleteTenantRowsIfExists("company_settings", tenantId);
+        deleteTenantRowsIfExists("notification_preference", tenantId);
+        deleteTenantRowsIfExists("email_template_override", tenantId);
+
         tenantRepository.delete(tenant);
         log.warn("DEV ADMIN: Tenant {} purged completely", tenantId);
     }
 
     @Transactional
     public void deleteStaffMember(UUID staffId) {
-        Staff staff = staffRepository.findById(staffId)
+        Staff staff = staffRepository.findByIdAndDeletedAtIsNull(staffId)
                 .orElseThrow(() -> new IllegalArgumentException("Staff not found: " + staffId));
 
         log.warn("DEV ADMIN: Deleting staff {} ({})", staff.getFullName(), staffId);
@@ -122,10 +127,23 @@ public class DevAdminService {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
 
-        List<Staff> staffList = staffRepository.findByDeletedAtIsNull();
-        List<StaffSummary> staffSummaries = staffList.stream()
-                .map(s -> new StaffSummary(s.getId(), s.getFirstName(), s.getLastName(), s.getEmail(), s.getRole().name(), s.getAuthUserId()))
-                .toList();
+        List<StaffSummary> staffSummaries = jdbcTemplate.query(
+                """
+                SELECT id, first_name, last_name, role, email, auth_user_id
+                FROM staff
+                WHERE tenant_id = ? AND deleted_at IS NULL
+                ORDER BY last_name, first_name
+                """,
+                (rs, rowNum) -> new StaffSummary(
+                        UUID.fromString(rs.getString("id")),
+                        rs.getString("first_name"),
+                        rs.getString("last_name"),
+                        rs.getString("email"),
+                        rs.getString("role"),
+                        rs.getString("auth_user_id")
+                ),
+                tenantId
+        );
 
         Long locationCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM locations WHERE tenant_id = ? AND deleted_at IS NULL", Long.class, tenantId);
@@ -146,6 +164,22 @@ public class DevAdminService {
         int deleted = jdbcTemplate.update("DELETE FROM " + table + " WHERE tenant_id = ?", tenantId);
         if (deleted > 0) {
             log.info("  Deleted {} rows from {}", deleted, table);
+        }
+    }
+
+    private void deleteTenantRowsIfExists(String table, UUID tenantId) {
+        Boolean exists = jdbcTemplate.queryForObject(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables
+                    WHERE table_schema = 'public' AND table_name = ?
+                )
+                """,
+                Boolean.class,
+                table
+        );
+        if (Boolean.TRUE.equals(exists)) {
+            deleteTenantRows(table, tenantId);
         }
     }
 

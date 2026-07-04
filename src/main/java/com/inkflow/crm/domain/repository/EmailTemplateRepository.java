@@ -12,6 +12,8 @@ import java.util.UUID;
 @Repository
 public interface EmailTemplateRepository extends JpaRepository<EmailTemplate, UUID> {
 
+    Optional<EmailTemplate> findByIdAndTenantId(UUID id, UUID tenantId);
+
     List<EmailTemplate> findAllByOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc();
 
     List<EmailTemplate> findByTriggerTypeAndEnabledTrue(TriggerType triggerType);

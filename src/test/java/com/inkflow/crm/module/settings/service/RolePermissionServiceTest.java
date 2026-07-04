@@ -132,7 +132,7 @@ class RolePermissionServiceTest {
                         .build()
         );
 
-        when(rolePermissionRepository.count()).thenReturn(1L);
+        when(rolePermissionRepository.existsByTenantId(tenantId)).thenReturn(true);
         when(rolePermissionRepository.findByRole(UserRole.ARTIST)).thenReturn(artistPermissions);
 
         List<String> permissions = rolePermissionService.getGrantedPermissions(tenantId, UserRole.ARTIST);
@@ -151,11 +151,14 @@ class RolePermissionServiceTest {
                 Permission.CLIENTS_VIEW_OWN.getValue()
         ));
 
+        when(rolePermissionRepository.findByRole(UserRole.ARTIST)).thenReturn(List.of());
+
         RolePermissionsDto updated = rolePermissionService.updateRolePermissions("artist", request);
 
         assertEquals("artist", updated.getRole());
         assertEquals(request.getPermissions(), updated.getPermissions());
-        verify(rolePermissionRepository).deleteByRole(UserRole.ARTIST);
+        verify(rolePermissionRepository).findByRole(UserRole.ARTIST);
+        verify(rolePermissionRepository).deleteAll(List.of());
         verify(rolePermissionRepository, times(2)).save(any(RolePermission.class));
     }
 

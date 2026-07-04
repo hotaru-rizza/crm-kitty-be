@@ -97,22 +97,24 @@ public interface ClientRepository extends JpaRepository<Client, UUID>, JpaSpecif
     @Query("""
             UPDATE Client c
             SET c.dormant = true
-            WHERE c.deletedAt IS NULL
+            WHERE c.tenantId = :tenantId
+              AND c.deletedAt IS NULL
               AND c.blacklisted = false
               AND c.dormant = false
               AND c.lastVisit IS NOT NULL
               AND c.lastVisit < :cutoff
             """)
-    int markDormantClients(@Param("cutoff") Instant cutoff);
+    int markDormantClients(@Param("tenantId") UUID tenantId, @Param("cutoff") Instant cutoff);
 
     @Modifying
     @Query("""
             UPDATE Client c
             SET c.dormant = false
-            WHERE c.deletedAt IS NULL
+            WHERE c.tenantId = :tenantId
+              AND c.deletedAt IS NULL
               AND c.dormant = true
               AND c.lastVisit IS NOT NULL
               AND c.lastVisit >= :cutoff
             """)
-    int reactivateDormantClients(@Param("cutoff") Instant cutoff);
+    int reactivateDormantClients(@Param("tenantId") UUID tenantId, @Param("cutoff") Instant cutoff);
 }

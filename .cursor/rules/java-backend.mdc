@@ -5,7 +5,7 @@ alwaysApply: false
 # Readability & logging (project standard)
 
 - Methods should be short and readable; extract named private methods when a block exceeds ~15–20 lines.
-- Leave visual «air» between logical steps: validate → load → mutate → respond (blank line between blocks).
+- Leave visual «air» between logical steps: validate → load → respond (blank line between blocks).
 - Prefer early returns over deep nesting.
 - Log mutations at INFO with context: `tenantId`, entity id/type, action.
 - Never swallow exceptions silently — side effects may fail without breaking the main flow, but must emit at least `log.warn` with ids and message.
@@ -58,6 +58,38 @@ alwaysApply: false
 4. If the module needs mapping — check if a `mapper/` folder exists in sibling modules and follow the same pattern.
 5. If the module needs external config — check if a `@ConfigurationProperties` class exists for that prefix; create one if not.
 
+# Tenant Safety (CRITICAL — read before any repository mutation)
+
+Hibernate `@Filter` applies to **SELECT via Query API only**. Bulk mutations and PK lookups **bypass** the filter.
+
+## NEVER on tenant-scoped entities
+
+| Forbidden | Why | Use instead |
+|-----------|-----|-------------|
+| `repository.findById()` / `findAllById()` | PK lookup, no filter | `findByIdAndDeletedAtIsNull`, `findByIdInAndDeletedAtIsNull`, scoped JPQL |
+| `repository.deleteById()` | same bypass | `findByIdAndDeletedAtIsNull` → `delete(entity)` |
+| derived `deleteBy*` / `updateBy*` | Spring generates bulk SQL | `findBy...()` → `deleteAll(list)` |
+| `@Modifying` JPQL UPDATE/DELETE without `tenantId` | bulk, no filter | explicit `AND x.tenantId = :tenantId` in `@Query` **or** load → mutate → `save()` |
+| native SQL / `JdbcTemplate` UPDATE/DELETE without `tenant_id` | outside filter | `WHERE tenant_id = ?` in SQL |
+| `repository.deleteAll()` with no prior filtered load | wipes table cross-tenant | always `deleteAll(findBy...())` |
+
+## Safe mutation patterns
+
+- **Update:** `findByIdAndDeletedAtIsNull(id)` → change fields → `save(entity)`
+- **Bulk replace:** `deleteAll(repo.findByX(...))` then `save(...)` — never `deleteByX(...)`
+- **Bulk JPQL update:** only with explicit `tenantId = :tenantId` in query (see `ClientRepository.markDormantClients`)
+
+## Exceptions (only these)
+
+- `findById()` safe on: `Tenant`, `SchedulerRun`, `ConsumerUser`, `Tattoo`, `AiGeneration`
+- `@BypassTenantFilter` class/method → **must** add explicit `WHERE tenant_id = ?` or manual `tenantId.equals(...)` check
+- Cross-tenant schedulers → loop tenants + set `TenantContext`, or document allowlist in tenant safety tests
+
+## When touching tenant-scoped code
+
+- New/changed endpoint or service → cross-tenant negative integration test (see `testing.mdc`)
+- CI will fail on: `TenantSecurityArchitectureTest`, `DerivedBulkMutationSafetyTest`, `BulkJpqlTenantSafetyTest`, `NativeSqlTenantSafetyTest`, `JdbcTemplateTenantSafetyTest`
+
 # Before finishing
 
 1. Is there duplicated logic?
@@ -67,3 +99,4 @@ alwaysApply: false
 5. Is the solution consistent with the existing codebase?
 6. Does the code become easier to maintain after the change?
 7. Are all IDE warnings resolved (resource leaks, dead code, condition always true/false)?
+8. **Tenant safety:** no unsafe find/delete/update patterns on tenant-scoped repos?

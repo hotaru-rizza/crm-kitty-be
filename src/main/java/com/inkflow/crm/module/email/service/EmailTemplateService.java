@@ -174,7 +174,7 @@ public class EmailTemplateService {
     }
 
     private EmailTemplate requireTemplate(UUID tenantId, UUID templateId) {
-        return emailTemplateRepository.findById(templateId)
+        return emailTemplateRepository.findByIdAndTenantId(templateId, tenantId)
                 .orElseThrow(() -> new BusinessRuleException(ErrorCode.NOT_FOUND, "Email template not found"));
     }
 

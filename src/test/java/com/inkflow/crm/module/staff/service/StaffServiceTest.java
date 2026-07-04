@@ -75,7 +75,7 @@ class StaffServiceTest {
 
         when(staffRepository.existsByEmailAndDeletedAtIsNull("alex@test.com")).thenReturn(false);
         when(staffMapper.toEntity(request)).thenReturn(entity);
-        when(locationRepository.findAllById(any())).thenReturn(java.util.List.of());
+        when(locationRepository.findByIdInAndDeletedAtIsNull(any())).thenReturn(java.util.List.of());
         when(staffRepository.save(entity)).thenReturn(saved);
         when(staffMapper.toDto(saved)).thenReturn(StaffDto.builder().id(saved.getId()).email("alex@test.com").build());
 

@@ -236,7 +236,7 @@ class LocationServiceTest {
                 .build();
 
         assertThrows(ResourceNotFoundException.class, () -> locationService.assignStaff(locationId, request));
-        verify(staffRepository, never()).findAllById(any());
+        verify(staffRepository, never()).findByIdInAndDeletedAtIsNull(any());
     }
 
     private void authenticateOwner(UUID tenantId) {

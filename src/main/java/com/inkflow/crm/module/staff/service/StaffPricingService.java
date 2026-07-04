@@ -63,7 +63,7 @@ public class StaffPricingService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Staff staff = staffLookup.requireStaff(staffId);
 
-        artistServicePricingRepository.deleteByStaffId(staffId);
+        artistServicePricingRepository.deleteAll(artistServicePricingRepository.findByStaffId(staffId));
         entityManager.flush();
 
         List<ArtistServicePricing> saved = new ArrayList<>();

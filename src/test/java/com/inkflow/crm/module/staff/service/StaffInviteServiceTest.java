@@ -225,8 +225,13 @@ class StaffInviteServiceTest {
                 .locationIds(new java.util.HashSet<>(List.of(locationId)))
                 .build();
 
+        com.inkflow.crm.domain.entity.Location location = com.inkflow.crm.domain.entity.Location.builder()
+                .id(locationId)
+                .tenantId(tenantId)
+                .build();
+
         when(staffInviteRepository.findByToken("valid-token")).thenReturn(Optional.of(invite));
-        when(locationRepository.findAllById(invite.getLocationIds())).thenReturn(List.of());
+        when(locationRepository.findByIdInAndDeletedAtIsNull(invite.getLocationIds())).thenReturn(List.of(location));
         when(staffInviteRepository.save(any(StaffInvite.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(staffRepository.save(any(com.inkflow.crm.domain.entity.Staff.class)))
                 .thenAnswer(invocation -> {

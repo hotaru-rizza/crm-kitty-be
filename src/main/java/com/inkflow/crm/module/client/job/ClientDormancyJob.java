@@ -29,7 +29,8 @@ public class ClientDormancyJob {
 
             TenantContext.setCurrentTenant(tenant.getId());
             try {
-                ClientDormancyService.DormancyResult result = clientDormancyService.processDormancy(cutoff);
+                ClientDormancyService.DormancyResult result =
+                        clientDormancyService.processDormancy(tenant.getId(), cutoff);
                 if (result.markedDormant() > 0 || result.reactivated() > 0) {
                     log.info("Client dormancy processed: tenantId={} markedDormant={} reactivated={}",
                             tenant.getId(), result.markedDormant(), result.reactivated());
