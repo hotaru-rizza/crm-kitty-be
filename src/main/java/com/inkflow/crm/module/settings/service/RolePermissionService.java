@@ -52,7 +52,8 @@ public class RolePermissionService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UserRole role = UserRole.fromValue(roleValue);
 
-        rolePermissionRepository.deleteByRole( role);
+        List<RolePermission> existing = rolePermissionRepository.findByRole(role);
+        rolePermissionRepository.deleteAll(existing);
         saveGrantedPermissions(tenantId, role, request.getPermissions());
 
         log.info("Role permissions updated: tenantId={} role={} count={}",
@@ -99,7 +100,7 @@ public class RolePermissionService {
     }
 
     private void initializeDefaultPermissionsIfNeeded(UUID tenantId) {
-        if (rolePermissionRepository.count() > 0) {
+        if (rolePermissionRepository.existsByTenantId(tenantId)) {
             return;
         }
 

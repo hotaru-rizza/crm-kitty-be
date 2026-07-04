@@ -132,7 +132,7 @@ public class StaffService {
     }
 
     private Set<Location> resolveLocations(Collection<UUID> locationIds) {
-        return new HashSet<>(locationRepository.findAllById(locationIds));
+        return new HashSet<>(locationRepository.findByIdInAndDeletedAtIsNull(locationIds));
     }
 
     private Page<Staff> getStaffPage(

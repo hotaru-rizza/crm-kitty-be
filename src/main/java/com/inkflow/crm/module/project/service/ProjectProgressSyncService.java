@@ -31,8 +31,7 @@ public class ProjectProgressSyncService {
             return;
         }
 
-        projectRepository.findById(projectId)
-                .filter(project -> project.getDeletedAt() == null)
+        projectRepository.findByIdAndDeletedAtIsNull(projectId)
                 .ifPresent(this::syncProjectState);
     }
 
@@ -42,7 +41,7 @@ public class ProjectProgressSyncService {
             return;
         }
 
-        appointmentRepository.findById(appointmentId)
+        appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId)
                 .map(Appointment::getProject)
                 .ifPresent(project -> syncProject(project.getId()));
     }

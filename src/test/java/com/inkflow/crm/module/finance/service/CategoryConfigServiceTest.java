@@ -94,7 +94,7 @@ class CategoryConfigServiceTest {
                 .isDefault(true)
                 .build();
 
-        when(repo.findById(configId)).thenReturn(Optional.of(defaultConfig));
+        when(repo.findByIdAndDeletedAtIsNull(configId)).thenReturn(Optional.of(defaultConfig));
 
         service.delete(configId);
 
@@ -115,7 +115,7 @@ class CategoryConfigServiceTest {
                 .isDefault(false)
                 .build();
 
-        when(repo.findById(configId)).thenReturn(Optional.of(customConfig));
+        when(repo.findByIdAndDeletedAtIsNull(configId)).thenReturn(Optional.of(customConfig));
         when(repo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.delete(configId);

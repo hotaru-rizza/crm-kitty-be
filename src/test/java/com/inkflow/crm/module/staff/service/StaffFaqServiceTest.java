@@ -63,6 +63,7 @@ class StaffFaqServiceTest {
     void shouldReplaceAllItemsWhenUpsertingFaq() {
         UUID staffId = UUID.randomUUID();
         when(staffLookup.requireStaff(staffId)).thenReturn(Staff.builder().id(staffId).tenantId(UUID.randomUUID()).build());
+        when(staffFaqRepository.findByStaffIdOrderBySortOrderAsc(staffId)).thenReturn(List.of());
         when(staffFaqRepository.save(any())).thenAnswer(invocation -> {
             StaffFaq faq = invocation.getArgument(0);
             if (faq.getId() == null) {
@@ -78,7 +79,8 @@ class StaffFaqServiceTest {
         List<StaffFaqDto> saved = staffFaqService.upsertFaq(staffId, request);
 
         var inOrder = inOrder(staffFaqRepository);
-        inOrder.verify(staffFaqRepository).deleteByStaffId(staffId);
+        inOrder.verify(staffFaqRepository).findByStaffIdOrderBySortOrderAsc(staffId);
+        inOrder.verify(staffFaqRepository).deleteAll(List.of());
         inOrder.verify(staffFaqRepository).flush();
         inOrder.verify(staffFaqRepository).save(faqCaptor.capture());
 
@@ -94,12 +96,14 @@ class StaffFaqServiceTest {
     void shouldClearFaqWhenUpsertingWithNullItems() {
         UUID staffId = UUID.randomUUID();
         when(staffLookup.requireStaff(staffId)).thenReturn(Staff.builder().id(staffId).tenantId(UUID.randomUUID()).build());
+        when(staffFaqRepository.findByStaffIdOrderBySortOrderAsc(staffId)).thenReturn(List.of());
 
         UpsertFaqRequest request = UpsertFaqRequest.builder().items(null).build();
 
         List<StaffFaqDto> saved = staffFaqService.upsertFaq(staffId, request);
 
-        verify(staffFaqRepository).deleteByStaffId(staffId);
+        verify(staffFaqRepository).findByStaffIdOrderBySortOrderAsc(staffId);
+        verify(staffFaqRepository).deleteAll(List.of());
         verify(staffFaqRepository, never()).save(any());
         assertTrue(saved.isEmpty());
     }
@@ -108,6 +112,7 @@ class StaffFaqServiceTest {
     void shouldPersistSortOrderWhenUpsertingMultipleItems() {
         UUID staffId = UUID.randomUUID();
         when(staffLookup.requireStaff(staffId)).thenReturn(Staff.builder().id(staffId).tenantId(UUID.randomUUID()).build());
+        when(staffFaqRepository.findByStaffIdOrderBySortOrderAsc(staffId)).thenReturn(List.of());
         when(staffFaqRepository.save(any())).thenAnswer(invocation -> {
             StaffFaq faq = invocation.getArgument(0);
             faq.setId(UUID.randomUUID());

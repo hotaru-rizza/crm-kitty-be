@@ -3,9 +3,6 @@ package com.inkflow.crm.domain.repository;
 import com.inkflow.crm.domain.entity.StaffSchedule;
 import com.inkflow.crm.domain.enums.DayOfWeek;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -17,11 +14,4 @@ public interface StaffScheduleRepository extends JpaRepository<StaffSchedule, UU
     List<StaffSchedule> findByStaffId(UUID staffId);
     Optional<StaffSchedule> findByStaffIdAndDayOfWeek(UUID staffId, DayOfWeek dayOfWeek);
     List<StaffSchedule> findByStaffIdIn(List<UUID> staffIds);
-
-    @Modifying(flushAutomatically = true)
-    @Query("""
-            DELETE FROM StaffSchedule s
-            WHERE s.staff.id = :staffId
-            """)
-    void deleteByStaffId(@Param("staffId") UUID staffId);
 }

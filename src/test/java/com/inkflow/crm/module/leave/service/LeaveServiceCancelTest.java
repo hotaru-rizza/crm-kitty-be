@@ -79,7 +79,7 @@ class LeaveServiceCancelTest {
                 .staff(Staff.builder().id(UUID.randomUUID()).build())
                 .build();
 
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.of(leave));
         when(leaveRequestRepository.save(leave)).thenReturn(leave);
         when(leaveMapper.toDto(leave)).thenReturn(LeaveRequestDto.builder().id(leaveId).status("cancelled").build());
 
@@ -102,7 +102,7 @@ class LeaveServiceCancelTest {
                 .status(LeaveStatus.REJECTED)
                 .build();
 
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.of(leave));
 
         assertThrows(BusinessRuleException.class, () -> leaveService.cancelLeave(leaveId));
     }
@@ -120,7 +120,7 @@ class LeaveServiceCancelTest {
                 .staff(Staff.builder().id(UUID.randomUUID()).build())
                 .build();
 
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.of(leave));
         when(leaveRequestRepository.save(leave)).thenReturn(leave);
         when(leaveMapper.toDto(leave)).thenReturn(LeaveRequestDto.builder().id(leaveId).status("cancelled").build());
 

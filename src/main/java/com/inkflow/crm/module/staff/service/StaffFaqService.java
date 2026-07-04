@@ -45,7 +45,7 @@ public class StaffFaqService {
     public List<StaffFaqDto> upsertFaq(UUID staffId, UpsertFaqRequest request) {
         Staff staff = staffLookup.requireStaff(staffId);
 
-        staffFaqRepository.deleteByStaffId(staffId);
+        staffFaqRepository.deleteAll(staffFaqRepository.findByStaffIdOrderBySortOrderAsc(staffId));
         staffFaqRepository.flush();
 
         List<StaffFaq> saved = new ArrayList<>();

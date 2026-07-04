@@ -4,56 +4,63 @@ alwaysApply: false
 ---
 # Test quality (crm-kitty-be)
 
-**Подход: Quality-first.** Сначала регрессии в бизнес-логике и API-контрактах; JaCoCo — только sanity-check в конце волны, не цель каждого теста.
+Quality-first: catch regressions in business logic and API contracts. Do not write tests only to hit JaCoCo lines.
 
-Living backlog: `docs/TESTING.md`
+## Do not test
 
-## Workflow (каждая волна)
-
-1. Взять пункт из backlog (категория E/A/B) или модуль с риском.
-2. Написать тест по чеклисту ниже.
-3. `./mvnw test` — всё зелёное.
-4. Опционально: JaCoCo snapshot → если осталось время, добить TOP красных `*Service` (не DTO/entity/mapper).
-
-## Не тестируем
-
-- DTO / mapper / repository / config — только если там **своя** логика.
-- Entity getters/setters — нет; domain-методы (`cancel()`, `canBeRefunded()`) — через **service unit** или отдельный unit entity, если сложно.
+- DTO / mapper / repository / config — unless they contain non-trivial logic.
+- Entity getters/setters. Domain methods (`cancel()`, `canBeRefunded()`) → service unit test.
 
 ## Before adding a test
 
-Ask: **«Какой регресс этот тест поймает?»** If only "JaCoCo line hit" — prefer unit test on service branch, or mark as intentional smoke in backlog.
+Ask: **what regression does this test catch?** If none — skip or write a meaningful service branch test instead.
 
-## Minimum bar (new integration test)
+## Integration test minimum
 
-1. **401** without auth (if endpoint is secured).
-2. **Happy path** with realistic payload from `IntegrationTestData.seedTenant()` or extensions.
-3. **Business assertion** — at least ONE of:
-   - repository load + field/status/count assertion
-   - `@MockBean` verify on external client (email, FCM, Gemini, R2)
-   - tenant isolation (other tenant gets 404/403)
+1. **401** without auth (secured endpoints).
+2. **Happy path** with `IntegrationTestData.seedTenant()`.
+3. At least one **business assertion**: repo load + field/status/count, `@MockBean` verify on external API, or tenant isolation.
 
 Do NOT stop at `status().isOk()` + `jsonPath("$.success").value(true)` alone.
 
-## Minimum bar (new unit test)
+## Tenant isolation (required for tenant-scoped features)
 
-- Cover **branch** or **business rule**, not getter/setter or trivial mapper pass-through.
+Any new/changed endpoint or service method that resolves a UUID to a `tenantId` entity **must** include a cross-tenant negative case.
+
+Pattern:
+1. `IntegrationTestData.seedTenant()` × 2
+2. `PersistenceTestSupport.clearPersistenceContext(entityManager)`
+3. `SecurityTestSupport.authenticate(tenantA.owner())`
+4. Assert: `ResourceNotFoundException` / `BusinessRuleException(NOT_FOUND)` / 404 / no-op (foreign data unchanged)
+
+Placement:
+- Single module → `*ServiceIntegrationTest` next to happy path
+- High-risk / multi-module → `TenantCrossTenantIsolationIntegrationTest` or `TenantFinanceSettingsIsolationIntegrationTest`
+
+Use safe repo lookups only — CI fails on unsafe patterns:
+- `findById()` / `findAllById()` / `deleteById()` → `TenantSecurityArchitectureTest`
+- derived `deleteBy*` / `updateBy*` → `DerivedBulkMutationSafetyTest` + ArchUnit
+- bulk `@Modifying` JPQL without `tenantId` → `BulkJpqlTenantSafetyTest`
+- native SQL on tenant tables without `tenant_id` → `NativeSqlTenantSafetyTest`
+- `JdbcTemplate` mutations outside bypass services → `JdbcTemplateTenantSafetyTest`
+
+See `java-backend.mdc` → **Tenant Safety (CRITICAL)** for safe mutation patterns.
+
+## Unit test minimum
+
+- Cover a **branch** or **business rule**.
 - Name: `should<Expected>When<Condition>`.
-- Use `@ExtendWith(MockitoExtension.class)`; mock repos, test service in isolation.
+- `@ExtendWith(MockitoExtension.class)`; mock repos; never mock the service under test.
 
-## Patterns to reuse
+## Reuse
 
-- `@IntegrationTest` + `IntegrationTestData` + `SecurityTestSupport.crmUser()` / `consumerUser()`.
-- `@MockBean` for external APIs (Resend, Gemini, Google, R2) — OK on controller; pair with service unit test for logic.
-- H2 limitations: see backlog section D — don't fight JSONB/pgvector in integration; cover in unit instead.
+- `@IntegrationTest` + `IntegrationTestData` + `SecurityTestSupport.crmUser()` / `consumerUser()`
+- `@MockBean` external APIs on controller tests; pair with service unit test for logic
+- H2: no JSONB/pgvector in integration — unit test instead
 
 ## Anti-patterns
 
-- Copy-paste 5 repository `@Autowired` without using them in assertions.
-- One giant test method covering create + list + delete.
-- `@MockBean` the service under test on its own controller (tests nothing real).
-- Chasing coverage % with empty exists() assertions.
-
-## When touching existing smoke tests
-
-Improve one assertion or add one negative case per PR — see backlog category for that module.
+- `@Autowired` repos without assertions
+- One test method for create + list + delete
+- `@MockBean` the service under test on its own controller
+- Empty `exists()` assertions for coverage

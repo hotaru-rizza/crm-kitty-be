@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -105,7 +106,7 @@ public class StaffInviteService {
         validateInviteAcceptable(invite);
 
         Staff staff = buildStaffFromInvite(invite, request);
-        staff.setLocations(resolveLocations(invite.getLocationIds()));
+        staff.setLocations(resolveLocations(invite.getTenantId(), invite.getLocationIds()));
 
         invite.setAcceptedAt(Instant.now());
         staffInviteRepository.save(invite);
@@ -154,7 +155,13 @@ public class StaffInviteService {
                 .build();
     }
 
-    private Set<Location> resolveLocations(Set<UUID> locationIds) {
-        return new HashSet<>(locationRepository.findAllById(locationIds));
+    private Set<Location> resolveLocations(UUID tenantId, Set<UUID> locationIds) {
+        List<Location> locations = locationRepository.findByIdInAndDeletedAtIsNull(locationIds);
+        boolean allBelongToTenant = locations.size() == locationIds.size()
+                && locations.stream().allMatch(location -> tenantId.equals(location.getTenantId()));
+        if (!allBelongToTenant) {
+            throw new BusinessRuleException("Invalid locations for invite");
+        }
+        return new HashSet<>(locations);
     }
 }

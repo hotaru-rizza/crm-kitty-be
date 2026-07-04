@@ -192,7 +192,7 @@ class GoogleCalendarSyncServiceTest {
         var calendar = GoogleCalendarApiMocks.calendarWithInsert("event-id");
 
         doReturn(calendar).when(spy).getCalendarService(artist);
-        when(appointmentRepository.findById(appointment.getId())).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointment.getId())).thenReturn(Optional.of(appointment));
         when(appointmentRepository.save(appointment)).thenReturn(appointment);
 
         spy.syncNewAppointment(appointment);
@@ -216,7 +216,7 @@ class GoogleCalendarSyncServiceTest {
         var calendar = GoogleCalendarApiMocks.calendarWithInsert("event-id");
 
         doReturn(calendar).when(spy).getCalendarService(artist);
-        when(appointmentRepository.findById(appointment.getId())).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointment.getId())).thenReturn(Optional.of(appointment));
         when(appointmentRepository.save(appointment)).thenReturn(appointment);
 
         spy.syncNewAppointment(appointment);
@@ -254,7 +254,7 @@ class GoogleCalendarSyncServiceTest {
         UUID appointmentId = UUID.randomUUID();
         Appointment appointment = Appointment.builder().id(appointmentId).build();
 
-        when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId)).thenReturn(Optional.of(appointment));
         when(appointmentRepository.save(appointment)).thenReturn(appointment);
 
         googleCalendarSyncService.saveEventId(appointmentId, "google-event-123");
@@ -266,7 +266,7 @@ class GoogleCalendarSyncServiceTest {
     @Test
     void saveEventId_skipsWhenAppointmentNotFound() {
         UUID appointmentId = UUID.randomUUID();
-        when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.empty());
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId)).thenReturn(Optional.empty());
 
         googleCalendarSyncService.saveEventId(appointmentId, "google-event-123");
 
@@ -296,7 +296,7 @@ class GoogleCalendarSyncServiceTest {
         doReturn(GoogleCalendarApiMocks.calendarWithInsert("google-event-456"))
                 .when(spy)
                 .getCalendarService(artist);
-        when(appointmentRepository.findById(appointment.getId())).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointment.getId())).thenReturn(Optional.of(appointment));
         when(appointmentRepository.save(appointment)).thenReturn(appointment);
 
         spy.syncNewAppointment(appointment);
@@ -315,7 +315,7 @@ class GoogleCalendarSyncServiceTest {
         var calendar = GoogleCalendarApiMocks.calendarWithInsert("event-id");
 
         doReturn(calendar).when(spy).getCalendarService(artist);
-        when(appointmentRepository.findById(appointment.getId())).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointment.getId())).thenReturn(Optional.of(appointment));
         when(appointmentRepository.save(appointment)).thenReturn(appointment);
 
         spy.syncNewAppointment(appointment);

@@ -13,5 +13,4 @@ public interface StaffFaqRepository extends JpaRepository<StaffFaq, UUID> {
     List<StaffFaq> findByStaffIdOrderBySortOrderAsc(UUID staffId);
 
     List<StaffFaq> findByStaffIdInOrderByStaffIdAscSortOrderAsc(Collection<UUID> staffIds);
-    void deleteByStaffId(UUID staffId);
 }

@@ -134,7 +134,7 @@ public class LocationService {
         Location location = locationRepository.findByIdAndDeletedAtIsNull(locationId)
                 .orElseThrow(() -> ResourceNotFoundException.location(locationId.toString()));
 
-        List<Staff> staffList = staffRepository.findAllById(request.getStaffIds());
+        List<Staff> staffList = staffRepository.findByIdInAndDeletedAtIsNull(request.getStaffIds());
         location.setStaff(new HashSet<>(staffList));
         locationRepository.save(location);
         log.info("Staff assigned to location: tenantId={} locationId={} count={}", tenantId, locationId, staffList.size());

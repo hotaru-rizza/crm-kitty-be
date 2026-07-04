@@ -93,7 +93,7 @@ class LeaveServiceStatusTest {
                 .endDate(LocalDate.of(2026, 7, 3))
                 .build();
 
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.of(leave));
         when(leaveRequestRepository.findOverlappingLeaves(staffId,
                 LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 3))).thenReturn(List.of());
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(managerId.toString()))
@@ -126,7 +126,7 @@ class LeaveServiceStatusTest {
                 .endDate(LocalDate.of(2026, 7, 3))
                 .build();
 
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.of(leave));
 
         UpdateLeaveStatusRequest request = new UpdateLeaveStatusRequest();
         request.setStatus("pending");
@@ -182,7 +182,7 @@ class LeaveServiceStatusTest {
                 .endDate(LocalDate.of(2026, 7, 3))
                 .build();
 
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.of(leave));
 
         UpdateLeaveStatusRequest request = new UpdateLeaveStatusRequest();
         request.setStatus("not_a_status");
@@ -215,7 +215,7 @@ class LeaveServiceStatusTest {
                 .endDate(LocalDate.of(2026, 7, 4))
                 .build();
 
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.of(leave));
         when(leaveRequestRepository.findOverlappingLeaves(staffId,
                 LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 3))).thenReturn(List.of(conflicting));
 
@@ -244,7 +244,7 @@ class LeaveServiceStatusTest {
                 .endDate(LocalDate.of(2026, 7, 3))
                 .build();
 
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.of(leave));
         when(leaveRequestRepository.findOverlappingLeaves(staffId,
                 LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 3))).thenReturn(List.of(leave));
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(managerId.toString()))
@@ -278,7 +278,7 @@ class LeaveServiceStatusTest {
                 .endDate(LocalDate.of(2026, 7, 3))
                 .build();
 
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.of(leave));
         when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(managerId.toString())).thenReturn(Optional.of(manager));
         when(leaveRequestRepository.save(leave)).thenReturn(leave);
         when(leaveMapper.toDto(leave)).thenReturn(LeaveRequestDto.builder().id(leaveId).status("REJECTED").build());
@@ -311,7 +311,7 @@ class LeaveServiceStatusTest {
                 .notes("original")
                 .build();
 
-        when(leaveRequestRepository.findById(leaveId)).thenReturn(Optional.of(leave));
+        when(leaveRequestRepository.findByIdAndDeletedAtIsNull(leaveId)).thenReturn(Optional.of(leave));
         when(leaveRequestRepository.save(leave)).thenReturn(leave);
         when(leaveMapper.toDto(leave)).thenReturn(LeaveRequestDto.builder().id(leaveId).status("CANCELLED").build());
 

@@ -263,7 +263,7 @@ public class AppointmentService {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = entityResolver.requireAppointment(tenantId, appointmentId);
 
-        GalleryPhoto photo = galleryPhotoRepository.findById(photoId)
+        GalleryPhoto photo = galleryPhotoRepository.findByIdAndAppointmentId(photoId, appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.APPOINTMENT_NOT_FOUND, "Photo not found: " + photoId));
 
         galleryPhotoRepository.delete(photo);

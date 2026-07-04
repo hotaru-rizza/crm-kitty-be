@@ -211,6 +211,7 @@ class StaffPricingServiceTest {
                 .build();
 
         when(staffLookup.requireStaff(staffId)).thenReturn(staff);
+        when(artistServicePricingRepository.findByStaffId(staffId)).thenReturn(List.of());
         when(serviceLookup.require(tenantId, serviceId)).thenReturn(service);
         when(staffPricingMapper.toEntity(staff, service, BigDecimal.valueOf(300), 120)).thenReturn(pricing);
         when(artistServicePricingRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -227,7 +228,8 @@ class StaffPricingServiceTest {
 
         List<StaffServiceDto> result = staffPricingService.updateStaffServices(staffId, request);
 
-        verify(artistServicePricingRepository).deleteByStaffId(staffId);
+        verify(artistServicePricingRepository).findByStaffId(staffId);
+        verify(artistServicePricingRepository).deleteAll(List.of());
         verify(entityManager).flush();
         verify(artistServicePricingRepository).save(pricingCaptor.capture());
         assertEquals(BigDecimal.valueOf(300), pricingCaptor.getValue().getPrice());

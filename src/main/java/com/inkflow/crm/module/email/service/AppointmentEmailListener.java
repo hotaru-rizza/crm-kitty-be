@@ -50,7 +50,7 @@ public class AppointmentEmailListener {
             TriggerType triggerType,
             Integer offsetMinutes) {
 
-        appointmentRepository.findById(appointmentId).ifPresent(appointment -> {
+        appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId).ifPresent(appointment -> {
             if (clientEmailMissing(appointment)) {
                 return;
             }

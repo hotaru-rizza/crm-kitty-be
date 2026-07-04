@@ -104,9 +104,9 @@ public class CategoryConfigService {
 
     @Transactional
     public void delete(UUID id) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
-        repo.findById(id).ifPresent(cfg -> {
-            if (cfg.getTenantId().equals(tenantId) && !Boolean.TRUE.equals(cfg.getIsDefault())) {
+        SecurityUtils.getCurrentTenantId();
+        repo.findByIdAndDeletedAtIsNull(id).ifPresent(cfg -> {
+            if (!Boolean.TRUE.equals(cfg.getIsDefault())) {
                 String label = auditLabelFormatter.financeCategory(cfg.getLabel());
                 cfg.setDeletedAt(java.time.Instant.now());
                 repo.save(cfg);

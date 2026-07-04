@@ -4,6 +4,7 @@ import com.inkflow.crm.module.notification.entity.Notification;
 import com.inkflow.crm.module.notification.entity.NotificationChannel;
 import com.inkflow.crm.module.notification.entity.NotificationType;
 import com.inkflow.crm.module.notification.repository.NotificationRepository;
+import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -80,7 +81,8 @@ public class NotificationService {
 
     @Transactional
     public void markAsRead(UUID notificationId) {
-        notificationRepository.findById(notificationId).ifPresent(n -> {
+        UUID userId = SecurityUtils.getCurrentUserId();
+        notificationRepository.findByIdAndRecipientId(notificationId, userId).ifPresent(n -> {
             n.markAsRead();
             notificationRepository.save(n);
         });

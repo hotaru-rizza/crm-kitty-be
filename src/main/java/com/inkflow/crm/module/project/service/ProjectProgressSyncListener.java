@@ -28,7 +28,7 @@ public class ProjectProgressSyncListener {
     }
 
     private void syncLinkedProject(java.util.UUID appointmentId) {
-        appointmentRepository.findById(appointmentId)
+        appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId)
                 .ifPresent(appointment -> {
                     if (appointment.getProject() == null) {
                         return;
