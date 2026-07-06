@@ -20,6 +20,7 @@ import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.enums.ClientBalanceReason;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.client.service.ClientBalanceService;
+import com.inkflow.crm.module.appointment.support.AppointmentAccessGuard;
 import com.inkflow.crm.module.payment.support.ReceiptNumberGenerator;
 import com.inkflow.crm.module.project.service.ProjectProgressSyncService;
 import com.inkflow.crm.security.SecurityUtils;
@@ -45,6 +46,7 @@ public class RefundProcessingService {
     private final ProjectProgressSyncService projectProgressSyncService;
     private final AuditRecorder auditRecorder;
     private final ClientBalanceService clientBalanceService;
+    private final AppointmentAccessGuard appointmentAccessGuard;
 
     @Transactional
     public PaymentDto processRefund(ProcessRefundRequest request) {
@@ -53,6 +55,10 @@ public class RefundProcessingService {
 
         Transaction originalTransaction = transactionRepository.findByIdAndDeletedAtIsNull(request.getTransactionId())
                 .orElseThrow(() -> ResourceNotFoundException.transaction(request.getTransactionId().toString()));
+
+        if (originalTransaction.getAppointment() != null) {
+            appointmentAccessGuard.requireEdit(originalTransaction.getAppointment());
+        }
 
         validateRefundable(originalTransaction, request.getAmount());
 

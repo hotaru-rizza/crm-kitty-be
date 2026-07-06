@@ -1,6 +1,6 @@
 package com.inkflow.crm.security;
 
-import com.inkflow.crm.common.exception.AccessDeniedException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.domain.enums.UserRole;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
@@ -19,7 +19,6 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -29,6 +28,9 @@ class LocationContextFilterTest {
 
     @Mock
     private FilterChain filterChain;
+
+    @Mock
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private LocationContextFilter filter;
@@ -65,7 +67,7 @@ class LocationContextFilterTest {
     }
 
     @Test
-    void shouldThrowWhenLocationHeaderNotAccessible() throws Exception {
+    void shouldReturnForbiddenWhenLocationHeaderNotAccessible() throws Exception {
         UUID tenantId = UUID.randomUUID();
         UUID allowedLocation = UUID.randomUUID();
         UUID deniedLocation = UUID.randomUUID();
@@ -84,7 +86,9 @@ class LocationContextFilterTest {
         request.addHeader("X-Location-Id", deniedLocation.toString());
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        assertThrows(AccessDeniedException.class, () -> filter.doFilter(request, response, filterChain));
+        filter.doFilter(request, response, filterChain);
+
+        assertEquals(403, response.getStatus());
         verify(filterChain, never()).doFilter(request, response);
     }
 

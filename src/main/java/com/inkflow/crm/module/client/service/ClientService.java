@@ -19,6 +19,7 @@ import com.inkflow.crm.domain.repository.ProjectRepository;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.client.dto.*;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
+import com.inkflow.crm.module.client.support.ClientAccessGuard;
 import com.inkflow.crm.module.project.dto.ProjectSummaryDto;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.security.SecurityUtils;
@@ -55,6 +56,7 @@ public class ClientService {
     private final AuditRecorder auditRecorder;
     private final ClientBalanceService clientBalanceService;
     private final ClientStatsService clientStatsService;
+    private final ClientAccessGuard clientAccessGuard;
 
     @Transactional(readOnly = true)
     public PageResult<ClientDto> getAllClients(PageRequest pageRequest, ClientFilterRequest filter) {
@@ -94,6 +96,7 @@ public class ClientService {
 
         Client client = clientRepository.findByIdWithCollections(id)
                 .orElseThrow(() -> ResourceNotFoundException.client(id.toString()));
+        clientAccessGuard.requireView(client);
 
         List<Project> activeProjects = projectRepository.findByClientIdAndStatusInAndDeletedAtIsNull(
                 id, List.of(ProjectStatus.IN_PROGRESS));
@@ -103,6 +106,8 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public ClientBalanceDto getClientBalance(UUID id) {
+        Client client = requireClient(SecurityUtils.getCurrentTenantId(), id);
+        clientAccessGuard.requireView(client);
         return clientBalanceService.getClientBalance(id);
     }
 
@@ -215,13 +220,15 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public List<ProjectSummaryDto> getClientProjects(UUID clientId) {
-        requireClient(SecurityUtils.getCurrentTenantId(), clientId);
+        Client client = requireClient(SecurityUtils.getCurrentTenantId(), clientId);
+        clientAccessGuard.requireView(client);
         return toProjectSummaries(projectRepository.findByClientIdAndDeletedAtIsNull(clientId));
     }
 
     @Transactional(readOnly = true)
     public List<ProjectSummaryDto> getClientActiveProjects(UUID clientId) {
-        requireClient(SecurityUtils.getCurrentTenantId(), clientId);
+        Client client = requireClient(SecurityUtils.getCurrentTenantId(), clientId);
+        clientAccessGuard.requireView(client);
         return toProjectSummaries(projectRepository.findByClientIdAndStatusInAndDeletedAtIsNull(
                 clientId, List.of(ProjectStatus.IN_PROGRESS)));
     }

@@ -14,6 +14,8 @@ import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
 import com.inkflow.crm.module.appointment.dto.AddAppointmentPhotoRequest;
 import com.inkflow.crm.module.appointment.dto.CreateAppointmentRequest;
 import com.inkflow.crm.module.appointment.dto.UpdateAppointmentRequest;
+import com.inkflow.crm.module.settings.service.RolePermissionService;
+import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
 import com.inkflow.crm.support.IntegrationTestData.TenantBundle;
@@ -78,6 +80,9 @@ class AppointmentControllerIntegrationTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private RolePermissionService rolePermissionService;
 
     @AfterEach
     void tearDown() {
@@ -433,6 +438,174 @@ class AppointmentControllerIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true));
 
         assertFalse(galleryPhotoRepository.findById(photoId).isPresent());
+    }
+
+    @Test
+    void updateAppointment_artistCanPatchOwnAppointment() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        ensureDefaultPermissions(bundle);
+        Staff artistA = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        UUID appointmentId = createAppointmentForArtist(bundle, artistA);
+
+        UpdateAppointmentRequest updateBody = UpdateAppointmentRequest.builder()
+                .notes("Updated by artist")
+                .build();
+
+        mockMvc.perform(patch("/appointments/{id}", appointmentId)
+                        .with(crmUser(artistA))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateBody)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.notes").value("Updated by artist"));
+    }
+
+    @Test
+    void updateAppointment_artistCannotPatchAnotherArtistsAppointment() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        ensureDefaultPermissions(bundle);
+        Staff artistA = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        Staff artistB = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        UUID appointmentId = createAppointmentForArtist(bundle, artistB);
+
+        UpdateAppointmentRequest updateBody = UpdateAppointmentRequest.builder()
+                .notes("Should be denied")
+                .build();
+
+        mockMvc.perform(patch("/appointments/{id}", appointmentId)
+                        .with(crmUser(artistA))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateBody)))
+                .andExpect(status().isForbidden());
+
+        Appointment unchanged = appointmentRepository.findById(appointmentId).orElseThrow();
+        assertTrue(unchanged.getNotes() == null || !"Should be denied".equals(unchanged.getNotes()));
+    }
+
+    @Test
+    void getAppointment_artistCannotViewAnotherArtistsAppointment() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        ensureDefaultPermissions(bundle);
+        Staff artistA = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        Staff artistB = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        UUID appointmentId = createAppointmentForArtist(bundle, artistB);
+
+        mockMvc.perform(get("/appointments/{id}", appointmentId).with(crmUser(artistA)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateAppointment_adminCanPatchAnyAppointment() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        ensureDefaultPermissions(bundle);
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        Staff admin = staffRepository.save(Staff.builder()
+                .tenantId(bundle.tenant().getId())
+                .firstName("Admin")
+                .lastName("User")
+                .email("admin-" + UUID.randomUUID() + "@test.com")
+                .role(com.inkflow.crm.domain.enums.UserRole.ADMIN)
+                .calendarColor("#6366f1")
+                .status(com.inkflow.crm.domain.enums.StaffStatus.WORKING)
+                .accountStatus(com.inkflow.crm.domain.enums.AccountStatus.ACTIVE)
+                .build());
+
+        UUID appointmentId = createAppointmentForArtist(bundle, artist);
+
+        UpdateAppointmentRequest updateBody = UpdateAppointmentRequest.builder()
+                .notes("Updated by admin")
+                .build();
+
+        mockMvc.perform(patch("/appointments/{id}", appointmentId)
+                        .with(crmUser(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateBody)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.notes").value("Updated by admin"));
+    }
+
+    @Test
+    void createAppointment_artistCannotAssignOtherArtist() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        ensureDefaultPermissions(bundle);
+        Staff artistA = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        Staff artistB = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        Instant start = Instant.now().plus(14, ChronoUnit.DAYS);
+        CreateAppointmentRequest body = CreateAppointmentRequest.builder()
+                .clientId(bundle.client().getId())
+                .artistId(artistB.getId())
+                .serviceId(bundle.service().getId())
+                .locationId(bundle.location().getId())
+                .startTime(start)
+                .endTime(start.plus(1, ChronoUnit.HOURS))
+                .price(BigDecimal.valueOf(1000))
+                .build();
+
+        mockMvc.perform(post("/appointments")
+                        .with(crmUser(artistA))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateAppointment_fromOtherTenant_returnsNotFound() throws Exception {
+        TenantBundle tenantA = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        TenantBundle tenantB = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        UUID appointmentId = createAppointment(tenantB, Instant.now().plus(15, ChronoUnit.DAYS),
+                Instant.now().plus(15, ChronoUnit.DAYS).plus(1, ChronoUnit.HOURS));
+
+        UpdateAppointmentRequest updateBody = UpdateAppointmentRequest.builder()
+                .notes("Cross tenant")
+                .build();
+
+        mockMvc.perform(patch("/appointments/{id}", appointmentId)
+                        .with(crmUser(tenantA.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateBody)))
+                .andExpect(status().isNotFound());
+    }
+
+    private UUID createAppointmentForArtist(TenantBundle bundle, Staff artist) throws Exception {
+        Instant start = Instant.now().plus(20, ChronoUnit.DAYS);
+        CreateAppointmentRequest body = CreateAppointmentRequest.builder()
+                .clientId(bundle.client().getId())
+                .artistId(artist.getId())
+                .serviceId(bundle.service().getId())
+                .locationId(bundle.location().getId())
+                .startTime(start)
+                .endTime(start.plus(1, ChronoUnit.HOURS))
+                .price(BigDecimal.valueOf(1000))
+                .build();
+
+        String response = mockMvc.perform(post("/appointments")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return UUID.fromString(objectMapper.readTree(response).path("data").path("id").asText());
+    }
+
+    private void ensureDefaultPermissions(TenantBundle bundle) {
+        SecurityTestSupport.authenticate(bundle.owner());
+        rolePermissionService.getGrantedPermissions(bundle.tenant().getId(), UserRole.ARTIST);
+        rolePermissionService.getGrantedPermissions(bundle.tenant().getId(), UserRole.ADMIN);
+        SecurityTestSupport.clearAuthentication();
     }
 
     private UUID createAppointment(TenantBundle bundle, Instant start, Instant end) throws Exception {

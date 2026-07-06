@@ -10,6 +10,7 @@ import com.inkflow.crm.domain.entity.StaffSchedule;
 import com.inkflow.crm.domain.enums.AccountStatus;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
 import com.inkflow.crm.domain.enums.DayOfWeek;
+import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.ArtistServicePricingRepository;
@@ -29,6 +30,7 @@ import com.inkflow.crm.module.staff.dto.UpdateScheduleRequest;
 import com.inkflow.crm.module.staff.dto.UpdateStaffRequest;
 import com.inkflow.crm.module.staff.dto.UpdateStaffServicesRequest;
 import com.inkflow.crm.module.staff.dto.UpsertFaqRequest;
+import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
 import com.inkflow.crm.support.IntegrationTestData.TenantBundle;
@@ -102,6 +104,9 @@ class StaffControllerIntegrationTest {
 
     @Autowired
     private AppointmentRepository appointmentRepository;
+
+    @Autowired
+    private RolePermissionService rolePermissionService;
 
     @AfterEach
     void tearDown() {
@@ -286,6 +291,21 @@ class StaffControllerIntegrationTest {
         mockMvc.perform(delete("/staff/{id}", target.getId())
                         .with(crmUser(artist)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deleteStaff_withAdminAuth_returnsForbidden() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff admin = seedAdmin(bundle);
+        Staff target = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        ensureDefaultPermissions(bundle);
+
+        mockMvc.perform(delete("/staff/{id}", target.getId())
+                        .with(crmUser(admin)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.error.code").value("FORBIDDEN"));
+
+        assertTrue(staffRepository.findByIdAndDeletedAtIsNull(target.getId()).isPresent());
     }
 
     @Test
@@ -782,6 +802,25 @@ class StaffControllerIntegrationTest {
                 serviceRepository,
                 locationRepository
         );
+    }
+
+    private Staff seedAdmin(TenantBundle bundle) {
+        return staffRepository.save(Staff.builder()
+                .tenantId(bundle.tenant().getId())
+                .firstName("Admin")
+                .lastName("User")
+                .email("admin-" + UUID.randomUUID() + "@test.com")
+                .role(UserRole.ADMIN)
+                .calendarColor("#6366f1")
+                .status(StaffStatus.WORKING)
+                .accountStatus(AccountStatus.ACTIVE)
+                .build());
+    }
+
+    private void ensureDefaultPermissions(TenantBundle bundle) {
+        SecurityTestSupport.authenticate(bundle.owner());
+        rolePermissionService.getGrantedPermissions(bundle.tenant().getId(), UserRole.ADMIN);
+        SecurityTestSupport.clearAuthentication();
     }
 
     private String createInviteAndReturnToken(TenantBundle bundle, String email) throws Exception {

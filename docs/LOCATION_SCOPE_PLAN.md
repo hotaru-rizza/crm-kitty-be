@@ -121,7 +121,11 @@ Direct entity reads (`GET /staff/{id}`, `GET /clients/{id}`, `GET /appointments/
 
 ## Out of scope (documented in tech debt)
 
-- Artist `calendar.edit` without ownership check on PATCH by UUID
+- Artist `calendar.edit` without ownership check on PATCH by UUID → [PERMISSIONS_ACCESS_PLAN.md](./PERMISSIONS_ACCESS_PLAN.md)
 - PostgreSQL RLS for `location_id` (Java enforcement sufficient for now)
+
+### Location scope — test coverage
+
+Cross-location regression tests tracked in [PERMISSIONS_ACCESS_PLAN.md](./PERMISSIONS_ACCESS_PLAN.md) **Phase L** — ✅ complete (`LocationScopeIntegrationTest`). Unit coverage: `LocationScopeTest`, `LocationContextFilterTest`, `ProjectServiceIntegrationTest`.
 
 See [TECH_DEBT.md](./TECH_DEBT.md).

@@ -29,6 +29,7 @@ import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.appointment.dto.*;
 import com.inkflow.crm.module.appointment.mapper.AppointmentMapper;
+import com.inkflow.crm.module.appointment.support.AppointmentAccessGuard;
 import com.inkflow.crm.module.client.service.ClientStatsService;
 import com.inkflow.crm.module.payment.service.PaymentProcessingService;
 import com.inkflow.crm.module.project.service.ProjectProgressSyncService;
@@ -69,6 +70,7 @@ public class AppointmentService {
     private final AuditRecorder auditRecorder;
     private final AuditLabelFormatter auditLabelFormatter;
     private final ClientStatsService clientStatsService;
+    private final AppointmentAccessGuard appointmentAccessGuard;
 
     @Transactional(readOnly = true)
     public PageResult<AppointmentDto> getAllAppointments(PageRequest pageRequest, AppointmentFilterRequest filter) {
@@ -88,7 +90,9 @@ public class AppointmentService {
     @Transactional(readOnly = true)
     public AppointmentDetailDto getAppointmentById(UUID id) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        return appointmentMapper.toDetailDto(entityResolver.requireAppointment(tenantId, id));
+        Appointment appointment = entityResolver.requireAppointment(tenantId, id);
+        appointmentAccessGuard.requireView(appointment);
+        return appointmentMapper.toDetailDto(appointment);
     }
 
     @Transactional(readOnly = true)
@@ -124,6 +128,8 @@ public class AppointmentService {
         if (request.getClientId() == null) {
             throw new BusinessRuleException("Client ID is required");
         }
+
+        appointmentAccessGuard.requireAssignableArtist(request.getArtistId());
 
         Client client = entityResolver.requireClient(tenantId, request.getClientId());
         Staff artist = entityResolver.requireActiveStaff(tenantId, request.getArtistId());
@@ -163,6 +169,8 @@ public class AppointmentService {
             throw BusinessRuleException.reservationRequiresClientOrNone();
         }
 
+        appointmentAccessGuard.requireAssignableArtist(request.getArtistId());
+
         Staff artist = entityResolver.requireActiveStaff(tenantId, request.getArtistId());
         Location location = entityResolver.requireLocation(tenantId, request.getLocationId());
         Client client = request.getClientId() != null
@@ -184,6 +192,7 @@ public class AppointmentService {
     public AppointmentDto updateAppointment(UUID id, UpdateAppointmentRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = entityResolver.requireAppointment(tenantId, id);
+        appointmentAccessGuard.requireEdit(appointment);
         UUID previousProjectId = appointment.getProject() != null ? appointment.getProject().getId() : null;
         UUID previousArtistId = appointment.getArtist().getId();
         Instant previousStartTime = appointment.getStartTime();
@@ -230,6 +239,7 @@ public class AppointmentService {
     public void deleteAppointment(UUID id) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = entityResolver.requireAppointment(tenantId, id);
+        appointmentAccessGuard.requireCancel(appointment);
         UUID projectId = appointment.getProject() != null ? appointment.getProject().getId() : null;
 
         appointmentSideEffectService.afterDelete(appointment, id);
@@ -247,6 +257,7 @@ public class AppointmentService {
     public AppointmentDetailDto.PhotoDto addPhoto(UUID appointmentId, String url, String stage) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = entityResolver.requireAppointment(tenantId, appointmentId);
+        appointmentAccessGuard.requireEdit(appointment);
 
         GalleryPhoto photo = GalleryPhoto.builder()
                 .tenantId(tenantId)
@@ -273,6 +284,7 @@ public class AppointmentService {
     public void deletePhoto(UUID appointmentId, UUID photoId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = entityResolver.requireAppointment(tenantId, appointmentId);
+        appointmentAccessGuard.requireEdit(appointment);
 
         GalleryPhoto photo = galleryPhotoRepository.findByIdAndAppointmentId(photoId, appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.APPOINTMENT_NOT_FOUND, "Photo not found: " + photoId));
@@ -380,6 +392,7 @@ public class AppointmentService {
 
     private void applyRelationUpdates(UUID tenantId, Appointment appointment, UpdateAppointmentRequest request) {
         if (request.getArtistId() != null) {
+            appointmentAccessGuard.requireAssignableArtist(request.getArtistId());
             appointment.setArtist(entityResolver.requireStaff(tenantId, request.getArtistId()));
         }
         if (request.getServiceId() != null) {

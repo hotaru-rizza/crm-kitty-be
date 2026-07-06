@@ -6,27 +6,21 @@ Tracked gaps that are **known** and **intentionally deferred**. Not forgotten.
 
 ## TD-001 — Artist can PATCH another artist's appointment (same tenant)
 
-**Severity:** Medium (same-tenant privilege escalation)
+**Status:** ✅ Resolved (Phase 1 — `AppointmentAccessGuard`)
 
-**Current behaviour**
+**Was**
 
 - Artist role has `calendar.edit`, `calendar.create`, `calendar.cancel` in `RolePermissionDefaults`.
 - List/calendar views restrict artist to own rows via `resolveArtistIds` / `CALENDAR_VIEW_OWN`.
-- **`PATCH /appointments/{id}`** does not verify `appointment.artist.id == currentUserId`.
+- **`PATCH /appointments/{id}`** did not verify `appointment.artist.id == currentUserId`.
 
-**Expected**
+**Fix shipped**
 
-- Artist may only mutate appointments where they are the assigned artist (or stricter product rule).
-- Owner / admin: full access within tenant.
+- `AppointmentAccessGuard` in `module/appointment/support/` — `requireView` / `requireEdit` / `requireCancel` / `requireAssignableArtist`.
+- Wired into `AppointmentService` (get, create, update, delete, photos, artist reassignment).
+- Unit: `AppointmentAccessGuardTest`; integration: `AppointmentControllerIntegrationTest` + `AppointmentServiceIntegrationTest`.
 
-**Fix (when picked up)**
-
-- Introduce `AppointmentAccessGuard` (or extend `AppointmentEntityResolver`):
-  - `requireEditableByCurrentUser(Appointment appointment)`
-  - Called at start of `updateAppointment`, `deleteAppointment`, photo mutations.
-- Mirror pattern for `projects.edit` / `clients.edit` if similar gaps exist.
-
-**Related:** permissions are role-based; location scope is a separate concern (see [LOCATION_SCOPE_PLAN.md](./LOCATION_SCOPE_PLAN.md)).
+See **[PERMISSIONS_ACCESS_PLAN.md](./PERMISSIONS_ACCESS_PLAN.md)** Phase 1.
 
 ---
 
@@ -43,3 +37,13 @@ See [LOCATION_SCOPE_PLAN.md](./LOCATION_SCOPE_PLAN.md) — Phase 5 (remove redun
 Header infrastructure existed since `TenantContextFilter`; services ignored it until `LocationScope` rollout.
 
 **Status:** Addressed by `LocationScope` (Phase 1).
+
+---
+
+## TD-004 — Delete endpoints owner-only policy
+
+**Status:** ✅ Documented and aligned (Phase 4)
+
+Staff, location, service, and transaction **delete** operations require `owner` role (`SecurityUtils.requireOwner()` in service). Controllers no longer advertise misleading edit permissions on delete routes. Admin integration tests assert 403.
+
+See **[PERMISSIONS_ACCESS_PLAN.md](./PERMISSIONS_ACCESS_PLAN.md)** Phase 4.

@@ -62,7 +62,6 @@ public class LocationController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission(Permission.LOCATIONS_EDIT)
     public ResponseEntity<ApiResponse<Void>> deleteLocation(@PathVariable UUID id) {
         locationService.deleteLocation(id);
         log.info("Location deleted via API: locationId={}", id);

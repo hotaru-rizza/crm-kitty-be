@@ -19,6 +19,7 @@ import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TransactionRepository;
 import com.inkflow.crm.module.appointment.support.AppointmentLabels;
+import com.inkflow.crm.module.appointment.support.AppointmentAccessGuard;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.client.service.ClientBalanceService;
@@ -57,6 +58,7 @@ public class PaymentProcessingService {
     private final AuditRecorder auditRecorder;
     private final AuditLabelFormatter auditLabelFormatter;
     private final ClientBalanceService clientBalanceService;
+    private final AppointmentAccessGuard appointmentAccessGuard;
 
     @Transactional
     public PaymentDto processPayment(ProcessPaymentRequest request) {
@@ -72,6 +74,7 @@ public class PaymentProcessingService {
         UUID currentUserId = SecurityUtils.getCurrentUserId();
 
         Appointment appointment = requireAppointment(request.getAppointmentId(), tenantId);
+        appointmentAccessGuard.requireEdit(appointment);
         rejectCancelledAppointment(appointment);
         rejectReservationPayment(appointment);
 
@@ -163,6 +166,7 @@ public class PaymentProcessingService {
         UUID currentUserId = SecurityUtils.getCurrentUserId();
 
         Appointment appointment = requireAppointment(request.getAppointmentId(), tenantId);
+        appointmentAccessGuard.requireEdit(appointment);
         rejectCancelledAppointment(appointment);
         rejectReservationPayment(appointment);
 

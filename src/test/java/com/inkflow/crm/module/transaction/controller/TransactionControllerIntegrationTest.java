@@ -9,6 +9,11 @@ import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.domain.repository.TransactionRepository;
 import com.inkflow.crm.module.transaction.dto.CreateTransactionRequest;
+import com.inkflow.crm.module.settings.service.RolePermissionService;
+import com.inkflow.crm.domain.enums.AccountStatus;
+import com.inkflow.crm.domain.enums.StaffStatus;
+import com.inkflow.crm.domain.enums.UserRole;
+import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
 import com.inkflow.crm.support.IntegrationTestData.TenantBundle;
@@ -30,6 +35,7 @@ import java.util.UUID;
 import static com.inkflow.crm.support.SecurityTestSupport.crmUser;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -65,6 +71,9 @@ class TransactionControllerIntegrationTest {
 
     @Autowired
     private TransactionRepository transactionRepository;
+
+    @Autowired
+    private RolePermissionService rolePermissionService;
 
     @AfterEach
     void tearDown() {
@@ -207,6 +216,20 @@ class TransactionControllerIntegrationTest {
     }
 
     @Test
+    void deleteTransaction_withAdminAuth_returnsForbidden() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff admin = seedAdmin(bundle);
+        ensureDefaultPermissions(bundle);
+        UUID transactionId = createTransactionAndGetId(bundle);
+
+        mockMvc.perform(delete("/transactions/{id}", transactionId).with(crmUser(admin)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.error.code").value("FORBIDDEN"));
+
+        assertTrue(transactionRepository.findByIdAndDeletedAtIsNull(transactionId).isPresent());
+    }
+
+    @Test
     void getTransaction_fromOtherTenant_returnsNotFound() throws Exception {
         TenantBundle tenantA = seedTenant();
         TenantBundle tenantB = seedTenant();
@@ -267,5 +290,24 @@ class TransactionControllerIntegrationTest {
     private TenantBundle seedTenant() {
         return IntegrationTestData.seedTenant(
                 tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+    }
+
+    private Staff seedAdmin(TenantBundle bundle) {
+        return staffRepository.save(Staff.builder()
+                .tenantId(bundle.tenant().getId())
+                .firstName("Admin")
+                .lastName("User")
+                .email("admin-" + UUID.randomUUID() + "@test.com")
+                .role(UserRole.ADMIN)
+                .calendarColor("#6366f1")
+                .status(StaffStatus.WORKING)
+                .accountStatus(AccountStatus.ACTIVE)
+                .build());
+    }
+
+    private void ensureDefaultPermissions(TenantBundle bundle) {
+        SecurityTestSupport.authenticate(bundle.owner());
+        rolePermissionService.getGrantedPermissions(bundle.tenant().getId(), UserRole.ADMIN);
+        SecurityTestSupport.clearAuthentication();
     }
 }
