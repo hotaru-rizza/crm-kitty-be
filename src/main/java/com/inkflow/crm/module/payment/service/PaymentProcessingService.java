@@ -6,15 +6,22 @@ import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.Transaction;
-import com.inkflow.crm.domain.enums.*;
+import com.inkflow.crm.domain.enums.AppointmentStatus;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.domain.enums.ClientBalanceReason;
+import com.inkflow.crm.domain.enums.PaymentMethod;
+import com.inkflow.crm.domain.enums.PaymentType;
+import com.inkflow.crm.domain.enums.TransactionCategory;
+import com.inkflow.crm.domain.enums.TransactionType;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TransactionRepository;
+import com.inkflow.crm.module.appointment.support.AppointmentLabels;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.client.service.ClientBalanceService;
-import com.inkflow.crm.domain.enums.ClientBalanceReason;
 import com.inkflow.crm.module.payment.dto.AppointmentPaymentSummaryDto;
 import com.inkflow.crm.module.payment.dto.PaymentDto;
 import com.inkflow.crm.module.payment.dto.PaymentLineRequest;
@@ -107,6 +114,48 @@ public class PaymentProcessingService {
         syncLinkedProjectProgress(appointment);
 
         return paymentMapper.toDto(transaction);
+    }
+
+    public void recordInitialPrepayment(Appointment appointment) {
+        if (appointment.isReservation()) {
+            return;
+        }
+
+        BigDecimal amount = appointment.getPrepayment() != null ? appointment.getPrepayment() : BigDecimal.ZERO;
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        UUID tenantId = appointment.getTenantId();
+        Staff processedBy = findProcessedByStaff(SecurityUtils.getCurrentUserId(), tenantId);
+        String serviceName = AppointmentLabels.serviceTitle(appointment);
+
+        Transaction transaction = Transaction.builder()
+                .tenantId(tenantId)
+                .type(TransactionType.INCOME)
+                .category(TransactionCategory.SERVICE.getValue())
+                .paymentType(PaymentType.DEPOSIT)
+                .amount(amount)
+                .paymentMethod(PaymentMethod.CASH)
+                .description(String.format("Передоплата: %s", serviceName))
+                .appointment(appointment)
+                .staff(appointment.getArtist())
+                .processedBy(processedBy)
+                .location(appointment.getLocation())
+                .date(Instant.now())
+                .receiptNumber(receiptNumberGenerator.generate())
+                .isRefunded(false)
+                .refundedAmount(BigDecimal.ZERO)
+                .build();
+
+        transaction = transactionRepository.save(transaction);
+
+        log.info("Initial prepayment recorded: tenantId={} transactionId={} appointmentId={} amount={}",
+                tenantId, transaction.getId(), appointment.getId(), amount);
+
+        auditPayment(appointment, transaction);
+        recordClientBalanceForPayment(appointment, transaction, PaymentMethod.CASH, PaymentType.DEPOSIT);
+        syncLinkedProjectProgress(appointment);
     }
 
     private PaymentDto processPaymentLines(ProcessPaymentRequest request) {
@@ -411,7 +460,7 @@ public class PaymentProcessingService {
             Appointment appointment,
             PaymentType paymentType) {
         String typeLabel = paymentType == PaymentType.DEPOSIT ? "Передоплата" : "Оплата послуги";
-        String serviceName = appointment.getService() != null ? appointment.getService().getTitle() : "Послуга";
+        String serviceName = AppointmentLabels.serviceTitle(appointment);
 
         if (request.getDescription() != null && !request.getDescription().isEmpty()) {
             return String.format("%s: %s - %s", typeLabel, serviceName, request.getDescription());

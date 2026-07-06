@@ -23,6 +23,8 @@ public class TransactionDto {
     private UUID appointmentId;
     private UUID staffId;
     private String staffName;
+    private String staffAccountStatus;
+    private boolean staffDeleted;
     private UUID locationId;
     private String locationName;
     private Instant date;

@@ -13,10 +13,12 @@ import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
 import com.inkflow.crm.domain.repository.LeaveRequestRepository;
 import com.inkflow.crm.module.appointment.dto.AppointmentDto;
+import com.inkflow.crm.module.appointment.dto.AppointmentItemRequest;
 import com.inkflow.crm.module.appointment.dto.AppointmentUpdateContext;
 import com.inkflow.crm.module.appointment.dto.CreateAppointmentRequest;
 import com.inkflow.crm.module.appointment.dto.UpdateAppointmentRequest;
 import com.inkflow.crm.module.appointment.mapper.AppointmentMapper;
+import com.inkflow.crm.module.payment.service.PaymentProcessingService;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
@@ -38,6 +40,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -77,6 +80,9 @@ class AppointmentServiceTest {
 
     @Mock
     private AppointmentPricingService appointmentPricingService;
+
+    @Mock
+    private PaymentProcessingService paymentProcessingService;
 
     @InjectMocks
     private AppointmentService appointmentService;
@@ -143,6 +149,72 @@ class AppointmentServiceTest {
         AppointmentDto result = appointmentService.createAppointment(request);
 
         assertEquals(saved.getId(), result.getId());
+        verify(paymentProcessingService).recordInitialPrepayment(saved);
+        verify(appointmentSideEffectService).afterCreate(saved);
+    }
+
+    @Test
+    void createAppointment_allowsCustomItemsOnly() {
+        UUID tenantId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        UUID locationId = UUID.randomUUID();
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        authenticate(tenantId);
+
+        Client client = client(clientId);
+        Staff artist = staff(artistId);
+        Location location = location(locationId);
+
+        when(entityResolver.requireClient(tenantId, clientId)).thenReturn(client);
+        when(entityResolver.requireActiveStaff(tenantId, artistId)).thenReturn(artist);
+        when(entityResolver.requireLocation(tenantId, locationId)).thenReturn(location);
+        when(appointmentRepository.existsConflictingAppointment(artistId, start, end)).thenReturn(false);
+        when(inkflowProperties.defaultZoneId()).thenReturn(ZoneId.of("Europe/Kyiv"));
+        when(leaveRequestRepository.findActiveLeaveForDate(eq(artistId), any())).thenReturn(List.of());
+        when(appointmentItemService.buildItemsForCreate(eq(tenantId), any(), eq(artist), any()))
+                .thenReturn(List.of());
+
+        Appointment saved = Appointment.builder()
+                .id(UUID.randomUUID())
+                .tenantId(tenantId)
+                .client(client)
+                .artist(artist)
+                .location(location)
+                .startTime(start)
+                .endTime(end)
+                .status(AppointmentStatus.SCHEDULED)
+                .price(BigDecimal.valueOf(100))
+                .build();
+
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> {
+            Appointment arg = invocation.getArgument(0);
+            assertNull(arg.getService());
+            return saved;
+        });
+        when(appointmentMapper.toDto(saved)).thenReturn(AppointmentDto.builder().id(saved.getId()).build());
+
+        CreateAppointmentRequest request = CreateAppointmentRequest.builder()
+                .clientId(clientId)
+                .artistId(artistId)
+                .locationId(locationId)
+                .startTime(start)
+                .endTime(end)
+                .items(List.of(AppointmentItemRequest.builder()
+                        .source("custom")
+                        .title("Hair wash")
+                        .unitPrice(BigDecimal.valueOf(100))
+                        .durationMinutes(60)
+                        .quantity(1)
+                        .sortOrder(0)
+                        .build()))
+                .build();
+
+        AppointmentDto result = appointmentService.createAppointment(request);
+
+        assertNotNull(result.getId());
         verify(appointmentSideEffectService).afterCreate(saved);
     }
 

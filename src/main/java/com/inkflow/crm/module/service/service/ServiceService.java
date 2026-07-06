@@ -5,6 +5,7 @@ import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.common.dto.PaginationDto;
 import com.inkflow.crm.domain.entity.ArtistServicePricing;
 import com.inkflow.crm.domain.entity.Service;
+import com.inkflow.crm.domain.enums.PricingType;
 import com.inkflow.crm.domain.repository.ArtistServicePricingRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
 import com.inkflow.crm.domain.enums.AuditAction;
@@ -13,6 +14,7 @@ import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.service.dto.*;
 import com.inkflow.crm.module.service.mapper.ServiceMapper;
+import com.inkflow.crm.module.service.support.ServiceDurationPolicy;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +63,7 @@ public class ServiceService {
 
         Service service = serviceMapper.toEntity(request);
         service.setTenantId(tenantId);
+        service.setDuration(ServiceDurationPolicy.resolveForCreate(service.getPricingType(), request.getDuration()));
         service = serviceRepository.save(service);
 
         log.info("Service created: tenantId={} serviceId={}", tenantId, service.getId());
@@ -80,6 +83,13 @@ public class ServiceService {
 
         Service service = serviceLookup.require(tenantId, id);
         serviceMapper.updateEntity(request, service);
+        PricingType pricingType = request.getPricingType() != null
+                ? PricingType.fromValue(request.getPricingType())
+                : service.getPricingType();
+        service.setDuration(ServiceDurationPolicy.resolveForUpdate(
+                pricingType,
+                request.getDuration(),
+                service.getDuration()));
         service = serviceRepository.save(service);
 
         log.info("Service updated: tenantId={} serviceId={}", tenantId, id);

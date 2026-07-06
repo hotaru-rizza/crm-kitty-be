@@ -72,6 +72,9 @@ public class LocationService {
 
         Location location = locationMapper.toEntity(request);
         location.setTenantId(tenantId);
+        if (locationRepository.findByIsDefaultTrueAndDeletedAtIsNull().isEmpty()) {
+            location.setIsDefault(true);
+        }
 
         location = locationRepository.save(location);
         log.info("Location created: tenantId={} locationId={}", tenantId, location.getId());
@@ -113,7 +116,7 @@ public class LocationService {
         Location location = locationRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.location(id.toString()));
 
-        ensureCanDeleteLocation(tenantId);
+        ensureCanDeleteLocation(tenantId, location);
 
         location.softDelete();
         locationRepository.save(location);
@@ -148,7 +151,39 @@ public class LocationService {
         );
     }
 
-    private void ensureCanDeleteLocation(UUID tenantId) {
+    @Transactional
+    public LocationDto setDefaultLocation(UUID id) {
+        SecurityUtils.requireAdminAccess();
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+
+        Location location = locationRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> ResourceNotFoundException.location(id.toString()));
+
+        locationRepository.findByIsDefaultTrueAndDeletedAtIsNull()
+                .filter(current -> !current.getId().equals(id))
+                .ifPresent(current -> {
+                    current.setIsDefault(false);
+                    locationRepository.save(current);
+                });
+
+        location.setIsDefault(true);
+        location = locationRepository.save(location);
+        log.info("Default location set: tenantId={} locationId={}", tenantId, id);
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.LOCATION,
+                location.getId().toString(),
+                auditLabelFormatter.location(location.getName()),
+                null,
+                "Основна локація"
+        );
+        return locationMapper.toDtoWithStaffCount(location);
+    }
+
+    private void ensureCanDeleteLocation(UUID tenantId, Location location) {
+        if (Boolean.TRUE.equals(location.getIsDefault())) {
+            throw BusinessRuleException.defaultLocationCannotBeDeleted();
+        }
         if (locationRepository.countByDeletedAtIsNull() <= 1) {
             throw BusinessRuleException.lastLocationCannotBeDeleted();
         }

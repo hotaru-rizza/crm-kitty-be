@@ -14,6 +14,8 @@ import com.inkflow.crm.module.email.dto.SendEmailRequest;
 import com.inkflow.crm.module.email.dto.SendEmailResultDto;
 import com.inkflow.crm.module.email.enums.TemplateCategory;
 import com.inkflow.crm.module.email.enums.TriggerType;
+import com.inkflow.crm.module.email.enums.TemplateVar;
+import com.inkflow.crm.module.email.service.EmailLocationContextLoader;
 import com.inkflow.crm.module.email.service.EmailTenantContextLoader;
 import com.inkflow.crm.module.email.service.NotificationDispatcher;
 import com.inkflow.crm.module.email.template.EmailHtmlSanitizer;
@@ -42,6 +44,7 @@ public class BulkEmailService {
     private final ClientRepository clientRepository;
     private final StaffRepository staffRepository;
     private final EmailTenantContextLoader tenantContextLoader;
+    private final EmailLocationContextLoader emailLocationContextLoader;
     private final InkflowProperties inkflowProperties;
     private final AuditRecorder auditRecorder;
 
@@ -131,26 +134,32 @@ public class BulkEmailService {
         String subject = TemplateVarSubstitutor.substitute(subjectTemplate, vars);
         String bodyResolved = TemplateVarSubstitutor.substitute(rawBody, vars);
         String bodyHtml = html ? bodyResolved : EmailLayout.toHtml(bodyResolved);
-        String fullHtml = wrapBody(subject, bodyHtml, context.studioName());
+        String fullHtml = wrapBody(subject, bodyHtml, context);
 
         return new RenderedManualEmail(subject, fullHtml);
     }
 
     private Map<String, String> buildVars(EmailRecipient recipient, EmailTenantContext context) {
-        return EmailPreviewSampleData.forManualCompose(
+        Map<String, String> vars = EmailPreviewSampleData.forManualCompose(
                 recipient.name(),
                 context.studioName(),
                 inkflowProperties.getAppName()
         );
+        String address = emailLocationContextLoader.resolveAddress();
+        if (!address.isBlank()) {
+            vars.put(TemplateVar.ADDRESS.getPlaceholder(), address);
+        }
+        return vars;
     }
 
-    private String wrapBody(String subject, String bodyHtml, String studioName) {
+    private String wrapBody(String subject, String bodyHtml, EmailTenantContext context) {
         EmailLayoutContext layout = new EmailLayoutContext(
                 inkflowProperties.getAppName(),
                 subject,
                 bodyHtml,
                 TemplateCategory.MARKETING,
-                studioName,
+                context.studioName(),
+                context.studioLogoUrl(),
                 null,
                 null
         );

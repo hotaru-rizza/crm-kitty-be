@@ -184,6 +184,32 @@ class ServiceControllerIntegrationTest {
     }
 
     @Test
+    void createService_hourlyWithoutDuration_persistsWithDefaultSlot() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        CreateServiceRequest body = CreateServiceRequest.builder()
+                .title("Removal")
+                .pricingType("hourly")
+                .price(BigDecimal.valueOf(400))
+                .color("#6366f1")
+                .build();
+
+        String response = mockMvc.perform(post("/services")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.pricingType").value("hourly"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String serviceId = objectMapper.readTree(response).path("data").path("id").asText();
+        Service saved = serviceRepository.findById(java.util.UUID.fromString(serviceId)).orElseThrow();
+        assertEquals(60, saved.getDuration());
+    }
+
+    @Test
     void deleteService_withArtistAuth_returnsForbidden() throws Exception {
         TenantBundle bundle = seedTenant();
         Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());

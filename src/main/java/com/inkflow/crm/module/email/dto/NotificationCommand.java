@@ -11,7 +11,8 @@ public record NotificationCommand(
         EmailRecipient recipient,
         Map<String, String> variables,
         UUID entityId,
-        String studioName) {
+        String studioName,
+        String studioLogoUrl) {
 
     public static NotificationCommand forTenant(
             UUID tenantId,
@@ -27,7 +28,8 @@ public record NotificationCommand(
                 recipient,
                 variables,
                 entityId,
-                context.studioName()
+                context.studioName(),
+                context.studioLogoUrl()
         );
     }
 }

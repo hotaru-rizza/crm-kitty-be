@@ -20,6 +20,7 @@ import com.inkflow.crm.module.leave.dto.LeaveRequestDto;
 import com.inkflow.crm.module.leave.dto.UpdateLeaveStatusRequest;
 import com.inkflow.crm.module.leave.dto.LeaveQueryParts;
 import com.inkflow.crm.module.leave.mapper.LeaveRequestMapper;
+import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
@@ -80,8 +81,9 @@ public class LeaveService {
             int size) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Pageable pageable = PageRequest.of(page, size);
+        UUID effectiveLocationId = LocationScope.resolveFilter(locationId).orElse(null);
 
-        LeaveQueryParts query = buildFilterQuery(tenantId, status, leaveType, from, to, locationId, staffIds);
+        LeaveQueryParts query = buildFilterQuery(tenantId, status, leaveType, from, to, effectiveLocationId, staffIds);
         TypedQuery<LeaveRequest> dataQuery = entityManager.createQuery(query.dataJpql(), LeaveRequest.class);
         TypedQuery<Long> countQuery = entityManager.createQuery(query.countJpql(), Long.class);
         query.params().forEach((key, value) -> {
@@ -100,8 +102,9 @@ public class LeaveService {
     @Transactional(readOnly = true)
     public long getPendingCount(UUID locationId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        if (locationId != null) {
-            return leaveRequestRepository.countPendingByLocation( locationId);
+        UUID effectiveLocationId = LocationScope.resolveFilter(locationId).orElse(null);
+        if (effectiveLocationId != null) {
+            return leaveRequestRepository.countPendingByLocation(effectiveLocationId);
         }
         return leaveRequestRepository.countPending();
     }

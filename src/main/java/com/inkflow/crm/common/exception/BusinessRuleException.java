@@ -71,6 +71,10 @@ public class BusinessRuleException extends ApiException {
         return new BusinessRuleException("Неможливо видалити останню локацію");
     }
 
+    public static BusinessRuleException defaultLocationCannotBeDeleted() {
+        return new BusinessRuleException("Неможливо видалити основну локацію");
+    }
+
     public static BusinessRuleException lastActiveLocationCannotBeDeactivated() {
         return new BusinessRuleException("Потрібна хоча б одна активна локація");
     }

@@ -10,8 +10,11 @@ import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
+import com.inkflow.crm.domain.enums.PaymentType;
+import com.inkflow.crm.domain.repository.TransactionRepository;
 import com.inkflow.crm.module.appointment.dto.CreateAppointmentRequest;
 import com.inkflow.crm.module.appointment.dto.UpdateAppointmentRequest;
+import com.inkflow.crm.module.payment.service.PaymentService;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
 import com.inkflow.crm.support.IntegrationTestData.TenantBundle;
@@ -56,6 +59,12 @@ class AppointmentServiceIntegrationTest {
 
     @Autowired
     private LocationRepository locationRepository;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
+
+    @Autowired
+    private PaymentService paymentService;
 
     @Autowired
     private EntityManager entityManager;
@@ -121,6 +130,36 @@ class AppointmentServiceIntegrationTest {
         assertEquals(tenant.owner().getId(), saved.getArtist().getId());
         assertEquals(BigDecimal.valueOf(1000), saved.getFinalPrice());
         assertEquals(start.truncatedTo(ChronoUnit.MILLIS), saved.getStartTime().truncatedTo(ChronoUnit.MILLIS));
+    }
+
+    @Test
+    void createAppointment_withPrepayment_createsDepositPaymentRecord() {
+        TenantBundle tenant = seedTenant();
+        SecurityTestSupport.authenticate(tenant.owner());
+
+        Instant start = Instant.now().plus(5, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        var created = appointmentService.createAppointment(CreateAppointmentRequest.builder()
+                .clientId(tenant.client().getId())
+                .artistId(tenant.owner().getId())
+                .serviceId(tenant.service().getId())
+                .locationId(tenant.location().getId())
+                .startTime(start)
+                .endTime(end)
+                .price(BigDecimal.valueOf(100))
+                .prepayment(BigDecimal.valueOf(90))
+                .build());
+
+        var transactions = transactionRepository.findByAppointmentIdAndDeletedAtIsNullOrderByDateDesc(created.getId());
+        assertEquals(1, transactions.size());
+        assertEquals(PaymentType.DEPOSIT, transactions.getFirst().getPaymentType());
+        assertEquals(0, transactions.getFirst().getAmount().compareTo(BigDecimal.valueOf(90)));
+
+        var summary = paymentService.getAppointmentPaymentSummary(created.getId());
+        assertEquals(1, summary.getPayments().size());
+        assertEquals(0, summary.getTotalPaid().compareTo(BigDecimal.valueOf(90)));
+        assertEquals(0, summary.getRemainingBalance().compareTo(BigDecimal.valueOf(10)));
     }
 
     @Test

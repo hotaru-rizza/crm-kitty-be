@@ -92,7 +92,7 @@ class StaffPerformanceAnalyticsServiceTest {
                 .build();
         List<Appointment> appointments = List.of(appointment);
 
-        when(appointmentRepository.findByDateRange(from, to)).thenReturn(appointments);
+        when(appointmentRepository.findByDateRange(from, to, null)).thenReturn(appointments);
         when(metrics.hasArtist(appointment)).thenReturn(true);
         when(staffScheduleRepository.findByStaffIdIn(List.of(artistId))).thenReturn(List.of());
         when(metrics.countTotal(appointments)).thenReturn(1);
@@ -131,7 +131,7 @@ class StaffPerformanceAnalyticsServiceTest {
         Instant from = Instant.parse("2026-06-01T00:00:00Z");
         Instant to = Instant.parse("2026-06-30T23:59:59Z");
 
-        when(appointmentRepository.findByDateRange(from, to)).thenReturn(List.of());
+        when(appointmentRepository.findByDateRange(from, to, null)).thenReturn(List.of());
 
         assertTrue(staffPerformanceAnalyticsService.getStaffPerformance(from, to).isEmpty());
     }
@@ -149,7 +149,7 @@ class StaffPerformanceAnalyticsServiceTest {
                 .finalPrice(BigDecimal.valueOf(300))
                 .build();
 
-        when(appointmentRepository.findByDateRange(from, to))
+        when(appointmentRepository.findByDateRange(from, to, null))
                 .thenReturn(List.of(withoutArtist));
         when(metrics.hasArtist(withoutArtist)).thenReturn(false);
 
@@ -178,7 +178,7 @@ class StaffPerformanceAnalyticsServiceTest {
                 .artist(topEarner)
                 .build();
 
-        when(appointmentRepository.findByDateRange(from, to)).thenReturn(List.of(low, high));
+        when(appointmentRepository.findByDateRange(from, to, null)).thenReturn(List.of(low, high));
         when(metrics.hasArtist(low)).thenReturn(true);
         when(metrics.hasArtist(high)).thenReturn(true);
         when(staffScheduleRepository.findByStaffIdIn(any())).thenReturn(List.of());

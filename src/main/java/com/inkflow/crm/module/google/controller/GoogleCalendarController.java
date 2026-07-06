@@ -1,14 +1,12 @@
 package com.inkflow.crm.module.google.controller;
 
-import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.config.GoogleCalendarProperties;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.module.google.dto.GoogleAuthUrlResponse;
 import com.inkflow.crm.module.google.dto.GoogleCalendarStatusResponse;
+import com.inkflow.crm.module.google.service.GoogleCalendarAccessGuard;
 import com.inkflow.crm.module.google.service.GoogleCalendarSyncService;
-import com.inkflow.crm.module.staff.service.StaffLookup;
-import com.inkflow.crm.security.RequirePermission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -25,15 +23,14 @@ public class GoogleCalendarController {
 
     private final GoogleCalendarSyncService syncService;
     private final GoogleCalendarProperties properties;
-    private final StaffLookup staffLookup;
+    private final GoogleCalendarAccessGuard accessGuard;
 
     @GetMapping("/staff/{id}/google/auth-url")
-    @RequirePermission({Permission.SETTINGS_ACCESS, Permission.STAFF_EDIT})
     public ResponseEntity<ApiResponse<GoogleAuthUrlResponse>> getAuthUrl(@PathVariable UUID id) {
         if (!properties.isConfigured()) {
             return ResponseEntity.badRequest().build();
         }
-        staffLookup.requireStaff(id);
+        accessGuard.requireManageAccess(id);
         String url = syncService.buildAuthorizationUrl(id.toString());
 
         return ResponseEntity.ok(ApiResponse.success(new GoogleAuthUrlResponse(url)));
@@ -44,24 +41,23 @@ public class GoogleCalendarController {
             @RequestParam String code,
             @RequestParam(required = false) String state) {
         try {
-            syncService.handleCallback(code, state);
-            log.info("Google Calendar connected via API: state={}", state);
+            UUID staffId = syncService.handleCallback(code, state);
+            log.info("Google Calendar connected via API: staffId={}", staffId);
 
             return ResponseEntity.status(302)
-                    .header("Location", properties.getFrontendRedirect() + "?google=connected")
+                    .header("Location", buildFrontendRedirect("connected", staffId))
                     .build();
-        } catch (Exception e) {
-            log.error("Google OAuth callback failed: {}", e.getMessage());
+        } catch (Exception exception) {
+            log.error("Google OAuth callback failed: {}", exception.getMessage());
             return ResponseEntity.status(302)
-                    .header("Location", properties.getFrontendRedirect() + "?google=error")
+                    .header("Location", buildFrontendRedirect("error", null))
                     .build();
         }
     }
 
     @GetMapping("/staff/{id}/google/status")
-    @RequirePermission({Permission.SETTINGS_ACCESS, Permission.STAFF_VIEW, Permission.STAFF_EDIT})
     public ResponseEntity<ApiResponse<GoogleCalendarStatusResponse>> getStatus(@PathVariable UUID id) {
-        Staff staff = staffLookup.requireStaff(id);
+        Staff staff = accessGuard.requireViewAccess(id);
         boolean connected = staff.isGoogleCalendarConnected();
         String email = connected ? staff.getGoogleCalendarEmail() : null;
         boolean configured = properties.isConfigured();
@@ -70,11 +66,22 @@ public class GoogleCalendarController {
     }
 
     @DeleteMapping("/staff/{id}/google/disconnect")
-    @RequirePermission({Permission.SETTINGS_ACCESS, Permission.STAFF_EDIT})
     public ResponseEntity<ApiResponse<Void>> disconnect(@PathVariable UUID id) {
+        accessGuard.requireManageAccess(id);
         syncService.disconnect(id);
         log.info("Google Calendar disconnected via API: staffId={}", id);
 
         return ResponseEntity.ok(ApiResponse.empty());
+    }
+
+    private String buildFrontendRedirect(String status, UUID staffId) {
+        String base = properties.getFrontendRedirect();
+        StringBuilder url = new StringBuilder(base);
+        url.append(base.contains("?") ? '&' : '?');
+        url.append("google=").append(status);
+        if (staffId != null) {
+            url.append("&tab=account");
+        }
+        return url.toString();
     }
 }

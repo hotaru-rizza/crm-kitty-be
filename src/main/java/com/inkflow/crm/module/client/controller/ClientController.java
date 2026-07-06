@@ -84,6 +84,17 @@ public class ClientController {
         return ResponseEntity.ok(ApiResponse.success(clientService.getClientBalance(id)));
     }
 
+    @PostMapping("/{id}/balance/adjust")
+    @RequirePermission(Permission.CLIENTS_EDIT)
+    public ResponseEntity<ApiResponse<ClientBalanceDto>> adjustClientBalance(
+            @PathVariable UUID id,
+            @Valid @RequestBody AdjustClientBalanceRequest request) {
+        ClientBalanceDto balance = clientService.adjustClientBalance(id, request);
+        log.info("Client balance adjusted via API: clientId={}", id);
+
+        return ResponseEntity.ok(ApiResponse.success(balance));
+    }
+
     @GetMapping("/{id}/projects")
     public ResponseEntity<ApiResponse<List<ProjectSummaryDto>>> getClientProjects(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(clientService.getClientProjects(id)));

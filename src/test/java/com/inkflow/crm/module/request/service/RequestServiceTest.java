@@ -1,9 +1,11 @@
 package com.inkflow.crm.module.request.service;
 
+import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Request;
 import com.inkflow.crm.domain.enums.RequestSource;
 import com.inkflow.crm.domain.enums.RequestStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
+import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.RequestRepository;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
@@ -19,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,6 +37,9 @@ class RequestServiceTest {
 
     @Mock
     private ClientRepository clientRepository;
+
+    @Mock
+    private LocationRepository locationRepository;
 
     @Mock
     private ClientMapper clientMapper;
@@ -65,6 +71,8 @@ class RequestServiceTest {
             return request;
         });
 
+        when(locationRepository.findByIsActiveAndDeletedAtIsNull(true)).thenReturn(List.of());
+
         requestService.createRequest(req);
 
         ArgumentCaptor<Request> captor = ArgumentCaptor.forClass(Request.class);
@@ -74,6 +82,30 @@ class RequestServiceTest {
         assertEquals(tenantId, saved.getTenantId());
         assertEquals(RequestSource.WEBSITE, saved.getSource());
         assertEquals(RequestStatus.NEW, saved.getStatus());
+    }
+
+    @Test
+    void createRequest_assignsPrimaryLocationWhenAvailable() {
+        UUID tenantId = UUID.randomUUID();
+        UUID locationId = UUID.randomUUID();
+        authenticate(tenantId);
+
+        Location location = Location.builder().id(locationId).name("Studio").build();
+        when(locationRepository.findByIsActiveAndDeletedAtIsNull(true)).thenReturn(List.of(location));
+        when(requestRepository.save(any(Request.class))).thenAnswer(invocation -> {
+            Request request = invocation.getArgument(0);
+            request.setId(UUID.randomUUID());
+            return request;
+        });
+
+        requestService.createRequest(CreateRequestRequest.builder()
+                .source("walk_in")
+                .clientName("Jane")
+                .build());
+
+        ArgumentCaptor<Request> captor = ArgumentCaptor.forClass(Request.class);
+        verify(requestRepository).save(captor.capture());
+        assertEquals(locationId, captor.getValue().getLocation().getId());
     }
 
     private void authenticate(UUID tenantId) {

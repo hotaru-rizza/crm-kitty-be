@@ -35,4 +35,10 @@ public class UpdateServiceRequest {
 
     @DecimalMin(value = "0.0", message = "Cost price must be positive")
     private BigDecimal costPrice;
+
+    @AssertTrue(message = "Duration must be at least 15 minutes when provided")
+    public boolean isDurationValid() {
+        return com.inkflow.crm.module.service.support.ServiceDurationPolicy
+                .isDurationValidForUpdate(pricingType, duration);
+    }
 }

@@ -44,7 +44,8 @@ class EmailContentRendererTest {
                 TENANT,
                 TemplateKey.WELCOME_ONBOARD,
                 Map.of("user_name", "Anna"),
-                "Ink Studio"
+                "Ink Studio",
+                null
         );
 
         assertThat(email.subject()).isEqualTo("Welcome to TestApp");

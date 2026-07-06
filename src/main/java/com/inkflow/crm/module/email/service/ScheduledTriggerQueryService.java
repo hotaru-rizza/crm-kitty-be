@@ -21,7 +21,7 @@ public class ScheduledTriggerQueryService {
     private final ClientRepository clientRepository;
 
     public List<Appointment> findAppointmentsByDateRange(Instant from, Instant to) {
-        return appointmentRepository.findByDateRange(from, to);
+        return appointmentRepository.findByDateRange(from, to, null);
     }
 
     public List<Client> findClientsByBirthDate(LocalDate birthDate) {

@@ -18,6 +18,7 @@ import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.infrastructure.supabase.SupabaseAdminService;
 import com.inkflow.crm.module.email.service.BuiltInTemplateSeeder;
+import com.inkflow.crm.module.finance.service.CategoryConfigService;
 import com.inkflow.crm.module.onboarding.dto.OnboardingRequest;
 import com.inkflow.crm.module.onboarding.dto.OnboardingResponse;
 import com.inkflow.crm.module.onboarding.dto.OnboardingServiceDraftDto;
@@ -46,6 +47,7 @@ public class OnboardingService {
     private final LocationRepository locationRepository;
     private final ServiceRepository serviceRepository;
     private final BuiltInTemplateSeeder builtInTemplateSeeder;
+    private final CategoryConfigService categoryConfigService;
     private final SubscriptionService subscriptionService;
     private final SupabaseAdminService supabaseAdminService;
     private final InkflowProperties inkflowProperties;
@@ -95,6 +97,7 @@ public class OnboardingService {
         createInitialServiceIfPresent(tenant.getId(), request.getService());
 
         builtInTemplateSeeder.seedDefaultsForTenant(tenant.getId());
+        categoryConfigService.ensureDefaults(tenant.getId());
         subscriptionService.createTrialForTenant(tenant.getId());
         supabaseAdminService.syncUserTenantClaims(
                 supabaseUserId.toString(),
@@ -162,6 +165,7 @@ public class OnboardingService {
                 .phone("")
                 .color(OnboardingDefaults.DEFAULT_LOCATION_COLOR)
                 .isActive(true)
+                .isDefault(true)
                 .build();
     }
 

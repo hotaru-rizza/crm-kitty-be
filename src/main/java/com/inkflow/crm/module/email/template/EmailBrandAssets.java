@@ -8,10 +8,12 @@ final class EmailBrandAssets {
 
     static final String BG_COLOR = "#060608";
     static final String TEXT_PRIMARY = "#ffffff";
-    static final String TEXT_BODY = "rgba(255,255,255,0.55)";
+    static final String TEXT_BODY = "rgba(255,255,255,0.82)";
     static final String TEXT_MUTED = "rgba(255,255,255,0.35)";
     static final String TEXT_FOOTER = "rgba(255,255,255,0.2)";
     static final String BORDER_SUBTLE = "rgba(255,255,255,0.06)";
+    static final String CARD_BG = "rgba(255,255,255,0.04)";
+    static final String CARD_BORDER = "rgba(255,255,255,0.07)";
     static final String FONT_STACK =
             "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
     static final String TOP_GLOW =

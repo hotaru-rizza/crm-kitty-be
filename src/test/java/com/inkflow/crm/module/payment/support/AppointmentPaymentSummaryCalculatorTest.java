@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,6 +38,58 @@ class AppointmentPaymentSummaryCalculatorTest {
 
     @InjectMocks
     private AppointmentPaymentSummaryCalculator calculator;
+
+    @Test
+    void calculate_includesRecordedPrepaymentWithoutTransaction() {
+        UUID appointmentId = UUID.randomUUID();
+        Appointment appointment = Appointment.builder()
+                .id(appointmentId)
+                .price(BigDecimal.valueOf(200))
+                .discount(BigDecimal.ZERO)
+                .finalPrice(BigDecimal.valueOf(200))
+                .prepayment(BigDecimal.valueOf(90))
+                .createdAt(Instant.parse("2026-07-04T14:00:00Z"))
+                .build();
+
+        when(transactionRepository.findByAppointmentIdAndDeletedAtIsNullOrderByDateDesc(appointmentId))
+                .thenReturn(List.of());
+
+        AppointmentPaymentSummaryDto summary = calculator.calculate(appointment);
+
+        assertEquals(BigDecimal.valueOf(90), summary.getTotalPaid());
+        assertEquals(BigDecimal.valueOf(90), summary.getDepositPaid());
+        assertEquals(BigDecimal.valueOf(110), summary.getRemainingBalance());
+        assertEquals(1, summary.getPayments().size());
+        assertEquals(PaymentType.DEPOSIT.getValue(), summary.getPayments().getFirst().getPaymentType());
+        assertEquals(BigDecimal.valueOf(90), summary.getPayments().getFirst().getAmount());
+    }
+
+    @Test
+    void calculate_doesNotDoubleCountPrepaymentWhenDepositTransactionExists() {
+        UUID appointmentId = UUID.randomUUID();
+        Appointment appointment = Appointment.builder()
+                .id(appointmentId)
+                .price(BigDecimal.valueOf(200))
+                .discount(BigDecimal.ZERO)
+                .finalPrice(BigDecimal.valueOf(200))
+                .prepayment(BigDecimal.valueOf(90))
+                .build();
+
+        Transaction deposit = transaction(appointmentId, PaymentType.DEPOSIT, BigDecimal.valueOf(90));
+        when(transactionRepository.findByAppointmentIdAndDeletedAtIsNullOrderByDateDesc(appointmentId))
+                .thenReturn(List.of(deposit));
+        when(paymentMapper.toDto(deposit)).thenReturn(PaymentDto.builder()
+                .id(deposit.getId())
+                .paymentType(PaymentType.DEPOSIT.getValue())
+                .amount(deposit.getAmount())
+                .build());
+
+        AppointmentPaymentSummaryDto summary = calculator.calculate(appointment);
+
+        assertEquals(BigDecimal.valueOf(90), summary.getTotalPaid());
+        assertEquals(BigDecimal.valueOf(110), summary.getRemainingBalance());
+        assertEquals(1, summary.getPayments().size());
+    }
 
     @Test
     void calculate_computesRemainingBalanceAfterDeposit() {

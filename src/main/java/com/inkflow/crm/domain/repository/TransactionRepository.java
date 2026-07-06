@@ -76,11 +76,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.date >= :from
               AND t.date < :to
               AND t.deletedAt IS NULL
+              AND (:locationId IS NULL OR t.location.id = :locationId)
             """)
     BigDecimal sumByTypeAndDateRange(
             @Param("type") TransactionType type,
             @Param("from") Instant from,
-            @Param("to") Instant to);
+            @Param("to") Instant to,
+            @Param("locationId") UUID locationId);
 
     @Query("""
             SELECT SUM(t.amount) FROM Transaction t
@@ -89,12 +91,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.date < :to
               AND t.staff.id IN :staffIds
               AND t.deletedAt IS NULL
+              AND (:locationId IS NULL OR t.location.id = :locationId)
             """)
     BigDecimal sumByTypeAndDateRangeForStaffs(
             @Param("type") TransactionType type,
             @Param("from") Instant from,
             @Param("to") Instant to,
-            @Param("staffIds") List<UUID> staffIds);
+            @Param("staffIds") List<UUID> staffIds,
+            @Param("locationId") UUID locationId);
 
     @Query("""
             SELECT COUNT(t) FROM Transaction t
@@ -102,11 +106,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.date >= :from
               AND t.date < :to
               AND t.deletedAt IS NULL
+              AND (:locationId IS NULL OR t.location.id = :locationId)
             """)
     long countByTypeAndDateRange(
             @Param("type") TransactionType type,
             @Param("from") Instant from,
-            @Param("to") Instant to);
+            @Param("to") Instant to,
+            @Param("locationId") UUID locationId);
 
     @Query("""
             SELECT COUNT(t) FROM Transaction t
@@ -115,23 +121,27 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.date < :to
               AND t.staff.id IN :staffIds
               AND t.deletedAt IS NULL
+              AND (:locationId IS NULL OR t.location.id = :locationId)
             """)
     long countByTypeAndDateRangeForStaffs(
             @Param("type") TransactionType type,
             @Param("from") Instant from,
             @Param("to") Instant to,
-            @Param("staffIds") List<UUID> staffIds);
+            @Param("staffIds") List<UUID> staffIds,
+            @Param("locationId") UUID locationId);
 
     @Query("""
             SELECT t.category, SUM(t.amount) FROM Transaction t
             WHERE t.date >= :from
               AND t.date < :to
               AND t.deletedAt IS NULL
+              AND (:locationId IS NULL OR t.location.id = :locationId)
             GROUP BY t.category
             """)
     List<Object[]> sumByCategoryAndDateRange(
             @Param("from") Instant from,
-            @Param("to") Instant to);
+            @Param("to") Instant to,
+            @Param("locationId") UUID locationId);
 
     @Query("""
             SELECT t.category, SUM(t.amount) FROM Transaction t
@@ -139,12 +149,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.date < :to
               AND t.staff.id IN :staffIds
               AND t.deletedAt IS NULL
+              AND (:locationId IS NULL OR t.location.id = :locationId)
             GROUP BY t.category
             """)
     List<Object[]> sumByCategoryAndDateRangeForStaffs(
             @Param("from") Instant from,
             @Param("to") Instant to,
-            @Param("staffIds") List<UUID> staffIds);
+            @Param("staffIds") List<UUID> staffIds,
+            @Param("locationId") UUID locationId);
 
     @Query("""
             SELECT t.paymentMethod, SUM(t.amount) FROM Transaction t
@@ -152,11 +164,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.date >= :from
               AND t.date < :to
               AND t.deletedAt IS NULL
+              AND (:locationId IS NULL OR t.location.id = :locationId)
             GROUP BY t.paymentMethod
             """)
     List<Object[]> sumByPaymentMethodAndDateRange(
             @Param("from") Instant from,
-            @Param("to") Instant to);
+            @Param("to") Instant to,
+            @Param("locationId") UUID locationId);
 
     @Query("""
             SELECT t.paymentMethod, SUM(t.amount) FROM Transaction t
@@ -165,12 +179,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.date < :to
               AND t.staff.id IN :staffIds
               AND t.deletedAt IS NULL
+              AND (:locationId IS NULL OR t.location.id = :locationId)
             GROUP BY t.paymentMethod
             """)
     List<Object[]> sumByPaymentMethodAndDateRangeForStaffs(
             @Param("from") Instant from,
             @Param("to") Instant to,
-            @Param("staffIds") List<UUID> staffIds);
+            @Param("staffIds") List<UUID> staffIds,
+            @Param("locationId") UUID locationId);
 
     @Query("""
             SELECT t.staff.id, t.staff.firstName, t.staff.lastName,
@@ -182,11 +198,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.date < :to
               AND t.staff IS NOT NULL
               AND t.deletedAt IS NULL
+              AND (:locationId IS NULL OR t.location.id = :locationId)
             GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName, t.staff.calendarColor
             """)
     List<Object[]> sumByArtistAndDateRange(
             @Param("from") Instant from,
-            @Param("to") Instant to);
+            @Param("to") Instant to,
+            @Param("locationId") UUID locationId);
 
     @Query("""
             SELECT t.staff.id, t.staff.firstName, t.staff.lastName,
@@ -199,12 +217,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.staff.id IN :staffIds
               AND t.staff IS NOT NULL
               AND t.deletedAt IS NULL
+              AND (:locationId IS NULL OR t.location.id = :locationId)
             GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName, t.staff.calendarColor
             """)
     List<Object[]> sumByArtistAndDateRangeForStaffs(
             @Param("from") Instant from,
             @Param("to") Instant to,
-            @Param("staffIds") List<UUID> staffIds);
+            @Param("staffIds") List<UUID> staffIds,
+            @Param("locationId") UUID locationId);
 
     @Query(value = """
             SELECT t.date::date AS day, SUM(t.amount)
@@ -214,13 +234,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.date >= :from
               AND t.date < :to
               AND t.deleted_at IS NULL
+              AND (:locationId IS NULL OR t.location_id = :locationId)
             GROUP BY t.date::date
             ORDER BY t.date::date
             """, nativeQuery = true)
     List<Object[]> sumIncomeByDayAndDateRange(
             @Param("tenantId") UUID tenantId,
             @Param("from") Instant from,
-            @Param("to") Instant to);
+            @Param("to") Instant to,
+            @Param("locationId") UUID locationId);
 
     @Query(value = """
             SELECT t.date::date AS day, SUM(t.amount)
@@ -231,6 +253,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.date >= :from
               AND t.date < :to
               AND t.deleted_at IS NULL
+              AND (:locationId IS NULL OR t.location_id = :locationId)
             GROUP BY t.date::date
             ORDER BY t.date::date
             """, nativeQuery = true)
@@ -238,7 +261,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             @Param("tenantId") UUID tenantId,
             @Param("staffIds") List<UUID> staffIds,
             @Param("from") Instant from,
-            @Param("to") Instant to);
+            @Param("to") Instant to,
+            @Param("locationId") UUID locationId);
 
     @Query("""
             SELECT SUM(t.amount) FROM Transaction t

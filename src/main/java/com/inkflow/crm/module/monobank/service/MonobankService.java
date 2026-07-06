@@ -9,6 +9,7 @@ import com.inkflow.crm.domain.enums.*;
 import com.inkflow.crm.domain.repository.*;
 import com.inkflow.crm.module.monobank.config.MonobankConfig;
 import com.inkflow.crm.module.monobank.dto.*;
+import com.inkflow.crm.module.appointment.support.AppointmentLabels;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.subscription.service.SubscriptionService;
@@ -67,9 +68,7 @@ public class MonobankService {
         String clientName = appointment.getClient() != null
                 ? appointment.getClient().getFirstName() + " " + appointment.getClient().getLastName()
                 : "Клієнт";
-        String serviceName = appointment.getService() != null
-                ? appointment.getService().getTitle()
-                : "Послуга";
+        String serviceName = AppointmentLabels.serviceTitle(appointment);
 
         Map<String, Object> body = Map.of(
                 "amount", amountKopecks,
@@ -301,7 +300,7 @@ public class MonobankService {
     }
 
     private String buildDescription(PaymentType type, Appointment appointment, MonobankWebhookPayload payload) {
-        String serviceName = appointment.getService() != null ? appointment.getService().getTitle() : "Послуга";
+        String serviceName = AppointmentLabels.serviceTitle(appointment);
         String prefix = type == PaymentType.DEPOSIT ? "Передоплата (Monobank)" : "Оплата (Monobank)";
         String pan = payload.getPaymentInfo() != null ? " • " + payload.getPaymentInfo().getMaskedPan() : "";
         return prefix + ": " + serviceName + pan;

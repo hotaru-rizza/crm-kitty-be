@@ -38,6 +38,27 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
 
     long countByLocationIdAndStartTimeBetweenAndDeletedAtIsNull(UUID locationId, Instant from, Instant to);
 
+    long countByClientIdAndStatusAndDeletedAtIsNull(UUID clientId, AppointmentStatus status);
+
+    @Query("""
+            SELECT COALESCE(SUM(a.finalPrice), 0)
+            FROM Appointment a
+            WHERE a.client.id = :clientId
+              AND a.deletedAt IS NULL
+              AND a.status = com.inkflow.crm.domain.enums.AppointmentStatus.COMPLETED
+              AND a.finalPrice > 0
+            """)
+    java.math.BigDecimal sumCompletedRevenueByClientId(@Param("clientId") UUID clientId);
+
+    @Query("""
+            SELECT MAX(a.startTime)
+            FROM Appointment a
+            WHERE a.client.id = :clientId
+              AND a.deletedAt IS NULL
+              AND a.status = com.inkflow.crm.domain.enums.AppointmentStatus.COMPLETED
+            """)
+    Optional<Instant> findLastCompletedStartTimeByClientId(@Param("clientId") UUID clientId);
+
     @Override
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     Page<Appointment> findAll(Specification<Appointment> spec, Pageable pageable);
@@ -48,11 +69,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID>,
             WHERE a.startTime >= :from
               AND a.startTime < :to
               AND a.deletedAt IS NULL
+              AND (:locationId IS NULL OR a.location.id = :locationId)
             ORDER BY a.startTime
             """)
     List<Appointment> findByDateRange(
             @Param("from") Instant from,
-            @Param("to") Instant to);
+            @Param("to") Instant to,
+            @Param("locationId") UUID locationId);
 
     @EntityGraph(attributePaths = {"client", "artist", "service", "location"})
     @Query("""

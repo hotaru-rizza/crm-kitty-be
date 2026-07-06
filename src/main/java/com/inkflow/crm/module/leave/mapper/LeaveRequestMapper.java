@@ -21,6 +21,8 @@ public interface LeaveRequestMapper {
                 .staffId(staff.getId())
                 .staffName(staff.getFullName())
                 .staffAvatar(staff.getAvatar())
+                .staffAccountStatus(staff.getAccountStatus().getValue())
+                .staffDeleted(staff.isDeleted())
                 .leaveType(leave.getLeaveType().name())
                 .status(leave.getStatus().name())
                 .startDate(leave.getStartDate())

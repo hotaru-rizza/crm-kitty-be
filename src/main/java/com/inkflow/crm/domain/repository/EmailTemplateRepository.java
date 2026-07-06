@@ -21,4 +21,6 @@ public interface EmailTemplateRepository extends JpaRepository<EmailTemplate, UU
     Optional<EmailTemplate> findByBuiltinKey(String builtinKey);
 
     boolean existsByBuiltinKey(String builtinKey);
+
+    boolean existsByTenantIdAndBuiltinKey(UUID tenantId, String builtinKey);
 }

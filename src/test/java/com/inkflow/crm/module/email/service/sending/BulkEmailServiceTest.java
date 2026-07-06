@@ -12,6 +12,7 @@ import com.inkflow.crm.module.email.dto.SendEmailRequest;
 import com.inkflow.crm.module.email.dto.SendEmailResultDto;
 import com.inkflow.crm.module.email.enums.TriggerType;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.email.service.EmailLocationContextLoader;
 import com.inkflow.crm.module.email.service.EmailTenantContextLoader;
 import com.inkflow.crm.module.email.service.NotificationDispatcher;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,7 @@ class BulkEmailServiceTest {
     @Mock private ClientRepository clientRepository;
     @Mock private StaffRepository staffRepository;
     @Mock private EmailTenantContextLoader tenantContextLoader;
+    @Mock private EmailLocationContextLoader emailLocationContextLoader;
     @Mock private InkflowProperties inkflowProperties;
     @Mock private AuditRecorder auditRecorder;
 
@@ -48,8 +50,9 @@ class BulkEmailServiceTest {
     @BeforeEach
     void setUp() {
         when(inkflowProperties.getAppName()).thenReturn("CRM");
+        when(emailLocationContextLoader.resolveAddress()).thenReturn("");
         when(tenantContextLoader.loadContext(TENANT_ID))
-                .thenReturn(new EmailTenantContext("Ink Studio", "Europe/Kyiv", SupportedLocale.UK));
+                .thenReturn(new EmailTenantContext("Ink Studio", null, "Europe/Kyiv", SupportedLocale.UK));
     }
 
     @Test

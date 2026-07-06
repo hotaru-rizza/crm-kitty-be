@@ -28,7 +28,6 @@ public class CreateServiceRequest {
     @DecimalMin(value = "0.0", message = "Price must be positive")
     private BigDecimal price;
 
-    @NotNull(message = "Duration is required")
     @Min(value = 15, message = "Duration must be at least 15 minutes")
     private Integer duration;
 
@@ -38,4 +37,10 @@ public class CreateServiceRequest {
 
     @DecimalMin(value = "0.0", message = "Cost price must be positive")
     private BigDecimal costPrice;
+
+    @AssertTrue(message = "Duration is required for fixed-price services (minimum 15 minutes)")
+    public boolean isDurationValid() {
+        return com.inkflow.crm.module.service.support.ServiceDurationPolicy
+                .isDurationValidForCreate(pricingType, duration);
+    }
 }

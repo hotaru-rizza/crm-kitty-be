@@ -10,6 +10,7 @@ import com.inkflow.crm.domain.repository.TransactionRepository;
 import com.inkflow.crm.module.analytics.dto.PnlDto;
 import com.inkflow.crm.module.analytics.support.AppointmentMetricsCalculator;
 import com.inkflow.crm.module.analytics.support.CommissionCalculator;
+import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,8 @@ public class PnlAnalyticsService {
     @Transactional(readOnly = true)
     public PnlDto getPnl(Instant from, Instant to) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<Appointment> appointments = appointmentRepository.findByDateRange( from, to);
+        UUID locationId = LocationScope.resolveFilter(null).orElse(null);
+        List<Appointment> appointments = appointmentRepository.findByDateRange(from, to, locationId);
 
         BigDecimal revenue = metrics.sumDoneRevenue(appointments);
         BigDecimal costOfSales = metrics.sumCostOfSales(appointments);
@@ -46,8 +48,8 @@ public class PnlAnalyticsService {
 
         List<PnlDto.StaffLine> staffBreakdown = buildStaffBreakdown(appointments);
         BigDecimal totalCommissions = sumCommissions(staffBreakdown);
-        BigDecimal otherExpenses = loadOtherExpenses(tenantId, from, to);
-        List<PnlDto.CategoryLine> expenseBreakdown = buildExpenseBreakdown(tenantId, from, to);
+        BigDecimal otherExpenses = loadOtherExpenses(from, to, locationId);
+        List<PnlDto.CategoryLine> expenseBreakdown = buildExpenseBreakdown(tenantId, from, to, locationId);
 
         BigDecimal netProfit = grossProfit.subtract(totalCommissions).subtract(otherExpenses);
         double netMargin = metrics.roundOneDecimal(metrics.toPercent(netProfit, revenue).doubleValue());
@@ -72,9 +74,9 @@ public class PnlAnalyticsService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal loadOtherExpenses(UUID tenantId, Instant from, Instant to) {
+    private BigDecimal loadOtherExpenses(Instant from, Instant to, UUID locationId) {
         BigDecimal otherExpenses = transactionRepository
-                .sumByTypeAndDateRange( TransactionType.EXPENSE, from, to);
+                .sumByTypeAndDateRange(TransactionType.EXPENSE, from, to, locationId);
         return otherExpenses != null ? otherExpenses : BigDecimal.ZERO;
     }
 
@@ -111,9 +113,9 @@ public class PnlAnalyticsService {
                 .build();
     }
 
-    private List<PnlDto.CategoryLine> buildExpenseBreakdown(UUID tenantId, Instant from, Instant to) {
+    private List<PnlDto.CategoryLine> buildExpenseBreakdown(UUID tenantId, Instant from, Instant to, UUID locationId) {
         Map<String, TransactionCategoryConfig> configByKey = loadCategoryConfigIndex(tenantId);
-        List<Object[]> categoryTotals = transactionRepository.sumByCategoryAndDateRange( from, to);
+        List<Object[]> categoryTotals = transactionRepository.sumByCategoryAndDateRange(from, to, locationId);
         List<PnlDto.CategoryLine> expenseBreakdown = new ArrayList<>();
 
         for (Object[] row : categoryTotals) {

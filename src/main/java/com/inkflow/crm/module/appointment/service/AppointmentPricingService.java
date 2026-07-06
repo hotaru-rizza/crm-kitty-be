@@ -79,7 +79,11 @@ public class AppointmentPricingService {
                 .filter(item -> item.getSource() == AppointmentItemSource.SERVICE && item.getService() != null)
                 .min(Comparator.comparingInt(AppointmentItem::getSortOrder));
 
-        primaryItem.ifPresent(item -> appointment.setService(item.getService()));
+        if (primaryItem.isPresent()) {
+            appointment.setService(primaryItem.get().getService());
+            return;
+        }
+        appointment.setService(null);
     }
 
     private BigDecimal calculateHourlyPrice(BigDecimal hourlyRate, int durationMinutes) {

@@ -67,6 +67,7 @@ public class ProjectDto {
         private String serviceName;
         private String serviceColor;
         private StaffSummaryDto artist;
+        private LocationSummaryDto location;
         private BigDecimal price;
         private BigDecimal finalPrice;
         private String notes;

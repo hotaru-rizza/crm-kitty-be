@@ -6,6 +6,7 @@ import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.module.analytics.dto.AppointmentAnalyticsDto;
 import com.inkflow.crm.module.analytics.support.AnalyticsTimeSeriesBuilder;
 import com.inkflow.crm.module.analytics.support.AppointmentMetricsCalculator;
+import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,8 @@ public class AppointmentAnalyticsQueryService {
     @Transactional(readOnly = true)
     public AppointmentAnalyticsDto getAppointmentAnalytics(Instant from, Instant to, String groupBy) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<Appointment> appointments = appointmentRepository.findByDateRange( from, to);
+        UUID locationId = LocationScope.resolveFilter(null).orElse(null);
+        List<Appointment> appointments = appointmentRepository.findByDateRange(from, to, locationId);
 
         int total = metrics.countTotal(appointments);
         int completed = metrics.countCompleted(appointments);

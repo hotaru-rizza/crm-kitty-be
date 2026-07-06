@@ -80,4 +80,12 @@ public class LocationController {
 
         return ResponseEntity.ok(ApiResponse.empty());
     }
+
+    @PatchMapping("/{id}/default")
+    @RequirePermission(Permission.LOCATIONS_EDIT)
+    public ResponseEntity<ApiResponse<LocationDto>> setDefaultLocation(@PathVariable UUID id) {
+        LocationDto location = locationService.setDefaultLocation(id);
+        log.info("Default location set via API: locationId={}", id);
+        return ResponseEntity.ok(ApiResponse.success(location));
+    }
 }

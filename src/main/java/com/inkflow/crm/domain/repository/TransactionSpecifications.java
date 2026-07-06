@@ -77,6 +77,13 @@ public final class TransactionSpecifications {
         };
     }
 
+    public static Specification<Transaction> locationIs(UUID locationId) {
+        if (locationId == null) {
+            return null;
+        }
+        return (root, query, cb) -> cb.equal(root.get("location").get("id"), locationId);
+    }
+
     public static Specification<Transaction> filtered(
             String type,
             String category,

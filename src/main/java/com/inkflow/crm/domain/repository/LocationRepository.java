@@ -33,4 +33,6 @@ public interface LocationRepository extends JpaRepository<Location, UUID> {
     long countByIsActiveAndDeletedAtIsNull(Boolean isActive);
 
     Optional<Location> findFirstByIsActiveTrueAndDeletedAtIsNull();
+
+    Optional<Location> findByIsDefaultTrueAndDeletedAtIsNull();
 }

@@ -18,4 +18,6 @@ public interface TransactionCategoryConfigRepository extends JpaRepository<Trans
     Optional<TransactionCategoryConfig> findByIdAndDeletedAtIsNull(UUID id);
 
     boolean existsByDeletedAtIsNull();
+
+    boolean existsByTenantIdAndDeletedAtIsNull(UUID tenantId);
 }

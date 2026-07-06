@@ -132,8 +132,20 @@ public class Client extends BaseEntity {
         this.lastVisit = Instant.now();
     }
 
+    public void decrementVisits() {
+        if (this.totalVisits > 0) {
+            this.totalVisits--;
+        }
+    }
+
     public void incrementCancelledVisits() {
         this.cancelledVisits++;
+    }
+
+    public void decrementCancelledVisits() {
+        if (this.cancelledVisits > 0) {
+            this.cancelledVisits--;
+        }
     }
 
     public void addToLtv(BigDecimal amount) {

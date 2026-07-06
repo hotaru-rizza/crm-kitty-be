@@ -29,8 +29,11 @@ import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.appointment.dto.*;
 import com.inkflow.crm.module.appointment.mapper.AppointmentMapper;
+import com.inkflow.crm.module.client.service.ClientStatsService;
+import com.inkflow.crm.module.payment.service.PaymentProcessingService;
 import com.inkflow.crm.module.project.service.ProjectProgressSyncService;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
+import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,8 +65,10 @@ public class AppointmentService {
     private final ProjectProgressSyncService projectProgressSyncService;
     private final AppointmentItemService appointmentItemService;
     private final AppointmentPricingService appointmentPricingService;
+    private final PaymentProcessingService paymentProcessingService;
     private final AuditRecorder auditRecorder;
     private final AuditLabelFormatter auditLabelFormatter;
+    private final ClientStatsService clientStatsService;
 
     @Transactional(readOnly = true)
     public PageResult<AppointmentDto> getAllAppointments(PageRequest pageRequest, AppointmentFilterRequest filter) {
@@ -90,12 +95,13 @@ public class AppointmentService {
     public List<AppointmentDto> getCalendar(CalendarQueryRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         List<UUID> artistIds = resolveArtistIds(tenantId, request.getArtistIds());
+        UUID locationId = LocationScope.resolveFilter(request.getLocationId()).orElse(null);
 
         Specification<Appointment> spec = Specification.where(AppointmentSpecifications.notDeleted())
                 .and(AppointmentSpecifications.startTimeAfter(request.getFrom()))
                 .and(AppointmentSpecifications.startTimeBefore(request.getTo()))
                 .and(AppointmentSpecifications.withArtists(artistIds))
-                .and(AppointmentSpecifications.withLocation(request.getLocationId()))
+                .and(AppointmentSpecifications.withLocation(locationId))
                 .and(AppointmentSpecifications.withService(request.getServiceId()))
                 .and(AppointmentSpecifications.withStatuses(request.getStatuses()));
 
@@ -121,8 +127,7 @@ public class AppointmentService {
 
         Client client = entityResolver.requireClient(tenantId, request.getClientId());
         Staff artist = entityResolver.requireActiveStaff(tenantId, request.getArtistId());
-        UUID primaryServiceId = resolvePrimaryServiceId(request);
-        Service service = entityResolver.requireService(tenantId, primaryServiceId);
+        Service service = resolvePrimaryService(tenantId, request);
         Location location = entityResolver.requireLocation(tenantId, request.getLocationId());
 
         validateTimeSlot(artist.getId(), request.getStartTime(), request.getEndTime(), null);
@@ -137,6 +142,7 @@ public class AppointmentService {
         appointment.getItems().addAll(items);
         appointmentPricingService.recompute(appointment, shouldAdjustEndTimeOnCreate(request));
         appointment = appointmentRepository.save(appointment);
+        paymentProcessingService.recordInitialPrepayment(appointment);
 
         log.info("Appointment created: tenantId={} appointmentId={}", tenantId, appointment.getId());
         appointmentSideEffectService.afterCreate(appointment);
@@ -205,6 +211,11 @@ public class AppointmentService {
         }
 
         appointment = appointmentRepository.save(appointment);
+
+        AppointmentStatus newStatus = appointment.getStatus();
+        if (previousStatus != newStatus) {
+            clientStatsService.applyStatusTransition(appointment, previousStatus, newStatus);
+        }
 
         log.info("Appointment updated: tenantId={} appointmentId={}", tenantId, id);
         appointmentSideEffectService.afterUpdate(
@@ -283,9 +294,10 @@ public class AppointmentService {
         Instant from = filter.from() != null ? Instant.parse(filter.from()) : null;
         Instant to = filter.to() != null ? Instant.parse(filter.to()) : null;
         List<UUID> artistIds = resolveArtistIds(tenantId, filter.artistIds());
+        UUID locationId = LocationScope.resolveFilter(filter.locationId()).orElse(null);
 
         Specification<Appointment> spec = Specification.where(AppointmentSpecifications.notDeleted())
-                .and(AppointmentSpecifications.withLocation(filter.locationId()))
+                .and(AppointmentSpecifications.withLocation(locationId))
                 .and(AppointmentSpecifications.withArtists(artistIds))
                 .and(AppointmentSpecifications.withService(filter.serviceId()))
                 .and(filter.statuses() != null && !filter.statuses().isEmpty()
@@ -491,17 +503,17 @@ public class AppointmentService {
         }
     }
 
-    private UUID resolvePrimaryServiceId(CreateAppointmentRequest request) {
+    private Service resolvePrimaryService(UUID tenantId, CreateAppointmentRequest request) {
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             return request.getItems().stream()
                     .filter(item -> item.getServiceId() != null)
                     .findFirst()
-                    .map(AppointmentItemRequest::getServiceId)
-                    .orElseThrow(() -> new BusinessRuleException("At least one service line item is required"));
+                    .map(item -> entityResolver.requireService(tenantId, item.getServiceId()))
+                    .orElse(null);
         }
         if (request.getServiceId() == null) {
             throw new BusinessRuleException("Service ID is required when items are not provided");
         }
-        return request.getServiceId();
+        return entityResolver.requireService(tenantId, request.getServiceId());
     }
 }

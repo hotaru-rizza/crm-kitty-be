@@ -18,6 +18,8 @@ public class LeaveRequestDto {
     private UUID staffId;
     private String staffName;
     private String staffAvatar;
+    private String staffAccountStatus;
+    private boolean staffDeleted;
     private String leaveType;
     private String status;
     private LocalDate startDate;

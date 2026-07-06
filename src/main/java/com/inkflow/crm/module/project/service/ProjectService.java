@@ -24,6 +24,7 @@ import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.project.dto.*;
 import com.inkflow.crm.module.project.mapper.ProjectMapper;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
+import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,7 +54,8 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public PageResult<ProjectDto> getAllProjects(PageRequest pageRequest, ProjectFilterRequest filter, UUID locationId) {
-        Page<Project> page = getProjectsPage(pageRequest, filter, locationId);
+        UUID effectiveLocationId = LocationScope.resolveFilter(locationId).orElse(null);
+        Page<Project> page = getProjectsPage(pageRequest, filter, effectiveLocationId);
         List<ProjectDto> data = page.getContent().stream().map(projectMapper::toListDto).toList();
         return new PageResult<>(data, PaginationDto.from(page));
     }

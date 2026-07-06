@@ -54,6 +54,7 @@ public class ClientService {
     private final RolePermissionService rolePermissionService;
     private final AuditRecorder auditRecorder;
     private final ClientBalanceService clientBalanceService;
+    private final ClientStatsService clientStatsService;
 
     @Transactional(readOnly = true)
     public PageResult<ClientDto> getAllClients(PageRequest pageRequest, ClientFilterRequest filter) {
@@ -87,9 +88,10 @@ public class ClientService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public ClientDetailDto getClientById(UUID id) {
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        clientStatsService.syncFromAppointments(id);
+
         Client client = clientRepository.findByIdWithCollections(id)
                 .orElseThrow(() -> ResourceNotFoundException.client(id.toString()));
 
@@ -102,6 +104,10 @@ public class ClientService {
     @Transactional(readOnly = true)
     public ClientBalanceDto getClientBalance(UUID id) {
         return clientBalanceService.getClientBalance(id);
+    }
+
+    public ClientBalanceDto adjustClientBalance(UUID id, AdjustClientBalanceRequest request) {
+        return clientBalanceService.adjustBalance(id, request);
     }
 
     @Transactional(readOnly = true)

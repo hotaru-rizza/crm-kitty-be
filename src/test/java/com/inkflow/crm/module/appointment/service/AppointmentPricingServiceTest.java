@@ -11,8 +11,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class AppointmentPricingServiceTest {
 
@@ -63,5 +65,28 @@ class AppointmentPricingServiceTest {
                 appointment.getStartTime().plus(120, ChronoUnit.MINUTES),
                 appointment.getEndTime()
         );
+    }
+
+    @Test
+    void recompute_clearsPrimaryServiceWhenOnlyCustomItemsRemain() {
+        Service linkedService = Service.builder().id(UUID.randomUUID()).title("Old service").build();
+        Appointment appointment = Appointment.builder()
+                .service(linkedService)
+                .discount(BigDecimal.ZERO)
+                .build();
+
+        appointment.getItems().add(AppointmentItem.builder()
+                .source(AppointmentItemSource.CUSTOM)
+                .title("Aftercare")
+                .quantity(1)
+                .unitPrice(BigDecimal.valueOf(100))
+                .durationMinutes(30)
+                .sortOrder(0)
+                .build());
+
+        pricingService.recompute(appointment, false);
+
+        assertNull(appointment.getService());
+        assertEquals(0, appointment.getPrice().compareTo(BigDecimal.valueOf(100)));
     }
 }

@@ -20,6 +20,7 @@ import com.inkflow.crm.module.staff.dto.CreateStaffRequest;
 import com.inkflow.crm.module.staff.dto.StaffDto;
 import com.inkflow.crm.module.staff.dto.UpdateStaffRequest;
 import com.inkflow.crm.module.staff.mapper.StaffMapper;
+import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +50,8 @@ public class StaffService {
             String role,
             UUID locationId,
             String accountStatus) {
-        Page<Staff> page = getStaffPage(pageRequest, search, role, locationId, accountStatus);
+        UUID effectiveLocationId = LocationScope.resolveFilter(locationId).orElse(null);
+        Page<Staff> page = getStaffPage(pageRequest, search, role, effectiveLocationId, accountStatus);
         return new PageResult<>(staffMapper.toDtoList(page.getContent()), PaginationDto.from(page));
     }
 

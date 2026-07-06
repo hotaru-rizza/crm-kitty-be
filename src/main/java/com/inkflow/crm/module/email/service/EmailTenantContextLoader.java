@@ -24,6 +24,7 @@ public class EmailTenantContextLoader {
 
         return new EmailTenantContext(
                 tenant != null ? tenant.getName() : FALLBACK_STUDIO,
+                tenant != null ? tenant.getLogoUrl() : null,
                 tenant != null ? tenant.getTimezone() : inkflowProperties.getDefaultTimezone(),
                 tenant != null ? tenant.getLanguage() : SupportedLocale.fromCode(inkflowProperties.getDefaultLanguage())
         );

@@ -19,4 +19,5 @@ public class StaffSummaryDto {
     private String calendarColor;
     private String role;
     private String accountStatus;
+    private boolean deleted;
 }

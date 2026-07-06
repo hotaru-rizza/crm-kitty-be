@@ -1,7 +1,14 @@
 package com.inkflow.crm.domain.repository;
 
+import com.inkflow.crm.domain.entity.Appointment;
+import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Project;
+import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.ProjectStatus;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
@@ -52,11 +59,65 @@ public final class ProjectSpecifications {
     }
 
     public static Specification<Project> locationIs(UUID locationId) {
-        if (locationId == null) return null;
+        if (locationId == null) {
+            return null;
+        }
         return (root, query, cb) -> cb.or(
-                cb.isNull(root.get("location")),
-                cb.equal(root.get("location").get("id"), locationId)
+                cb.equal(root.get("location").get("id"), locationId),
+                hasSessionAtLocation(root, query, cb, locationId),
+                leadArtistWorksAtLocation(root, query, cb, locationId),
+                sessionArtistWorksAtLocation(root, query, cb, locationId)
         );
+    }
+
+    private static Predicate hasSessionAtLocation(
+            Root<Project> projectRoot,
+            jakarta.persistence.criteria.CriteriaQuery<?> query,
+            jakarta.persistence.criteria.CriteriaBuilder cb,
+            UUID locationId) {
+        Subquery<UUID> subquery = query.subquery(UUID.class);
+        Root<Appointment> appointmentRoot = subquery.from(Appointment.class);
+        subquery.select(appointmentRoot.get("id"))
+                .where(
+                        cb.equal(appointmentRoot.get("project").get("id"), projectRoot.get("id")),
+                        cb.equal(appointmentRoot.get("location").get("id"), locationId),
+                        cb.isNull(appointmentRoot.get("deletedAt"))
+                );
+        return cb.exists(subquery);
+    }
+
+    private static Predicate leadArtistWorksAtLocation(
+            Root<Project> projectRoot,
+            jakarta.persistence.criteria.CriteriaQuery<?> query,
+            jakarta.persistence.criteria.CriteriaBuilder cb,
+            UUID locationId) {
+        Subquery<UUID> subquery = query.subquery(UUID.class);
+        Root<Staff> staffRoot = subquery.from(Staff.class);
+        Join<Staff, Location> locationJoin = staffRoot.join("locations");
+        subquery.select(staffRoot.get("id"))
+                .where(
+                        cb.equal(staffRoot.get("id"), projectRoot.get("artist").get("id")),
+                        cb.equal(locationJoin.get("id"), locationId)
+                );
+        return cb.exists(subquery);
+    }
+
+    private static Predicate sessionArtistWorksAtLocation(
+            Root<Project> projectRoot,
+            jakarta.persistence.criteria.CriteriaQuery<?> query,
+            jakarta.persistence.criteria.CriteriaBuilder cb,
+            UUID locationId) {
+        Subquery<UUID> subquery = query.subquery(UUID.class);
+        Root<Appointment> appointmentRoot = subquery.from(Appointment.class);
+        Join<Appointment, Staff> artistJoin = appointmentRoot.join("artist");
+        Join<Staff, Location> locationJoin = artistJoin.join("locations");
+        subquery.select(appointmentRoot.get("id"))
+                .where(
+                        cb.equal(appointmentRoot.get("project").get("id"), projectRoot.get("id")),
+                        cb.equal(locationJoin.get("id"), locationId),
+                        cb.isNull(appointmentRoot.get("deletedAt"))
+                );
+        return cb.exists(subquery);
     }
 
     public static Specification<Project> budgetBetween(BigDecimal min, BigDecimal max) {

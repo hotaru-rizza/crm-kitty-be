@@ -5,6 +5,7 @@ import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.module.analytics.dto.ClientAnalyticsDto;
 import com.inkflow.crm.module.analytics.support.AnalyticsTimeSeriesBuilder;
 import com.inkflow.crm.module.analytics.support.AppointmentMetricsCalculator;
+import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,10 +29,11 @@ public class ClientAnalyticsQueryService {
     @Transactional(readOnly = true)
     public ClientAnalyticsDto getClientAnalytics(Instant from, Instant to, String groupBy) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<Appointment> appointments = appointmentRepository.findByDateRange( from, to);
+        UUID locationId = LocationScope.resolveFilter(null).orElse(null);
+        List<Appointment> appointments = appointmentRepository.findByDateRange(from, to, locationId);
 
         Set<UUID> clientIdsInRange = collectClientIds(appointments);
-        Set<UUID> existingClientIds = loadExistingClientIds(tenantId, from);
+        Set<UUID> existingClientIds = loadExistingClientIds(from, locationId);
 
         int newClients = countNewClients(clientIdsInRange, existingClientIds);
         int returningClients = countReturningClients(clientIdsInRange, existingClientIds);
@@ -54,9 +56,9 @@ public class ClientAnalyticsQueryService {
                 .collect(Collectors.toSet());
     }
 
-    private Set<UUID> loadExistingClientIds(UUID tenantId, Instant before) {
+    private Set<UUID> loadExistingClientIds(Instant before, UUID locationId) {
         return appointmentRepository
-                .findByDateRange( Instant.EPOCH, before)
+                .findByDateRange(Instant.EPOCH, before, locationId)
                 .stream()
                 .filter(metrics::hasClient)
                 .map(appointment -> appointment.getClient().getId())
