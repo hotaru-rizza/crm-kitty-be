@@ -54,6 +54,12 @@ inkflow:
   default-timezone: ${INKFLOW_DEFAULT_TIMEZONE:Europe/Kyiv}
   default-language: ${INKFLOW_DEFAULT_LANGUAGE:uk}
   default-start-page: ${INKFLOW_DEFAULT_START_PAGE:/calendar}
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  invite:
+    ttl-days: ${INKFLOW_INVITE_TTL_DAYS:7}
+    cleanup-enabled: ${INKFLOW_INVITE_CLEANUP_ENABLED:true}
+    cleanup-retention-days-after-expiry: ${INKFLOW_INVITE_CLEANUP_RETENTION_DAYS:30}
+    cleanup-cron: ${INKFLOW_INVITE_CLEANUP_CRON:0 0 4 * * *}
   openapi:
     enabled: ${OPENAPI_ENABLED:false}
   email:

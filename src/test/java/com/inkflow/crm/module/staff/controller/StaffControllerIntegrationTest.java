@@ -53,6 +53,7 @@ import java.util.UUID;
 import static com.inkflow.crm.support.SecurityTestSupport.crmUser;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -657,7 +658,9 @@ class StaffControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.token").isNotEmpty());
+                .andExpect(jsonPath("$.data.token").isNotEmpty())
+                .andExpect(jsonPath("$.data.resent").value(false))
+                .andExpect(jsonPath("$.data.emailDispatched").exists());
 
         StaffInvite invite = staffInviteRepository
                 .findByEmailAndAcceptedAtIsNull("invite-target@test.com")
@@ -711,6 +714,80 @@ class StaffControllerIntegrationTest {
 
         StaffInvite invite = staffInviteRepository.findByToken(token).orElseThrow();
         assertNotNull(invite.getAcceptedAt());
+    }
+
+    @Test
+    void inviteStaff_resendSameEmail_rotatesToken() throws Exception {
+        TenantBundle bundle = seedTenant();
+        String firstToken = createInviteAndReturnToken(bundle, "resend-target@test.com");
+
+        InviteStaffRequest body = InviteStaffRequest.builder()
+                .email("resend-target@test.com")
+                .role("admin")
+                .calendarColor("#6366f1")
+                .locationIds(List.of(bundle.location().getId()))
+                .build();
+
+        mockMvc.perform(post("/staff/invite")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.resent").value(true))
+                .andExpect(jsonPath("$.data.token").isNotEmpty());
+
+        StaffInvite invite = staffInviteRepository
+                .findByEmailAndAcceptedAtIsNull("resend-target@test.com")
+                .orElseThrow();
+        assertNotEquals(firstToken, invite.getToken());
+        assertEquals(UserRole.ADMIN, invite.getRole());
+    }
+
+    @Test
+    void inviteStaff_withInvalidLocation_returnsBadRequest() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        InviteStaffRequest body = InviteStaffRequest.builder()
+                .email("invalid-loc@test.com")
+                .role("artist")
+                .calendarColor("#6366f1")
+                .locationIds(List.of(UUID.randomUUID()))
+                .build();
+
+        mockMvc.perform(post("/staff/invite")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void listPendingInvites_withOwnerAuth_returnsPendingOnly() throws Exception {
+        TenantBundle bundle = seedTenant();
+        createInviteAndReturnToken(bundle, "pending-list@test.com");
+
+        mockMvc.perform(get("/staff/invites").with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[?(@.email=='pending-list@test.com')]").exists())
+                .andExpect(jsonPath("$.data[?(@.email=='pending-list@test.com')].expired").value(false));
+    }
+
+    @Test
+    void revokePendingInvite_withOwnerAuth_removesInvite() throws Exception {
+        TenantBundle bundle = seedTenant();
+        createInviteAndReturnToken(bundle, "revoke-target@test.com");
+
+        StaffInvite invite = staffInviteRepository
+                .findByEmailAndAcceptedAtIsNull("revoke-target@test.com")
+                .orElseThrow();
+
+        mockMvc.perform(delete("/staff/invites/{id}", invite.getId())
+                        .with(crmUser(bundle.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        assertTrue(staffInviteRepository.findByEmailAndAcceptedAtIsNull("revoke-target@test.com").isEmpty());
     }
 
     @Test

@@ -35,6 +35,17 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
 
     boolean existsByEmailAndDeletedAtIsNull(String email);
 
+    @Query("""
+            SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END
+            FROM Staff s
+            WHERE s.tenantId = :tenantId
+              AND LOWER(s.email) = LOWER(:email)
+              AND s.deletedAt IS NULL
+            """)
+    boolean existsByTenantIdAndEmailIgnoreCaseAndDeletedAtIsNull(
+            @Param("tenantId") UUID tenantId,
+            @Param("email") String email);
+
     List<Staff> findByStatusAndDeletedAtIsNull(StaffStatus status);
 
     long countByStatusAndDeletedAtIsNull(StaffStatus status);
