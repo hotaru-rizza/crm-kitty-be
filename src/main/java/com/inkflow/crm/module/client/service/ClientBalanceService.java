@@ -91,32 +91,7 @@ public class ClientBalanceService {
 
     @Transactional
     public void chargeAppointmentOnCompletion(UUID appointmentId, UUID tenantId) {
-        Appointment appointment = appointmentRepository
-                .findByIdAndDeletedAtIsNull(appointmentId)
-                .orElseThrow(() -> ResourceNotFoundException.appointment(appointmentId.toString()));
-
-        if (appointment.getClient() == null || appointment.isReservation() || appointment.getBalanceChargedAt() != null) {
-            return;
-        }
-
-        BigDecimal finalPrice = appointment.getFinalPrice();
-        if (finalPrice == null || finalPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            appointment.setBalanceChargedAt(Instant.now());
-            appointmentRepository.save(appointment);
-            return;
-        }
-
-        record(
-                appointment.getClient(),
-                finalPrice.negate(),
-                ClientBalanceReason.CHARGE,
-                appointment.getId(),
-                null,
-                null
-        );
-
-        appointment.setBalanceChargedAt(Instant.now());
-        appointmentRepository.save(appointment);
+        // Balance changes only through explicit payments — never auto-charge on completion.
     }
 
     @Transactional

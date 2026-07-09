@@ -12,6 +12,7 @@ import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
 import com.inkflow.crm.module.appointment.dto.AddAppointmentPhotoRequest;
+import com.inkflow.crm.module.appointment.dto.AppointmentItemRequest;
 import com.inkflow.crm.module.appointment.dto.CreateAppointmentRequest;
 import com.inkflow.crm.module.appointment.dto.UpdateAppointmentRequest;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
@@ -29,6 +30,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -575,6 +577,63 @@ class AppointmentControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateBody)))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void createAppointment_adjacentSlot_succeeds() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        Instant firstStart = Instant.now().plus(10, ChronoUnit.DAYS).truncatedTo(ChronoUnit.HOURS);
+        Instant firstEnd = firstStart.plus(2, ChronoUnit.HOURS);
+        createAppointment(bundle, firstStart, firstEnd);
+
+        Instant secondStart = firstEnd;
+        Instant secondEnd = secondStart.plus(1, ChronoUnit.HOURS);
+        CreateAppointmentRequest body = CreateAppointmentRequest.builder()
+                .clientId(bundle.client().getId())
+                .artistId(bundle.owner().getId())
+                .serviceId(bundle.service().getId())
+                .locationId(bundle.location().getId())
+                .startTime(secondStart)
+                .endTime(secondEnd)
+                .price(BigDecimal.valueOf(1000))
+                .build();
+
+        mockMvc.perform(post("/appointments")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void updateAppointment_itemsExtendIntoConflict_returnsConflict() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+
+        Instant base = Instant.now().plus(11, ChronoUnit.DAYS).truncatedTo(ChronoUnit.HOURS);
+        UUID firstAppointmentId = createAppointment(bundle, base, base.plus(1, ChronoUnit.HOURS));
+        createAppointment(bundle, base.plus(1, ChronoUnit.HOURS), base.plus(2, ChronoUnit.HOURS));
+
+        UpdateAppointmentRequest updateBody = UpdateAppointmentRequest.builder()
+                .items(List.of(AppointmentItemRequest.builder()
+                        .source("custom")
+                        .title("Extended session")
+                        .unitPrice(BigDecimal.valueOf(1500))
+                        .durationMinutes(120)
+                        .quantity(1)
+                        .sortOrder(0)
+                        .build()))
+                .adjustEndTimeFromItems(true)
+                .build();
+
+        mockMvc.perform(patch("/appointments/{id}", firstAppointmentId)
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateBody)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.error.code").value("TIME_SLOT_CONFLICT"));
     }
 
     private UUID createAppointmentForArtist(TenantBundle bundle, Staff artist) throws Exception {

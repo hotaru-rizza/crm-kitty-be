@@ -3,6 +3,7 @@ package com.inkflow.crm.module.transaction.service;
 import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.common.dto.PaginationDto;
+import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.*;
 import com.inkflow.crm.domain.enums.*;
@@ -71,6 +72,43 @@ public class TransactionService {
 
     @Transactional
     public TransactionDto createTransaction(CreateTransactionRequest request) {
+        PaymentMethod paymentMethod = PaymentMethod.fromValue(request.getPaymentMethod());
+        if (paymentMethod == PaymentMethod.SPLIT) {
+            return createSplitTransactions(request);
+        }
+
+        return saveTransaction(request, paymentMethod, request.getAmount(), null, null);
+    }
+
+    private TransactionDto createSplitTransactions(CreateTransactionRequest request) {
+        BigDecimal cashAmount = request.getCashAmount();
+        BigDecimal cardAmount = request.getCardAmount();
+
+        if (cashAmount == null || cardAmount == null) {
+            throw new BusinessRuleException("Split payment requires both cash and card amounts");
+        }
+
+        TransactionDto lastCreated = null;
+        if (isPositiveAmount(cashAmount)) {
+            lastCreated = saveTransaction(request, PaymentMethod.CASH, cashAmount, null, null);
+        }
+        if (isPositiveAmount(cardAmount)) {
+            lastCreated = saveTransaction(request, PaymentMethod.CARD, cardAmount, null, null);
+        }
+
+        if (lastCreated == null) {
+            throw new BusinessRuleException("Split payment requires a positive cash or card amount");
+        }
+
+        return lastCreated;
+    }
+
+    private TransactionDto saveTransaction(
+            CreateTransactionRequest request,
+            PaymentMethod paymentMethod,
+            BigDecimal amount,
+            BigDecimal cashAmount,
+            BigDecimal cardAmount) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
 
         Location location = locationRepository.findByIdAndDeletedAtIsNull(request.getLocationId())
@@ -96,15 +134,15 @@ public class TransactionService {
                 .tenantId(tenantId)
                 .type(transactionType)
                 .category(categoryKey)
-                .amount(request.getAmount())
-                .paymentMethod(PaymentMethod.fromValue(request.getPaymentMethod()))
+                .amount(amount)
+                .paymentMethod(paymentMethod)
                 .description(request.getDescription())
                 .appointment(appointment)
                 .staff(staff)
                 .location(location)
                 .date(request.getDate())
-                .cashAmount(request.getCashAmount())
-                .cardAmount(request.getCardAmount())
+                .cashAmount(cashAmount)
+                .cardAmount(cardAmount)
                 .tipAmount(request.getTipAmount())
                 .build();
 
@@ -112,6 +150,10 @@ public class TransactionService {
         log.info("Transaction created: tenantId={} transactionId={}", tenantId, transaction.getId());
         auditTransactionCreated(transaction);
         return transactionMapper.toDto(transaction);
+    }
+
+    private boolean isPositiveAmount(BigDecimal amount) {
+        return amount != null && amount.compareTo(BigDecimal.ZERO) > 0;
     }
 
     @Transactional

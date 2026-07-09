@@ -72,7 +72,7 @@ public class LocationService {
 
         Location location = locationMapper.toEntity(request);
         location.setTenantId(tenantId);
-        if (locationRepository.findByIsDefaultTrueAndDeletedAtIsNull().isEmpty()) {
+        if (locationRepository.findFirstByIsDefaultTrueAndDeletedAtIsNullOrderByCreatedAtAsc().isEmpty()) {
             location.setIsDefault(true);
         }
 
@@ -159,9 +159,9 @@ public class LocationService {
         Location location = locationRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ResourceNotFoundException.location(id.toString()));
 
-        locationRepository.findByIsDefaultTrueAndDeletedAtIsNull()
+        locationRepository.findAllByIsDefaultTrueAndDeletedAtIsNull().stream()
                 .filter(current -> !current.getId().equals(id))
-                .ifPresent(current -> {
+                .forEach(current -> {
                     current.setIsDefault(false);
                     locationRepository.save(current);
                 });

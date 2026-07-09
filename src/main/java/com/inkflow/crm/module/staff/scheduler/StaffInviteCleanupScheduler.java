@@ -35,7 +35,9 @@ public class StaffInviteCleanupScheduler {
 
         int retentionDays = Math.max(0, invite.getCleanupRetentionDaysAfterExpiry());
         Instant cutoff = Instant.now().minus(retentionDays, ChronoUnit.DAYS);
-        int deleted = staffInviteRepository.deleteByAcceptedAtIsNullAndExpiresAtBefore(cutoff);
+        var expired = staffInviteRepository.findByAcceptedAtIsNullAndExpiresAtBefore(cutoff);
+        staffInviteRepository.deleteAll(expired);
+        int deleted = expired.size();
 
         schedulerRunService.markRun(JOB_KEY, Instant.now());
         log.info("Staff invite cleanup completed: deleted={} cutoff={}", deleted, cutoff);

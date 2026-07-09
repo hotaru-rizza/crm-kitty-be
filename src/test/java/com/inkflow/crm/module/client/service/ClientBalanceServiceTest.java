@@ -78,10 +78,9 @@ class ClientBalanceServiceTest {
     }
 
     @Test
-    void chargeAppointmentOnCompletion_shouldCreateDebtWhenUnpaid() {
+    void chargeAppointmentOnCompletion_shouldNotChangeBalance() {
         UUID tenantId = UUID.randomUUID();
         UUID appointmentId = UUID.randomUUID();
-        authenticate(tenantId, UUID.randomUUID());
 
         Client client = client(tenantId, BigDecimal.ZERO);
         Appointment appointment = Appointment.builder()
@@ -91,16 +90,10 @@ class ClientBalanceServiceTest {
                 .finalPrice(BigDecimal.valueOf(500))
                 .build();
 
-        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
-                .thenReturn(Optional.of(appointment));
-        when(clientRepository.save(client)).thenAnswer(invocation -> invocation.getArgument(0));
-        when(appointmentRepository.save(appointment)).thenAnswer(invocation -> invocation.getArgument(0));
-        when(balanceEntryRepository.save(any(ClientBalanceEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
         clientBalanceService.chargeAppointmentOnCompletion(appointmentId, tenantId);
 
-        assertEquals(BigDecimal.valueOf(-500), client.getBalance());
-        assertNotNull(appointment.getBalanceChargedAt());
+        assertEquals(BigDecimal.ZERO, client.getBalance());
+        assertNull(appointment.getBalanceChargedAt());
     }
 
     @Test
@@ -116,9 +109,6 @@ class ClientBalanceServiceTest {
                 .finalPrice(BigDecimal.valueOf(500))
                 .balanceChargedAt(java.time.Instant.now())
                 .build();
-
-        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
-                .thenReturn(Optional.of(appointment));
 
         clientBalanceService.chargeAppointmentOnCompletion(appointmentId, tenantId);
 

@@ -3,6 +3,7 @@ package com.inkflow.crm.module.email.service.sending;
 import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.enums.AuditAction;
 import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.domain.repository.StaffRepository;
@@ -61,7 +62,8 @@ public class BulkEmailService {
                     rawBody,
                     request.html(),
                     recipient,
-                    context);
+                    context,
+                    request.locationId());
             notificationDispatcher.enqueueManual(
                     tenantId,
                     TriggerType.MANUAL,
@@ -92,7 +94,8 @@ public class BulkEmailService {
         EmailRecipient sampleRecipient = EmailRecipient.of("preview@example.com", PREVIEW_CLIENT_NAME);
         String rawBody = prepareRawBody(request.body(), request.html());
 
-        return renderForRecipient(request.subject(), rawBody, request.html(), sampleRecipient, context).fullHtml();
+        return renderForRecipient(request.subject(), rawBody, request.html(), sampleRecipient, context, request.locationId())
+                .fullHtml();
     }
 
     @Transactional
@@ -105,7 +108,8 @@ public class BulkEmailService {
                 rawBody,
                 request.html(),
                 recipient,
-                context);
+                context,
+                request.locationId());
 
         notificationDispatcher.enqueueManual(
                 tenantId,
@@ -128,9 +132,10 @@ public class BulkEmailService {
             String rawBody,
             boolean html,
             EmailRecipient recipient,
-            EmailTenantContext context) {
+            EmailTenantContext context,
+            UUID locationId) {
 
-        Map<String, String> vars = buildVars(recipient, context);
+        Map<String, String> vars = buildVars(recipient, context, locationId);
         String subject = TemplateVarSubstitutor.substitute(subjectTemplate, vars);
         String bodyResolved = TemplateVarSubstitutor.substitute(rawBody, vars);
         String bodyHtml = html ? bodyResolved : EmailLayout.toHtml(bodyResolved);
@@ -139,17 +144,31 @@ public class BulkEmailService {
         return new RenderedManualEmail(subject, fullHtml);
     }
 
-    private Map<String, String> buildVars(EmailRecipient recipient, EmailTenantContext context) {
+    private Map<String, String> buildVars(EmailRecipient recipient, EmailTenantContext context, UUID locationId) {
         Map<String, String> vars = EmailPreviewSampleData.forManualCompose(
                 recipient.name(),
                 context.studioName(),
                 inkflowProperties.getAppName()
         );
-        String address = emailLocationContextLoader.resolveAddress();
-        if (!address.isBlank()) {
-            vars.put(TemplateVar.ADDRESS.getPlaceholder(), address);
-        }
+
+        emailLocationContextLoader.resolveLocationForMacros(locationId).ifPresent(location -> {
+            putLocationVars(vars, location);
+        });
+
         return vars;
+    }
+
+    private void putLocationVars(Map<String, String> vars, Location location) {
+        if (hasText(location.getAddress())) {
+            vars.put(TemplateVar.ADDRESS.getPlaceholder(), location.getAddress());
+        }
+        if (hasText(location.getName())) {
+            vars.put(TemplateVar.LOCATION_NAME.getPlaceholder(), location.getName());
+        }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private String wrapBody(String subject, String bodyHtml, EmailTenantContext context) {

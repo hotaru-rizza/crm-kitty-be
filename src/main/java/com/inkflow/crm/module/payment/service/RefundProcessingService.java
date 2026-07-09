@@ -159,12 +159,19 @@ public class RefundProcessingService {
 
         clientBalanceService.record(
                 appointment.getClient(),
-                refundTransaction.getAmount().negate(),
+                resolveRefundBalanceDelta(originalTransaction, refundTransaction.getAmount()),
                 ClientBalanceReason.REFUND,
                 appointment.getId(),
                 refundTransaction.getId(),
                 null
         );
+    }
+
+    private BigDecimal resolveRefundBalanceDelta(Transaction originalTransaction, BigDecimal refundAmount) {
+        if (originalTransaction.getPaymentMethod() == PaymentMethod.BALANCE) {
+            return refundAmount;
+        }
+        return refundAmount.negate();
     }
 
     private void syncLinkedProjectProgress(Appointment appointment) {

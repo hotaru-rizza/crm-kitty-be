@@ -34,5 +34,7 @@ public interface LocationRepository extends JpaRepository<Location, UUID> {
 
     Optional<Location> findFirstByIsActiveTrueAndDeletedAtIsNull();
 
-    Optional<Location> findByIsDefaultTrueAndDeletedAtIsNull();
+    Optional<Location> findFirstByIsDefaultTrueAndDeletedAtIsNullOrderByCreatedAtAsc();
+
+    List<Location> findAllByIsDefaultTrueAndDeletedAtIsNull();
 }

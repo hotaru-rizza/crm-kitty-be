@@ -23,6 +23,7 @@ import com.inkflow.crm.module.project.dto.CreateProjectRequest;
 import com.inkflow.crm.module.project.dto.ProjectDto;
 import com.inkflow.crm.module.project.dto.ProjectFilterRequest;
 import com.inkflow.crm.module.project.mapper.ProjectMapper;
+import com.inkflow.crm.module.project.support.ProjectAccessGuard;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.security.UserPrincipal;
 import com.inkflow.crm.support.AuditMocks;
@@ -52,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -86,12 +88,18 @@ class ProjectServiceTest {
     @Mock
     private AuditLabelFormatter auditLabelFormatter;
 
+    @Mock
+    private ProjectAccessGuard projectAccessGuard;
+
     @InjectMocks
     private ProjectService projectService;
 
     @BeforeEach
     void stubAudit() {
         AuditMocks.stubLabelFormatter(auditLabelFormatter);
+        lenient().doNothing().when(projectAccessGuard).requireView(any(Project.class));
+        lenient().doNothing().when(projectAccessGuard).requireEdit(any(Project.class));
+        lenient().doNothing().when(projectAccessGuard).requireLeadReassignment(any(UUID.class));
     }
 
     @AfterEach

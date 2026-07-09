@@ -29,5 +29,5 @@ public interface StaffInviteRepository extends JpaRepository<StaffInvite, UUID> 
 
     List<StaffInvite> findByTenantIdAndAcceptedAtIsNullOrderByCreatedAtDesc(UUID tenantId);
 
-    int deleteByAcceptedAtIsNullAndExpiresAtBefore(Instant cutoff);
+    List<StaffInvite> findByAcceptedAtIsNullAndExpiresAtBefore(Instant cutoff);
 }

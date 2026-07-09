@@ -40,7 +40,7 @@ public class EmailTemplateService {
     @Transactional(readOnly = true)
     public List<EmailTemplateResponseDto> list(UUID tenantId) {
         builtInTemplateSeeder.seedDefaultsForTenant(tenantId);
-        return emailTemplateRepository.findAllByOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc().stream()
+        return emailTemplateRepository.findAllByTenantIdOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc(tenantId).stream()
                 .map(this::toDto)
                 .toList();
     }

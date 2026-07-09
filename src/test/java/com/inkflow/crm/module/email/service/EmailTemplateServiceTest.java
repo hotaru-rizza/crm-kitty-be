@@ -67,7 +67,7 @@ class EmailTemplateServiceTest {
                 .category(BuiltInTemplateKey.CONFIRMATION.getCategory())
                 .build();
 
-        when(emailTemplateRepository.findAllByOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc())
+        when(emailTemplateRepository.findAllByTenantIdOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc(TENANT))
                 .thenReturn(List.of(template));
 
         List<EmailTemplateResponseDto> result = service.list(TENANT);

@@ -44,6 +44,15 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success(payment));
     }
 
+    @DeleteMapping("/{transactionId}")
+    @RequirePermission(Permission.PAYMENTS_PROCESS)
+    public ResponseEntity<ApiResponse<Void>> voidPayment(@PathVariable UUID transactionId) {
+        paymentService.voidPayment(transactionId);
+        log.info("Payment voided via API: transactionId={}", transactionId);
+
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
     @GetMapping("/appointment/{appointmentId}/summary")
     @RequirePermission({Permission.PAYMENTS_VIEW, Permission.FINANCE_VIEW})
     public ResponseEntity<ApiResponse<AppointmentPaymentSummaryDto>> getPaymentSummary(

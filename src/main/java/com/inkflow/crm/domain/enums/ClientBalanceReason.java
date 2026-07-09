@@ -11,6 +11,7 @@ public enum ClientBalanceReason {
     BALANCE_SPEND("balance_spend"),
     REFUND("refund"),
     CHARGE_REVERSAL("charge_reversal"),
+    PAYMENT_VOID("payment_void"),
     MANUAL_ADJUSTMENT("manual_adjustment");
 
     private final String value;

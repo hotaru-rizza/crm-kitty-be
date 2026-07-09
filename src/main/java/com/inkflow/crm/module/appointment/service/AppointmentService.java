@@ -21,7 +21,9 @@ import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.AppointmentSpecifications;
 import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
+import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.repository.LeaveRequestRepository;
+import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.enums.AuditAction;
 import com.inkflow.crm.domain.enums.AuditEntityType;
@@ -47,6 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -56,6 +59,7 @@ import java.util.UUID;
 public class AppointmentService {
 
     private final InkflowProperties inkflowProperties;
+    private final TenantRepository tenantRepository;
     private final AppointmentRepository appointmentRepository;
     private final GalleryPhotoRepository galleryPhotoRepository;
     private final LeaveRequestRepository leaveRequestRepository;
@@ -80,11 +84,12 @@ public class AppointmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<AppointmentDto> getClientHistory(UUID clientId, PageRequest pageRequest) {
+    public PageResult<AppointmentDto> getClientHistory(UUID clientId, PageRequest pageRequest) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Page<Appointment> page = appointmentRepository
-                .findByClientIdAndDeletedAtIsNullOrderByStartTimeDesc( clientId, pageRequest.toPageable());
-        return page.getContent().stream().map(appointmentMapper::toDto).toList();
+                .findByClientIdAndDeletedAtIsNullOrderByStartTimeDesc(clientId, pageRequest.toPageable());
+        List<AppointmentDto> data = page.getContent().stream().map(appointmentMapper::toDto).toList();
+        return new PageResult<>(data, PaginationDto.from(page));
     }
 
     @Transactional(readOnly = true)
@@ -196,6 +201,7 @@ public class AppointmentService {
         UUID previousProjectId = appointment.getProject() != null ? appointment.getProject().getId() : null;
         UUID previousArtistId = appointment.getArtist().getId();
         Instant previousStartTime = appointment.getStartTime();
+        Instant previousEndTime = appointment.getEndTime();
 
         applyRelationUpdates(tenantId, appointment, request);
 
@@ -205,7 +211,8 @@ public class AppointmentService {
         boolean startTimeChanged = request.getStartTime() != null
                 && !request.getStartTime().equals(appointment.getStartTime());
 
-        validateScheduleUpdateIfNeeded(tenantId, appointment, request, previousArtistId, previousStartTime, id);
+        validateScheduleUpdateIfNeeded(
+                tenantId, appointment, request, previousArtistId, previousStartTime, previousEndTime, id);
         applyScheduleUpdate(appointment, request);
         applyPricingUpdate(appointment, request);
         applyStatusUpdate(appointment, request);
@@ -215,6 +222,7 @@ public class AppointmentService {
             boolean adjustEndTime = Boolean.TRUE.equals(request.getAdjustEndTimeFromItems())
                     || request.getEndTime() == null;
             appointmentPricingService.recompute(appointment, adjustEndTime);
+            validateTimeSlotAfterItemsRecompute(appointment, previousEndTime, id);
         } else if (request.getDiscount() != null && appointment.getItems() != null && !appointment.getItems().isEmpty()) {
             appointmentPricingService.recompute(appointment, false);
         }
@@ -344,11 +352,38 @@ public class AppointmentService {
      * warning so that overtime / out-of-schedule bookings remain possible.
      */
     private void validateArtistAvailable(UUID tenantId, UUID artistId, Instant startTime) {
-        LocalDate date = startTime.atZone(inkflowProperties.defaultZoneId()).toLocalDate();
-        List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate( artistId, date);
+        LocalDate date = startTime.atZone(resolveTenantZoneId(tenantId)).toLocalDate();
+        List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate(artistId, date);
         if (!activeLeaves.isEmpty()) {
             throw BusinessRuleException.artistOnLeave();
         }
+    }
+
+    private ZoneId resolveTenantZoneId(UUID tenantId) {
+        return tenantRepository.findById(tenantId)
+                .map(Tenant::getTimezone)
+                .map(ZoneId::of)
+                .orElseGet(inkflowProperties::defaultZoneId);
+    }
+
+    private void validateTimeSlotAfterItemsRecompute(
+            Appointment appointment,
+            Instant previousEndTime,
+            UUID appointmentId) {
+        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
+            return;
+        }
+
+        Instant currentEnd = appointment.getEndTime();
+        if (currentEnd == null || currentEnd.equals(previousEndTime)) {
+            return;
+        }
+
+        validateTimeSlot(
+                appointment.getArtist().getId(),
+                appointment.getStartTime(),
+                currentEnd,
+                appointmentId);
     }
 
     private Appointment buildAppointment(
@@ -414,6 +449,7 @@ public class AppointmentService {
             UpdateAppointmentRequest request,
             UUID previousArtistId,
             Instant previousStartTime,
+            Instant previousEndTime,
             UUID appointmentId) {
         if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
             return;
@@ -424,7 +460,8 @@ public class AppointmentService {
         UUID artistId = appointment.getArtist().getId();
 
         boolean artistChanged = !artistId.equals(previousArtistId);
-        boolean timeChanged = request.getStartTime() != null && !request.getStartTime().equals(previousStartTime);
+        boolean timeChanged = (request.getStartTime() != null && !request.getStartTime().equals(previousStartTime))
+                || (request.getEndTime() != null && !request.getEndTime().equals(previousEndTime));
         if (!artistChanged && !timeChanged) {
             return;
         }
@@ -453,7 +490,7 @@ public class AppointmentService {
             appointment.setNotes(request.getNotes());
         }
         if (request.getSketchImage() != null) {
-            appointment.setSketchImage(request.getSketchImage());
+            appointment.setSketchImage(request.getSketchImage().isBlank() ? null : request.getSketchImage());
         }
         if (request.getPrice() != null && request.getItems() == null) {
             appointment.setPrice(request.getPrice());

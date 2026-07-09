@@ -11,13 +11,20 @@ import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
+import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.repository.LeaveRequestRepository;
+import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.module.appointment.dto.AppointmentDto;
 import com.inkflow.crm.module.appointment.dto.AppointmentItemRequest;
 import com.inkflow.crm.module.appointment.dto.AppointmentUpdateContext;
 import com.inkflow.crm.module.appointment.dto.CreateAppointmentRequest;
 import com.inkflow.crm.module.appointment.dto.UpdateAppointmentRequest;
 import com.inkflow.crm.module.appointment.mapper.AppointmentMapper;
+import com.inkflow.crm.module.appointment.support.AppointmentAccessGuard;
+import com.inkflow.crm.module.client.service.ClientStatsService;
+import com.inkflow.crm.module.project.service.ProjectProgressSyncService;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.payment.service.PaymentProcessingService;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.security.UserPrincipal;
@@ -33,6 +40,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -44,7 +52,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -62,6 +72,9 @@ class AppointmentServiceTest {
 
     @Mock
     private LeaveRequestRepository leaveRequestRepository;
+
+    @Mock
+    private TenantRepository tenantRepository;
 
     @Mock
     private RolePermissionService rolePermissionService;
@@ -83,6 +96,21 @@ class AppointmentServiceTest {
 
     @Mock
     private PaymentProcessingService paymentProcessingService;
+
+    @Mock
+    private AppointmentAccessGuard appointmentAccessGuard;
+
+    @Mock
+    private ClientStatsService clientStatsService;
+
+    @Mock
+    private ProjectProgressSyncService projectProgressSyncService;
+
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
 
     @InjectMocks
     private AppointmentService appointmentService;
@@ -476,6 +504,82 @@ class AppointmentServiceTest {
         assertEquals(BigDecimal.valueOf(1200), appointment.getPrice());
         assertEquals(BigDecimal.valueOf(200), appointment.getDiscount());
         assertEquals(BigDecimal.valueOf(1000), appointment.getFinalPrice());
+    }
+
+    @Test
+    void updateAppointment_adjustEndTimeFromItems_overlap_throwsConflict() {
+        UUID tenantId = UUID.randomUUID();
+        UUID appointmentId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        Instant oldStart = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant oldEnd = oldStart.plus(1, ChronoUnit.HOURS);
+        Instant extendedEnd = oldStart.plus(2, ChronoUnit.HOURS);
+
+        authenticate(tenantId);
+
+        Staff artist = staff(artistId);
+        Appointment appointment = baseAppointment(appointmentId, tenantId, artist, oldStart, oldEnd, AppointmentStatus.SCHEDULED);
+
+        when(entityResolver.requireAppointment(tenantId, appointmentId)).thenReturn(appointment);
+        doAnswer(invocation -> {
+            Appointment appt = invocation.getArgument(0);
+            appt.setEndTime(extendedEnd);
+            return null;
+        }).when(appointmentPricingService).recompute(any(Appointment.class), anyBoolean());
+        when(appointmentRepository.existsConflictingAppointmentExcluding(artistId, oldStart, extendedEnd, appointmentId))
+                .thenReturn(true);
+
+        UpdateAppointmentRequest request = UpdateAppointmentRequest.builder()
+                .items(List.of(AppointmentItemRequest.builder()
+                        .source("custom")
+                        .title("Extended session")
+                        .unitPrice(BigDecimal.valueOf(1500))
+                        .durationMinutes(120)
+                        .quantity(1)
+                        .sortOrder(0)
+                        .build()))
+                .adjustEndTimeFromItems(true)
+                .build();
+
+        assertThrows(BusinessRuleException.class, () -> appointmentService.updateAppointment(appointmentId, request));
+    }
+
+    @Test
+    void validateArtistAvailable_usesTenantTimezone() {
+        UUID tenantId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        UUID serviceId = UUID.randomUUID();
+        UUID locationId = UUID.randomUUID();
+        ZoneId tenantZone = ZoneId.of("America/New_York");
+        // 03:00 UTC on Jul 10 = Jul 9 23:00 in New York (EDT)
+        Instant startTime = Instant.parse("2026-07-10T03:00:00Z");
+
+        authenticate(tenantId);
+
+        CreateAppointmentRequest request = CreateAppointmentRequest.builder()
+                .clientId(clientId)
+                .artistId(artistId)
+                .serviceId(serviceId)
+                .locationId(locationId)
+                .startTime(startTime)
+                .endTime(startTime.plus(1, ChronoUnit.HOURS))
+                .price(BigDecimal.valueOf(1000))
+                .build();
+
+        when(entityResolver.requireClient(tenantId, clientId)).thenReturn(client(clientId));
+        when(entityResolver.requireActiveStaff(tenantId, artistId)).thenReturn(staff(artistId));
+        when(entityResolver.requireService(tenantId, serviceId)).thenReturn(service(serviceId));
+        when(entityResolver.requireLocation(tenantId, locationId)).thenReturn(location(locationId));
+        when(appointmentRepository.existsConflictingAppointment(artistId, startTime, startTime.plus(1, ChronoUnit.HOURS)))
+                .thenReturn(false);
+        when(tenantRepository.findById(tenantId)).thenReturn(java.util.Optional.of(
+                Tenant.builder().id(tenantId).timezone(tenantZone.getId()).build()));
+        when(leaveRequestRepository.findActiveLeaveForDate(eq(artistId), eq(LocalDate.of(2026, 7, 9))))
+                .thenReturn(List.of(LeaveRequest.builder().build()));
+
+        assertThrows(BusinessRuleException.class, () -> appointmentService.createAppointment(request));
+        verify(leaveRequestRepository).findActiveLeaveForDate(artistId, LocalDate.of(2026, 7, 9));
     }
 
     @Test

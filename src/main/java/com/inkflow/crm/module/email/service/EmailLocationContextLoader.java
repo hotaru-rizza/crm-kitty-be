@@ -15,19 +15,32 @@ public class EmailLocationContextLoader {
 
     private final LocationRepository locationRepository;
 
-    public Optional<Location> resolveLocationForMacros() {
+    public Optional<Location> resolveLocationForMacros(UUID locationId) {
+        if (locationId != null) {
+            return locationRepository.findByIdAndDeletedAtIsNull(locationId);
+        }
+
+        return resolveFallbackLocation();
+    }
+
+    public String resolveAddress(UUID locationId) {
+        return resolveLocationForMacros(locationId)
+                .map(Location::getAddress)
+                .filter(this::hasText)
+                .orElse("");
+    }
+
+    private Optional<Location> resolveFallbackLocation() {
         Optional<UUID> filter = LocationScope.resolveFilter(null);
         if (filter.isPresent()) {
             return locationRepository.findByIdAndDeletedAtIsNull(filter.get());
         }
-        return locationRepository.findByIsDefaultTrueAndDeletedAtIsNull()
+
+        return locationRepository.findFirstByIsDefaultTrueAndDeletedAtIsNullOrderByCreatedAtAsc()
                 .or(() -> locationRepository.findFirstByIsActiveTrueAndDeletedAtIsNull());
     }
 
-    public String resolveAddress() {
-        return resolveLocationForMacros()
-                .map(Location::getAddress)
-                .filter(address -> address != null && !address.isBlank())
-                .orElse("");
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

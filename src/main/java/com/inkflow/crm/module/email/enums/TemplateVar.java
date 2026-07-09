@@ -25,6 +25,7 @@ public enum TemplateVar {
     DATE("date"),
     TIME("time"),
     ADDRESS("address"),
+    LOCATION_NAME("location_name"),
     REMINDER_WINDOW("reminder_window"),
     APPOINTMENTS_COUNT("appointments_count"),
     SCHEDULE_LIST("schedule_list");

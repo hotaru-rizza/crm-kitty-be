@@ -9,6 +9,7 @@ import com.inkflow.crm.domain.entity.Service;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.Transaction;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
+import com.inkflow.crm.domain.enums.PaymentMethod;
 import com.inkflow.crm.domain.enums.PaymentType;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.ClientRepository;
@@ -82,6 +83,12 @@ class PaymentProcessingServiceTest {
 
     @Mock
     private com.inkflow.crm.module.client.service.ClientBalanceService clientBalanceService;
+
+    @Mock
+    private com.inkflow.crm.domain.repository.ClientBalanceEntryRepository balanceEntryRepository;
+
+    @Mock
+    private com.inkflow.crm.module.appointment.support.AppointmentAccessGuard appointmentAccessGuard;
 
     @InjectMocks
     private PaymentProcessingService paymentProcessingService;
@@ -157,18 +164,12 @@ class PaymentProcessingServiceTest {
         UUID appointmentId = UUID.randomUUID();
         authenticate(tenantId, UUID.randomUUID());
 
-        Appointment appointment = appointment(appointmentId, tenantId);
-
-        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
-                .thenReturn(Optional.of(appointment));
-        when(summaryCalculator.calculate(appointment)).thenReturn(summary(appointmentId, BigDecimal.valueOf(1000)));
-
         ProcessPaymentRequest request = ProcessPaymentRequest.builder()
                 .appointmentId(appointmentId)
                 .amount(BigDecimal.valueOf(100))
                 .paymentMethod("split")
-                .cashAmount(BigDecimal.valueOf(40))
-                .cardAmount(BigDecimal.valueOf(40))
+                .cashAmount(BigDecimal.ZERO)
+                .cardAmount(BigDecimal.ZERO)
                 .build();
 
         assertThrows(BusinessRuleException.class, () -> paymentProcessingService.processPayment(request));
@@ -195,10 +196,6 @@ class PaymentProcessingServiceTest {
         UUID appointmentId = UUID.randomUUID();
         authenticate(tenantId, UUID.randomUUID());
 
-        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
-                .thenReturn(Optional.of(appointment(appointmentId, tenantId)));
-        when(summaryCalculator.calculate(any())).thenReturn(summary(appointmentId, BigDecimal.valueOf(1000)));
-
         ProcessPaymentRequest request = ProcessPaymentRequest.builder()
                 .appointmentId(appointmentId)
                 .amount(BigDecimal.valueOf(100))
@@ -209,7 +206,7 @@ class PaymentProcessingServiceTest {
     }
 
     @Test
-    void processPayment_recordsSplitPaymentWithCashAndCardBreakdown() {
+    void processPayment_recordsSplitPaymentAsSeparateCashAndCardTransactions() {
         UUID tenantId = UUID.randomUUID();
         UUID appointmentId = UUID.randomUUID();
         authenticate(tenantId, UUID.randomUUID());
@@ -238,11 +235,12 @@ class PaymentProcessingServiceTest {
         paymentProcessingService.processPayment(request);
 
         ArgumentCaptor<Transaction> transactionCaptor = ArgumentCaptor.forClass(Transaction.class);
-        verify(transactionRepository).save(transactionCaptor.capture());
-        Transaction saved = transactionCaptor.getValue();
-        assertEquals(cash, saved.getCashAmount());
-        assertEquals(card, saved.getCardAmount());
-        assertEquals(BigDecimal.valueOf(100), saved.getAmount());
+        verify(transactionRepository, times(2)).save(transactionCaptor.capture());
+        List<Transaction> saved = transactionCaptor.getAllValues();
+        assertEquals(PaymentMethod.CASH, saved.get(0).getPaymentMethod());
+        assertEquals(cash, saved.get(0).getAmount());
+        assertEquals(PaymentMethod.CARD, saved.get(1).getPaymentMethod());
+        assertEquals(card, saved.get(1).getAmount());
     }
 
     @Test
@@ -383,7 +381,7 @@ class PaymentProcessingServiceTest {
     }
 
     @Test
-    void processPaymentLines_rejectsInvalidSplitLine() {
+    void processPaymentLines_expandsSplitLineIntoCashAndCardTransactions() {
         UUID tenantId = UUID.randomUUID();
         UUID appointmentId = UUID.randomUUID();
         authenticate(tenantId, UUID.randomUUID());
@@ -391,6 +389,9 @@ class PaymentProcessingServiceTest {
         when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
                 .thenReturn(Optional.of(appointment(appointmentId, tenantId)));
         when(summaryCalculator.calculate(any())).thenReturn(summary(appointmentId, BigDecimal.valueOf(1000)));
+        when(receiptNumberGenerator.generate()).thenReturn("RCP-SPLIT");
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(paymentMapper.toDto(any(Transaction.class))).thenReturn(PaymentDto.builder().build());
 
         ProcessPaymentRequest request = ProcessPaymentRequest.builder()
                 .appointmentId(appointmentId)
@@ -404,7 +405,15 @@ class PaymentProcessingServiceTest {
                 ))
                 .build();
 
-        assertThrows(BusinessRuleException.class, () -> paymentProcessingService.processPayment(request));
+        paymentProcessingService.processPayment(request);
+
+        ArgumentCaptor<Transaction> transactionCaptor = ArgumentCaptor.forClass(Transaction.class);
+        verify(transactionRepository, times(2)).save(transactionCaptor.capture());
+        List<Transaction> saved = transactionCaptor.getAllValues();
+        assertEquals(PaymentMethod.CASH, saved.get(0).getPaymentMethod());
+        assertEquals(BigDecimal.valueOf(40), saved.get(0).getAmount());
+        assertEquals(PaymentMethod.CARD, saved.get(1).getPaymentMethod());
+        assertEquals(BigDecimal.valueOf(40), saved.get(1).getAmount());
     }
 
     @Test

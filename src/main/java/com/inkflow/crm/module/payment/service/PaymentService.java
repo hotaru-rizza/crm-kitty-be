@@ -37,6 +37,11 @@ public class PaymentService {
         return refundProcessingService.processRefund(request);
     }
 
+    @Transactional
+    public void voidPayment(UUID transactionId) {
+        paymentProcessingService.voidPayment(transactionId);
+    }
+
     @Transactional(readOnly = true)
     public AppointmentPaymentSummaryDto getAppointmentPaymentSummary(UUID appointmentId) {
         Appointment appointment = requireAppointment(appointmentId);

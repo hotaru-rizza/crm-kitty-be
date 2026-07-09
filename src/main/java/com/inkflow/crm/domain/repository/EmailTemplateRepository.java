@@ -14,7 +14,7 @@ public interface EmailTemplateRepository extends JpaRepository<EmailTemplate, UU
 
     Optional<EmailTemplate> findByIdAndTenantId(UUID id, UUID tenantId);
 
-    List<EmailTemplate> findAllByOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc();
+    List<EmailTemplate> findAllByTenantIdOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc(UUID tenantId);
 
     List<EmailTemplate> findByTriggerTypeAndEnabledTrue(TriggerType triggerType);
 

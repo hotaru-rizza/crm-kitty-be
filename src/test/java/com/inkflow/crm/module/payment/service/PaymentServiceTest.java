@@ -8,9 +8,11 @@ import com.inkflow.crm.module.payment.dto.AppointmentPaymentSummaryDto;
 import com.inkflow.crm.module.payment.dto.PaymentDto;
 import com.inkflow.crm.module.payment.dto.ProcessPaymentRequest;
 import com.inkflow.crm.module.payment.dto.ProcessRefundRequest;
+import com.inkflow.crm.module.appointment.support.AppointmentAccessGuard;
 import com.inkflow.crm.module.payment.support.AppointmentPaymentSummaryCalculator;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,6 +28,8 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,8 +48,16 @@ class PaymentServiceTest {
     @Mock
     private AppointmentRepository appointmentRepository;
 
+    @Mock
+    private AppointmentAccessGuard appointmentAccessGuard;
+
     @InjectMocks
     private PaymentService paymentService;
+
+    @BeforeEach
+    void stubAccessGuard() {
+        lenient().doNothing().when(appointmentAccessGuard).requireView(any());
+    }
 
     @AfterEach
     void clearSecurityContext() {
