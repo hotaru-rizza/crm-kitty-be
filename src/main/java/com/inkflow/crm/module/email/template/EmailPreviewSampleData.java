@@ -85,6 +85,7 @@ public final class EmailPreviewSampleData {
             case DATE -> SAMPLE_DATE;
             case TIME -> SAMPLE_TIME;
             case ADDRESS -> SAMPLE_ADDRESS;
+            case LOCATION_NAME -> "Black Ink · Поділ";
             case REMINDER_WINDOW -> SAMPLE_REMINDER_WINDOW;
             case APPOINTMENTS_COUNT -> SAMPLE_APPOINTMENTS_COUNT;
             case SCHEDULE_LIST -> SAMPLE_SCHEDULE_LIST;

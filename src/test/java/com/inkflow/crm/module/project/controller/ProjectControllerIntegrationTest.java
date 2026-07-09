@@ -2,8 +2,10 @@ package com.inkflow.crm.module.project.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.domain.entity.Project;
-import com.inkflow.crm.domain.enums.GalleryStage;
+import com.inkflow.crm.domain.enums.AccountStatus;
 import com.inkflow.crm.domain.enums.ProjectStatus;
+import com.inkflow.crm.domain.enums.StaffStatus;
+import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
@@ -14,6 +16,8 @@ import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.module.project.dto.CreateProjectRequest;
 import com.inkflow.crm.module.project.dto.UpdateProjectRequest;
+import com.inkflow.crm.module.settings.service.RolePermissionService;
+import com.inkflow.crm.domain.enums.GalleryStage;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
 import com.inkflow.crm.support.IntegrationTestData.TenantBundle;
@@ -70,6 +74,9 @@ class ProjectControllerIntegrationTest {
 
     @Autowired
     private GalleryPhotoRepository galleryPhotoRepository;
+
+    @Autowired
+    private RolePermissionService rolePermissionService;
 
     @AfterEach
     void tearDown() {
@@ -258,6 +265,30 @@ class ProjectControllerIntegrationTest {
     }
 
     @Test
+    void getProject_artistCanViewOwnLeadProject() throws Exception {
+        TenantBundle bundle = seedTenant();
+        ensureDefaultPermissions(bundle);
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        UUID projectId = createProjectForArtist(bundle, artist);
+
+        mockMvc.perform(get("/projects/{id}", projectId).with(crmUser(artist)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(projectId.toString()));
+    }
+
+    @Test
+    void getProject_artistCannotViewAnotherLeadsProject() throws Exception {
+        TenantBundle bundle = seedTenant();
+        ensureDefaultPermissions(bundle);
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        UUID projectId = createProjectForArtist(bundle, bundle.owner());
+
+        mockMvc.perform(get("/projects/{id}", projectId).with(crmUser(artist)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
     void addProjectPhoto_persistsInGalleryPhotoRepository() throws Exception {
         TenantBundle bundle = seedTenant();
         UUID projectId = createProjectAndGetId(bundle);
@@ -359,6 +390,28 @@ class ProjectControllerIntegrationTest {
                 .getContentAsString();
 
         return UUID.fromString(objectMapper.readTree(response).path("data").path("id").asText());
+    }
+
+    private UUID createProjectForArtist(TenantBundle bundle, Staff artist) {
+        Project project = projectRepository.save(Project.builder()
+                .tenantId(bundle.tenant().getId())
+                .client(bundle.client())
+                .artist(artist)
+                .location(bundle.location())
+                .title("Artist Project")
+                .status(ProjectStatus.IN_PROGRESS)
+                .estimatedCost(BigDecimal.valueOf(3000))
+                .totalSessions(2)
+                .completedSessions(0)
+                .totalPaid(BigDecimal.ZERO)
+                .build());
+        return project.getId();
+    }
+
+    private void ensureDefaultPermissions(TenantBundle bundle) {
+        SecurityTestSupport.authenticate(bundle.owner());
+        rolePermissionService.getGrantedPermissions(bundle.tenant().getId(), UserRole.ARTIST);
+        SecurityTestSupport.clearAuthentication();
     }
 
     private TenantBundle seedTenant() {

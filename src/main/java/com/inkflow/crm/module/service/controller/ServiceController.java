@@ -73,7 +73,6 @@ public class ServiceController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission(Permission.SERVICES_EDIT)
     public ResponseEntity<ApiResponse<Void>> deleteService(@PathVariable UUID id) {
         serviceService.deleteService(id);
         log.info("Service deleted via API: serviceId={}", id);

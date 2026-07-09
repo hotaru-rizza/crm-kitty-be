@@ -56,7 +56,7 @@ class AppointmentEmailComposerTest {
     void sendConfirmation_callsNotificationSenderWithCorrectKey() {
         Appointment appointment = buildAppointment("anna@test.com");
         when(tenantContextLoader.loadContext(TENANT))
-                .thenReturn(new EmailTenantContext("Ink Studio", "Europe/Kyiv", SupportedLocale.UK));
+                .thenReturn(new EmailTenantContext("Ink Studio", null, "Europe/Kyiv", SupportedLocale.UK));
 
         service.sendConfirmation(appointment);
 
@@ -84,7 +84,7 @@ class AppointmentEmailComposerTest {
     void sendStaffNewAppointment_usesNewAppointmentKey() {
         Appointment appointment = buildAppointment("anna@test.com");
         when(tenantContextLoader.loadContext(TENANT))
-                .thenReturn(new EmailTenantContext("Ink Studio", "Europe/Kyiv", SupportedLocale.UK));
+                .thenReturn(new EmailTenantContext("Ink Studio", null, "Europe/Kyiv", SupportedLocale.UK));
 
         service.sendStaffNewAppointment(appointment);
 

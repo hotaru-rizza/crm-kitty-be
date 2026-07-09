@@ -54,7 +54,7 @@ public artist API.
 
 | Что | Состояние | Что докрутить | Письмо |
 |-----|-----------|---------------|--------|
-| Приглашение сотрудника | 🟡 invite-токен, `/invite/:token`, accept-invite | сейчас админ копирует ссылку руками → слать email | TEAM_INVITE |
+| Приглашение сотрудника | ✅ invite-токен, `/invite/:token`, accept-invite, `TEAM_INVITE` email, resend/revoke/list | E2E проверка доставки в prod | TEAM_INVITE |
 | Деактивация/реактивация | 🟡 `StaffLifecycleService` | добавить вызов письма в методы | STAFF_DEACTIVATED / REACTIVATED |
 | Онбординг | 🟡 flow есть | письмо после верификации | WELCOME_ONBOARD |
 | Смена роли | 🟡 роли/права редактируются | добавить событие смены роли | ROLE_CHANGED |

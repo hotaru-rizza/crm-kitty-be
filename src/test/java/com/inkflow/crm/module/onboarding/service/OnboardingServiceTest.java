@@ -16,6 +16,7 @@ import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.infrastructure.supabase.SupabaseAdminService;
 import com.inkflow.crm.module.email.service.BuiltInTemplateSeeder;
+import com.inkflow.crm.module.finance.service.CategoryConfigService;
 import com.inkflow.crm.module.onboarding.dto.OnboardingRequest;
 import com.inkflow.crm.module.onboarding.dto.OnboardingResponse;
 import com.inkflow.crm.module.onboarding.dto.OnboardingServiceDraftDto;
@@ -62,6 +63,9 @@ class OnboardingServiceTest {
 
     @Mock
     private BuiltInTemplateSeeder builtInTemplateSeeder;
+
+    @Mock
+    private CategoryConfigService categoryConfigService;
 
     @Mock
     private SubscriptionService subscriptionService;
@@ -329,6 +333,7 @@ class OnboardingServiceTest {
         onboardingService.completeOnboarding(supabaseUserId, "alex@test.com", request);
 
         verify(builtInTemplateSeeder).seedDefaultsForTenant(any(UUID.class));
+        verify(categoryConfigService).ensureDefaults(any(UUID.class));
     }
 
     @Test

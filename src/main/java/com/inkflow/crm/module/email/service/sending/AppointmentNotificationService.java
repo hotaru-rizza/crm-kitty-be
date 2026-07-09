@@ -8,6 +8,7 @@ import com.inkflow.crm.module.email.dto.NotificationCommand;
 import com.inkflow.crm.module.email.enums.TemplateKey;
 import com.inkflow.crm.module.email.enums.TemplateVar;
 import com.inkflow.crm.module.email.service.EmailTenantContextLoader;
+import com.inkflow.crm.module.appointment.support.AppointmentLabels;
 import com.inkflow.crm.module.email.template.TemplateVars;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -139,7 +140,7 @@ public class AppointmentNotificationService {
         TemplateVars variables = new TemplateVars()
                 .put(TemplateVar.CLIENT_NAME, appointment.getClient().getFirstName())
                 .put(TemplateVar.MASTER_NAME, appointment.getArtist().getFullName())
-                .put(TemplateVar.SERVICE, appointment.getService().getTitle());
+                .put(TemplateVar.SERVICE, AppointmentLabels.serviceTitle(appointment));
 
         putSchedule(variables, appointment, context);
         return variables.toMap();
@@ -158,7 +159,7 @@ public class AppointmentNotificationService {
         return new TemplateVars()
                 .put(TemplateVar.CLIENT_NAME, appointment.getClient().getFirstName())
                 .put(TemplateVar.MASTER_NAME, appointment.getArtist().getFullName())
-                .put(TemplateVar.SERVICE, appointment.getService().getTitle())
+                .put(TemplateVar.SERVICE, AppointmentLabels.serviceTitle(appointment))
                 .toMap();
     }
 
@@ -166,7 +167,7 @@ public class AppointmentNotificationService {
         TemplateVars variables = new TemplateVars()
                 .put(TemplateVar.MASTER_NAME, appointment.getArtist().getFirstName())
                 .put(TemplateVar.CLIENT_NAME, appointment.getClient().getFullName())
-                .put(TemplateVar.SERVICE, appointment.getService().getTitle());
+                .put(TemplateVar.SERVICE, AppointmentLabels.serviceTitle(appointment));
 
         putSchedule(variables, appointment, context);
         return variables.toMap();

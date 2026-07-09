@@ -9,6 +9,7 @@ import com.inkflow.crm.module.email.template.BuiltInTemplateCatalog;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -22,7 +23,7 @@ public class BuiltInTemplateSeeder {
     private final EmailTemplateRepository emailTemplateRepository;
     private final TenantRepository tenantRepository;
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void seedDefaultsForTenant(UUID tenantId) {
         for (BuiltInTemplateKey builtinKey : BuiltInTemplateCatalog.allKeys()) {
             seedBuiltinIfMissing(tenantId, builtinKey);
@@ -36,7 +37,7 @@ public class BuiltInTemplateSeeder {
     }
 
     private void seedBuiltinIfMissing(UUID tenantId, BuiltInTemplateKey builtinKey) {
-        if (emailTemplateRepository.existsByBuiltinKey( builtinKey.name())) {
+        if (emailTemplateRepository.existsByTenantIdAndBuiltinKey(tenantId, builtinKey.name())) {
             return;
         }
 

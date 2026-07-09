@@ -141,13 +141,14 @@ public class TestSecurityConfig {
                 UUID userId = UUID.fromString(userIdHeader);
                 UUID tenantId = UUID.fromString(tenantIdHeader);
                 UserRole role = parseRole(request.getHeader(TestSecurityHeaders.CRM_ROLE));
+                List<UUID> locationIds = parseLocationIds(request.getHeader(TestSecurityHeaders.CRM_LOCATION_IDS));
 
                 UserPrincipal principal = UserPrincipal.builder()
                         .id(userId)
                         .tenantId(tenantId)
                         .role(role)
                         .email("test@example.com")
-                        .locationIds(Collections.emptyList())
+                        .locationIds(locationIds)
                         .build();
 
                 UsernamePasswordAuthenticationToken auth =
@@ -173,6 +174,17 @@ public class TestSecurityConfig {
                 return UserRole.OWNER;
             }
             return UserRole.valueOf(roleHeader);
+        }
+
+        private List<UUID> parseLocationIds(String header) {
+            if (!StringUtils.hasText(header)) {
+                return Collections.emptyList();
+            }
+            return java.util.Arrays.stream(header.split(","))
+                    .map(String::trim)
+                    .filter(StringUtils::hasText)
+                    .map(UUID::fromString)
+                    .toList();
         }
     }
 

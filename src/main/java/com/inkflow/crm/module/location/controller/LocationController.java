@@ -62,7 +62,6 @@ public class LocationController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission(Permission.LOCATIONS_EDIT)
     public ResponseEntity<ApiResponse<Void>> deleteLocation(@PathVariable UUID id) {
         locationService.deleteLocation(id);
         log.info("Location deleted via API: locationId={}", id);
@@ -79,5 +78,13 @@ public class LocationController {
         log.info("Location staff assigned via API: locationId={} count={}", id, request.getStaffIds().size());
 
         return ResponseEntity.ok(ApiResponse.empty());
+    }
+
+    @PatchMapping("/{id}/default")
+    @RequirePermission(Permission.LOCATIONS_EDIT)
+    public ResponseEntity<ApiResponse<LocationDto>> setDefaultLocation(@PathVariable UUID id) {
+        LocationDto location = locationService.setDefaultLocation(id);
+        log.info("Default location set via API: locationId={}", id);
+        return ResponseEntity.ok(ApiResponse.success(location));
     }
 }

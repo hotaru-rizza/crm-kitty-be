@@ -24,6 +24,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -61,8 +62,8 @@ class ClientAnalyticsQueryServiceTest {
         Appointment fresh = appointment(newClientId);
         List<Appointment> inRange = List.of(returning, fresh);
 
-        when(appointmentRepository.findByDateRange(from, to)).thenReturn(inRange);
-        when(appointmentRepository.findByDateRange(eq(Instant.EPOCH), eq(from)))
+        when(appointmentRepository.findByDateRange(eq(from), eq(to), isNull())).thenReturn(inRange);
+        when(appointmentRepository.findByDateRange(eq(Instant.EPOCH), eq(from), isNull()))
                 .thenReturn(List.of(appointment(returningClientId)));
         when(metrics.hasClient(any())).thenReturn(true);
         when(metrics.calculateRepeatRate(1, 2)).thenReturn(50.0);
@@ -85,8 +86,8 @@ class ClientAnalyticsQueryServiceTest {
         Instant from = Instant.parse("2026-06-01T00:00:00Z");
         Instant to = Instant.parse("2026-06-30T23:59:59Z");
 
-        when(appointmentRepository.findByDateRange(from, to)).thenReturn(List.of());
-        when(appointmentRepository.findByDateRange(eq(Instant.EPOCH), eq(from)))
+        when(appointmentRepository.findByDateRange(eq(from), eq(to), isNull())).thenReturn(List.of());
+        when(appointmentRepository.findByDateRange(eq(Instant.EPOCH), eq(from), isNull()))
                 .thenReturn(List.of());
         when(metrics.calculateRepeatRate(0, 0)).thenReturn(0.0);
         when(timeSeriesBuilder.buildClientSeries(List.of(), Set.of(), from, to, "month")).thenReturn(List.of());
@@ -111,8 +112,8 @@ class ClientAnalyticsQueryServiceTest {
         Appointment withClient = appointment(UUID.randomUUID());
         List<Appointment> inRange = List.of(withoutClient, withClient);
 
-        when(appointmentRepository.findByDateRange(from, to)).thenReturn(inRange);
-        when(appointmentRepository.findByDateRange(eq(Instant.EPOCH), eq(from)))
+        when(appointmentRepository.findByDateRange(eq(from), eq(to), isNull())).thenReturn(inRange);
+        when(appointmentRepository.findByDateRange(eq(Instant.EPOCH), eq(from), isNull()))
                 .thenReturn(List.of());
         when(metrics.hasClient(withoutClient)).thenReturn(false);
         when(metrics.hasClient(withClient)).thenReturn(true);
@@ -137,8 +138,8 @@ class ClientAnalyticsQueryServiceTest {
 
         List<Appointment> inRange = List.of(appointment(clientId), appointment(clientId));
 
-        when(appointmentRepository.findByDateRange(from, to)).thenReturn(inRange);
-        when(appointmentRepository.findByDateRange(eq(Instant.EPOCH), eq(from)))
+        when(appointmentRepository.findByDateRange(eq(from), eq(to), isNull())).thenReturn(inRange);
+        when(appointmentRepository.findByDateRange(eq(Instant.EPOCH), eq(from), isNull()))
                 .thenReturn(List.of());
         when(metrics.hasClient(org.mockito.ArgumentMatchers.any())).thenReturn(true);
         when(metrics.calculateRepeatRate(0, 1)).thenReturn(0.0);
@@ -162,8 +163,8 @@ class ClientAnalyticsQueryServiceTest {
         UUID clientB = UUID.randomUUID();
         List<Appointment> inRange = List.of(appointment(clientA), appointment(clientB));
 
-        when(appointmentRepository.findByDateRange(from, to)).thenReturn(inRange);
-        when(appointmentRepository.findByDateRange(eq(Instant.EPOCH), eq(from)))
+        when(appointmentRepository.findByDateRange(eq(from), eq(to), isNull())).thenReturn(inRange);
+        when(appointmentRepository.findByDateRange(eq(Instant.EPOCH), eq(from), isNull()))
                 .thenReturn(List.of());
         when(metrics.hasClient(any())).thenReturn(true);
         when(metrics.calculateRepeatRate(0, 2)).thenReturn(0.0);

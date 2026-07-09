@@ -8,5 +8,6 @@ public record EmailLayoutContext(
         String bodyHtml,
         TemplateCategory category,
         String studioName,
+        String studioLogoUrl,
         String actionUrl,
         String actionLabel) {}

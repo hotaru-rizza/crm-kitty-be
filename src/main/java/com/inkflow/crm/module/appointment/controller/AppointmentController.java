@@ -56,7 +56,8 @@ public class AppointmentController {
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getClientHistory(
             @PathVariable UUID clientId,
             @ModelAttribute PageRequest pageRequest) {
-        return ResponseEntity.ok(ApiResponse.success(appointmentService.getClientHistory(clientId, pageRequest)));
+        PageResult<AppointmentDto> result = appointmentService.getClientHistory(clientId, pageRequest);
+        return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));
     }
 
     @GetMapping("/{id}")

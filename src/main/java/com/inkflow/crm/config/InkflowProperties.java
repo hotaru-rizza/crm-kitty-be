@@ -21,6 +21,8 @@ public class InkflowProperties {
     private String defaultStartPage = "/calendar";
     private String defaultAccentTheme = "orange";
     private String defaultColorScheme = "dark";
+    private String frontendUrl = "http://localhost:5173";
+    private Invite invite = new Invite();
     private Cors cors = new Cors();
     private Openapi openapi = new Openapi();
     private Email email = new Email();
@@ -71,6 +73,14 @@ public class InkflowProperties {
         public long backoffMsForAttempt(int attempt) {
             return baseBackoffMs * (1L << Math.min(attempt - 1, 10));
         }
+    }
+
+    @Getter
+    @Setter
+    public static class Invite {
+        private int ttlDays = 7;
+        private boolean cleanupEnabled = true;
+        private int cleanupRetentionDaysAfterExpiry = 30;
     }
 
     @Getter

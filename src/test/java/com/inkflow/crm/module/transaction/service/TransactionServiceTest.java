@@ -201,15 +201,15 @@ class TransactionServiceTest {
         Instant from = Instant.parse("2025-01-01T00:00:00Z");
         Instant to = Instant.parse("2025-01-31T23:59:59Z");
 
-        when(transactionRepository.sumByTypeAndDateRange(TransactionType.INCOME, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.INCOME, from, to, null))
                 .thenReturn(BigDecimal.valueOf(5000));
-        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to, null))
                 .thenReturn(BigDecimal.valueOf(1200));
-        when(transactionRepository.sumByCategoryAndDateRange(from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByPaymentMethodAndDateRange(from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByArtistAndDateRange(from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.countByTypeAndDateRange(TransactionType.INCOME, from, to)).thenReturn(5L);
+        when(transactionRepository.sumByCategoryAndDateRange(from, to, null)).thenReturn(Collections.emptyList());
+        when(transactionRepository.sumByPaymentMethodAndDateRange(from, to, null)).thenReturn(Collections.emptyList());
+        when(transactionRepository.sumByArtistAndDateRange(from, to, null)).thenReturn(Collections.emptyList());
+        when(transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to, null)).thenReturn(Collections.emptyList());
+        when(transactionRepository.countByTypeAndDateRange(TransactionType.INCOME, from, to, null)).thenReturn(5L);
 
         FinanceStatsDto stats = transactionService.getFinanceStats(from, to, null);
 
@@ -400,15 +400,15 @@ class TransactionServiceTest {
         Instant from = Instant.parse("2025-01-01T00:00:00Z");
         Instant to = Instant.parse("2025-01-31T23:59:59Z");
 
-        when(transactionRepository.sumByTypeAndDateRange(TransactionType.INCOME, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.INCOME, from, to, null))
                 .thenReturn(null);
-        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to, null))
                 .thenReturn(null);
-        when(transactionRepository.sumByCategoryAndDateRange(from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByPaymentMethodAndDateRange(from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByArtistAndDateRange(from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to)).thenReturn(Collections.emptyList());
-        when(transactionRepository.countByTypeAndDateRange(TransactionType.INCOME, from, to)).thenReturn(0L);
+        when(transactionRepository.sumByCategoryAndDateRange(from, to, null)).thenReturn(Collections.emptyList());
+        when(transactionRepository.sumByPaymentMethodAndDateRange(from, to, null)).thenReturn(Collections.emptyList());
+        when(transactionRepository.sumByArtistAndDateRange(from, to, null)).thenReturn(Collections.emptyList());
+        when(transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to, null)).thenReturn(Collections.emptyList());
+        when(transactionRepository.countByTypeAndDateRange(TransactionType.INCOME, from, to, null)).thenReturn(0L);
 
         FinanceStatsDto stats = transactionService.getFinanceStats(from, to, null);
 
@@ -427,21 +427,21 @@ class TransactionServiceTest {
         Instant to = Instant.parse("2025-01-31T23:59:59Z");
         UUID artistId = UUID.randomUUID();
 
-        when(transactionRepository.sumByTypeAndDateRange(TransactionType.INCOME, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.INCOME, from, to, null))
                 .thenReturn(BigDecimal.valueOf(3000));
-        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to))
+        when(transactionRepository.sumByTypeAndDateRange(TransactionType.EXPENSE, from, to, null))
                 .thenReturn(BigDecimal.valueOf(500));
-        when(transactionRepository.sumByCategoryAndDateRange(from, to))
+        when(transactionRepository.sumByCategoryAndDateRange(from, to, null))
                 .thenReturn(List.<Object[]>of(new Object[]{"service", BigDecimal.valueOf(2800)}));
-        when(transactionRepository.sumByPaymentMethodAndDateRange(from, to))
+        when(transactionRepository.sumByPaymentMethodAndDateRange(from, to, null))
                 .thenReturn(List.<Object[]>of(new Object[]{PaymentMethod.CARD, BigDecimal.valueOf(2000)}));
-        when(transactionRepository.sumByArtistAndDateRange(from, to))
+        when(transactionRepository.sumByArtistAndDateRange(from, to, null))
                 .thenReturn(List.<Object[]>of(new Object[]{
                         artistId, "Jane", "Doe", BigDecimal.valueOf(2800), 4L, "#aabbcc"
                 }));
-        when(transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to))
+        when(transactionRepository.sumIncomeByDayAndDateRange(tenantId, from, to, null))
                 .thenReturn(List.<Object[]>of(new Object[]{"2025-01-10", BigDecimal.valueOf(1500)}));
-        when(transactionRepository.countByTypeAndDateRange(TransactionType.INCOME, from, to)).thenReturn(4L);
+        when(transactionRepository.countByTypeAndDateRange(TransactionType.INCOME, from, to, null)).thenReturn(4L);
 
         FinanceStatsDto stats = transactionService.getFinanceStats(from, to, null);
 
@@ -468,21 +468,21 @@ class TransactionServiceTest {
         Instant to = Instant.parse("2025-01-31T23:59:59Z");
         List<UUID> staffFilter = List.of(staffId);
 
-        when(transactionRepository.sumByTypeAndDateRangeForStaffs(TransactionType.INCOME, from, to, staffFilter))
+        when(transactionRepository.sumByTypeAndDateRangeForStaffs(TransactionType.INCOME, from, to, staffFilter, null))
                 .thenReturn(BigDecimal.valueOf(1000));
-        when(transactionRepository.sumByTypeAndDateRangeForStaffs(TransactionType.EXPENSE, from, to, staffFilter))
+        when(transactionRepository.sumByTypeAndDateRangeForStaffs(TransactionType.EXPENSE, from, to, staffFilter, null))
                 .thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.sumByCategoryAndDateRangeForStaffs(from, to, staffFilter))
+        when(transactionRepository.sumByCategoryAndDateRangeForStaffs(from, to, staffFilter, null))
                 .thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByPaymentMethodAndDateRangeForStaffs(from, to, staffFilter))
+        when(transactionRepository.sumByPaymentMethodAndDateRangeForStaffs(from, to, staffFilter, null))
                 .thenReturn(Collections.emptyList());
-        when(transactionRepository.sumByArtistAndDateRangeForStaffs(from, to, staffFilter))
+        when(transactionRepository.sumByArtistAndDateRangeForStaffs(from, to, staffFilter, null))
                 .thenReturn(List.<Object[]>of(new Object[]{
                         staffId, "Alex", "Smith", BigDecimal.valueOf(1000), 2L, "#112233"
                 }));
-        when(transactionRepository.sumIncomeByDayAndDateRangeForStaffs(tenantId, staffFilter, from, to))
+        when(transactionRepository.sumIncomeByDayAndDateRangeForStaffs(tenantId, staffFilter, from, to, null))
                 .thenReturn(List.<Object[]>of(new Object[]{"2025-01-05", BigDecimal.valueOf(600)}));
-        when(transactionRepository.countByTypeAndDateRangeForStaffs(TransactionType.INCOME, from, to, staffFilter)).thenReturn(2L);
+        when(transactionRepository.countByTypeAndDateRangeForStaffs(TransactionType.INCOME, from, to, staffFilter, null)).thenReturn(2L);
 
         FinanceStatsDto stats = transactionService.getFinanceStats(from, to, staffFilter);
 
@@ -490,10 +490,10 @@ class TransactionServiceTest {
         assertEquals(new BigDecimal("500.00"), stats.getAvgCheck());
         assertEquals(staffId.toString(), stats.getByArtist().getFirst().getArtistId());
         assertEquals(BigDecimal.valueOf(600), stats.getByDate().get("2025-01-05"));
-        verify(transactionRepository).sumByArtistAndDateRangeForStaffs(from, to, staffFilter);
-        verify(transactionRepository, never()).sumByArtistAndDateRange(from, to);
-        verify(transactionRepository).sumIncomeByDayAndDateRangeForStaffs(tenantId, staffFilter, from, to);
-        verify(transactionRepository, never()).sumIncomeByDayAndDateRange(tenantId, from, to);
+        verify(transactionRepository).sumByArtistAndDateRangeForStaffs(from, to, staffFilter, null);
+        verify(transactionRepository, never()).sumByArtistAndDateRange(from, to, null);
+        verify(transactionRepository).sumIncomeByDayAndDateRangeForStaffs(tenantId, staffFilter, from, to, null);
+        verify(transactionRepository, never()).sumIncomeByDayAndDateRange(tenantId, from, to, null);
     }
 
     @Test

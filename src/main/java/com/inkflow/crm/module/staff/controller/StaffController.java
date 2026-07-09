@@ -111,11 +111,26 @@ public class StaffController {
 
     @PostMapping("/invite")
     @RequirePermission(Permission.STAFF_INVITE)
-    public ResponseEntity<ApiResponse<Map<String, String>>> inviteStaff(@Valid @RequestBody InviteStaffRequest request) {
-        String token = staffInviteService.inviteStaff(request);
-        log.info("Staff invite sent via API: email={}", request.getEmail());
+    public ResponseEntity<ApiResponse<InviteStaffResultDto>> inviteStaff(@Valid @RequestBody InviteStaffRequest request) {
+        InviteStaffResultDto result = staffInviteService.inviteStaff(request);
+        log.info("Staff invite {} via API: email={}", result.isResent() ? "resent" : "created", request.getEmail());
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(Map.of("token", token)));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(result));
+    }
+
+    @GetMapping("/invites")
+    @RequirePermission(Permission.STAFF_INVITE)
+    public ResponseEntity<ApiResponse<List<PendingStaffInviteDto>>> listPendingInvites() {
+        return ResponseEntity.ok(ApiResponse.success(staffInviteService.listPendingInvites()));
+    }
+
+    @DeleteMapping("/invites/{id}")
+    @RequirePermission(Permission.STAFF_INVITE)
+    public ResponseEntity<ApiResponse<Void>> revokeInvite(@PathVariable UUID id) {
+        staffInviteService.revokePendingInvite(id);
+        log.info("Staff invite revoked via API: inviteId={}", id);
+
+        return ResponseEntity.ok(ApiResponse.empty());
     }
 
     @PostMapping("/accept-invite")

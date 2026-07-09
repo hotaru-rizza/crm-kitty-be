@@ -31,6 +31,7 @@ public class PaymentDto {
     private Boolean isRefunded;
     private BigDecimal refundedAmount;
     private BigDecimal refundableAmount;
+    private Boolean canVoid;
     private UUID originalTransactionId;
     private String refundReason;
 

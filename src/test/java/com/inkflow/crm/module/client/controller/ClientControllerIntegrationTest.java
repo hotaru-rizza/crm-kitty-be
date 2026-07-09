@@ -2,6 +2,12 @@ package com.inkflow.crm.module.client.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.domain.entity.Client;
+import com.inkflow.crm.domain.entity.Appointment;
+import com.inkflow.crm.domain.enums.AccountStatus;
+import com.inkflow.crm.domain.enums.AppointmentStatus;
+import com.inkflow.crm.domain.enums.StaffStatus;
+import com.inkflow.crm.domain.enums.UserRole;
+import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
@@ -10,7 +16,11 @@ import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.module.client.dto.CreateClientRequest;
 import com.inkflow.crm.module.client.dto.UpdateClientRequest;
+import com.inkflow.crm.module.settings.service.RolePermissionService;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
@@ -59,6 +69,12 @@ class ClientControllerIntegrationTest {
 
     @Autowired
     private LocationRepository locationRepository;
+
+    @Autowired
+    private AppointmentRepository appointmentRepository;
+
+    @Autowired
+    private RolePermissionService rolePermissionService;
 
     @AfterEach
     void tearDown() {
@@ -224,6 +240,74 @@ class ClientControllerIntegrationTest {
                         .with(crmUser(artist)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void getClient_artistCanViewClientTheyWorkedWith() throws Exception {
+        TenantBundle bundle = seedTenant();
+        ensureDefaultPermissions(bundle);
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        linkArtistToClient(bundle, artist);
+
+        mockMvc.perform(get("/clients/{id}", bundle.client().getId()).with(crmUser(artist)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(bundle.client().getId().toString()));
+    }
+
+    @Test
+    void getClient_artistCannotViewClientNeverWorkedWith() throws Exception {
+        TenantBundle bundle = seedTenant();
+        ensureDefaultPermissions(bundle);
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        mockMvc.perform(get("/clients/{id}", bundle.client().getId()).with(crmUser(artist)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void getClient_adminCanViewAnyClient() throws Exception {
+        TenantBundle bundle = seedTenant();
+        ensureDefaultPermissions(bundle);
+        Staff admin = staffRepository.save(Staff.builder()
+                .tenantId(bundle.tenant().getId())
+                .firstName("Admin")
+                .lastName("User")
+                .email("admin-" + UUID.randomUUID() + "@test.com")
+                .role(UserRole.ADMIN)
+                .calendarColor("#6366f1")
+                .status(StaffStatus.WORKING)
+                .accountStatus(AccountStatus.ACTIVE)
+                .build());
+
+        mockMvc.perform(get("/clients/{id}", bundle.client().getId()).with(crmUser(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(bundle.client().getId().toString()));
+    }
+
+    private void linkArtistToClient(TenantBundle bundle, Staff artist) {
+        Instant start = Instant.now().plus(5, ChronoUnit.DAYS);
+        appointmentRepository.save(Appointment.builder()
+                .tenantId(bundle.tenant().getId())
+                .client(bundle.client())
+                .artist(artist)
+                .service(bundle.service())
+                .location(bundle.location())
+                .startTime(start)
+                .endTime(start.plus(1, ChronoUnit.HOURS))
+                .status(AppointmentStatus.SCHEDULED)
+                .price(BigDecimal.valueOf(1000))
+                .prepayment(BigDecimal.ZERO)
+                .discount(BigDecimal.ZERO)
+                .finalPrice(BigDecimal.valueOf(1000))
+                .build());
+    }
+
+    private void ensureDefaultPermissions(TenantBundle bundle) {
+        SecurityTestSupport.authenticate(bundle.owner());
+        rolePermissionService.getGrantedPermissions(bundle.tenant().getId(), UserRole.ARTIST);
+        rolePermissionService.getGrantedPermissions(bundle.tenant().getId(), UserRole.ADMIN);
+        SecurityTestSupport.clearAuthentication();
     }
 
     private TenantBundle seedTenant() {

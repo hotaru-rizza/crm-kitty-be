@@ -8,6 +8,7 @@ import com.inkflow.crm.module.payment.dto.PaymentDto;
 import com.inkflow.crm.module.payment.dto.ProcessPaymentRequest;
 import com.inkflow.crm.module.payment.dto.ProcessRefundRequest;
 import com.inkflow.crm.module.payment.support.AppointmentPaymentSummaryCalculator;
+import com.inkflow.crm.module.appointment.support.AppointmentAccessGuard;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class PaymentService {
     private final RefundProcessingService refundProcessingService;
     private final AppointmentPaymentSummaryCalculator summaryCalculator;
     private final AppointmentRepository appointmentRepository;
+    private final AppointmentAccessGuard appointmentAccessGuard;
 
     @Transactional
     public PaymentDto processPayment(ProcessPaymentRequest request) {
@@ -35,15 +37,22 @@ public class PaymentService {
         return refundProcessingService.processRefund(request);
     }
 
+    @Transactional
+    public void voidPayment(UUID transactionId) {
+        paymentProcessingService.voidPayment(transactionId);
+    }
+
     @Transactional(readOnly = true)
     public AppointmentPaymentSummaryDto getAppointmentPaymentSummary(UUID appointmentId) {
         Appointment appointment = requireAppointment(appointmentId);
+        appointmentAccessGuard.requireView(appointment);
         return summaryCalculator.calculate(appointment);
     }
 
     @Transactional(readOnly = true)
     public List<PaymentDto> getAppointmentPayments(UUID appointmentId) {
-        requireAppointment(appointmentId);
+        Appointment appointment = requireAppointment(appointmentId);
+        appointmentAccessGuard.requireView(appointment);
         return summaryCalculator.listPayments(appointmentId);
     }
 

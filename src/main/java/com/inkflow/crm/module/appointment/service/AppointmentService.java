@@ -21,7 +21,9 @@ import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.AppointmentSpecifications;
 import com.inkflow.crm.domain.repository.GalleryPhotoRepository;
+import com.inkflow.crm.domain.entity.Tenant;
 import com.inkflow.crm.domain.repository.LeaveRequestRepository;
+import com.inkflow.crm.domain.repository.TenantRepository;
 import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.enums.AuditAction;
 import com.inkflow.crm.domain.enums.AuditEntityType;
@@ -29,8 +31,12 @@ import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.appointment.dto.*;
 import com.inkflow.crm.module.appointment.mapper.AppointmentMapper;
+import com.inkflow.crm.module.appointment.support.AppointmentAccessGuard;
+import com.inkflow.crm.module.client.service.ClientStatsService;
+import com.inkflow.crm.module.payment.service.PaymentProcessingService;
 import com.inkflow.crm.module.project.service.ProjectProgressSyncService;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
+import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,6 +59,7 @@ import java.util.UUID;
 public class AppointmentService {
 
     private final InkflowProperties inkflowProperties;
+    private final TenantRepository tenantRepository;
     private final AppointmentRepository appointmentRepository;
     private final GalleryPhotoRepository galleryPhotoRepository;
     private final LeaveRequestRepository leaveRequestRepository;
@@ -62,8 +70,11 @@ public class AppointmentService {
     private final ProjectProgressSyncService projectProgressSyncService;
     private final AppointmentItemService appointmentItemService;
     private final AppointmentPricingService appointmentPricingService;
+    private final PaymentProcessingService paymentProcessingService;
     private final AuditRecorder auditRecorder;
     private final AuditLabelFormatter auditLabelFormatter;
+    private final ClientStatsService clientStatsService;
+    private final AppointmentAccessGuard appointmentAccessGuard;
 
     @Transactional(readOnly = true)
     public PageResult<AppointmentDto> getAllAppointments(PageRequest pageRequest, AppointmentFilterRequest filter) {
@@ -73,29 +84,33 @@ public class AppointmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<AppointmentDto> getClientHistory(UUID clientId, PageRequest pageRequest) {
+    public PageResult<AppointmentDto> getClientHistory(UUID clientId, PageRequest pageRequest) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Page<Appointment> page = appointmentRepository
-                .findByClientIdAndDeletedAtIsNullOrderByStartTimeDesc( clientId, pageRequest.toPageable());
-        return page.getContent().stream().map(appointmentMapper::toDto).toList();
+                .findByClientIdAndDeletedAtIsNullOrderByStartTimeDesc(clientId, pageRequest.toPageable());
+        List<AppointmentDto> data = page.getContent().stream().map(appointmentMapper::toDto).toList();
+        return new PageResult<>(data, PaginationDto.from(page));
     }
 
     @Transactional(readOnly = true)
     public AppointmentDetailDto getAppointmentById(UUID id) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        return appointmentMapper.toDetailDto(entityResolver.requireAppointment(tenantId, id));
+        Appointment appointment = entityResolver.requireAppointment(tenantId, id);
+        appointmentAccessGuard.requireView(appointment);
+        return appointmentMapper.toDetailDto(appointment);
     }
 
     @Transactional(readOnly = true)
     public List<AppointmentDto> getCalendar(CalendarQueryRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         List<UUID> artistIds = resolveArtistIds(tenantId, request.getArtistIds());
+        UUID locationId = LocationScope.resolveFilter(request.getLocationId()).orElse(null);
 
         Specification<Appointment> spec = Specification.where(AppointmentSpecifications.notDeleted())
                 .and(AppointmentSpecifications.startTimeAfter(request.getFrom()))
                 .and(AppointmentSpecifications.startTimeBefore(request.getTo()))
                 .and(AppointmentSpecifications.withArtists(artistIds))
-                .and(AppointmentSpecifications.withLocation(request.getLocationId()))
+                .and(AppointmentSpecifications.withLocation(locationId))
                 .and(AppointmentSpecifications.withService(request.getServiceId()))
                 .and(AppointmentSpecifications.withStatuses(request.getStatuses()));
 
@@ -119,10 +134,11 @@ public class AppointmentService {
             throw new BusinessRuleException("Client ID is required");
         }
 
+        appointmentAccessGuard.requireAssignableArtist(request.getArtistId());
+
         Client client = entityResolver.requireClient(tenantId, request.getClientId());
         Staff artist = entityResolver.requireActiveStaff(tenantId, request.getArtistId());
-        UUID primaryServiceId = resolvePrimaryServiceId(request);
-        Service service = entityResolver.requireService(tenantId, primaryServiceId);
+        Service service = resolvePrimaryService(tenantId, request);
         Location location = entityResolver.requireLocation(tenantId, request.getLocationId());
 
         validateTimeSlot(artist.getId(), request.getStartTime(), request.getEndTime(), null);
@@ -137,6 +153,7 @@ public class AppointmentService {
         appointment.getItems().addAll(items);
         appointmentPricingService.recompute(appointment, shouldAdjustEndTimeOnCreate(request));
         appointment = appointmentRepository.save(appointment);
+        paymentProcessingService.recordInitialPrepayment(appointment);
 
         log.info("Appointment created: tenantId={} appointmentId={}", tenantId, appointment.getId());
         appointmentSideEffectService.afterCreate(appointment);
@@ -156,6 +173,8 @@ public class AppointmentService {
         if (request.getProjectId() != null) {
             throw BusinessRuleException.reservationRequiresClientOrNone();
         }
+
+        appointmentAccessGuard.requireAssignableArtist(request.getArtistId());
 
         Staff artist = entityResolver.requireActiveStaff(tenantId, request.getArtistId());
         Location location = entityResolver.requireLocation(tenantId, request.getLocationId());
@@ -178,9 +197,11 @@ public class AppointmentService {
     public AppointmentDto updateAppointment(UUID id, UpdateAppointmentRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = entityResolver.requireAppointment(tenantId, id);
+        appointmentAccessGuard.requireEdit(appointment);
         UUID previousProjectId = appointment.getProject() != null ? appointment.getProject().getId() : null;
         UUID previousArtistId = appointment.getArtist().getId();
         Instant previousStartTime = appointment.getStartTime();
+        Instant previousEndTime = appointment.getEndTime();
 
         applyRelationUpdates(tenantId, appointment, request);
 
@@ -190,7 +211,8 @@ public class AppointmentService {
         boolean startTimeChanged = request.getStartTime() != null
                 && !request.getStartTime().equals(appointment.getStartTime());
 
-        validateScheduleUpdateIfNeeded(tenantId, appointment, request, previousArtistId, previousStartTime, id);
+        validateScheduleUpdateIfNeeded(
+                tenantId, appointment, request, previousArtistId, previousStartTime, previousEndTime, id);
         applyScheduleUpdate(appointment, request);
         applyPricingUpdate(appointment, request);
         applyStatusUpdate(appointment, request);
@@ -200,11 +222,17 @@ public class AppointmentService {
             boolean adjustEndTime = Boolean.TRUE.equals(request.getAdjustEndTimeFromItems())
                     || request.getEndTime() == null;
             appointmentPricingService.recompute(appointment, adjustEndTime);
+            validateTimeSlotAfterItemsRecompute(appointment, previousEndTime, id);
         } else if (request.getDiscount() != null && appointment.getItems() != null && !appointment.getItems().isEmpty()) {
             appointmentPricingService.recompute(appointment, false);
         }
 
         appointment = appointmentRepository.save(appointment);
+
+        AppointmentStatus newStatus = appointment.getStatus();
+        if (previousStatus != newStatus) {
+            clientStatsService.applyStatusTransition(appointment, previousStatus, newStatus);
+        }
 
         log.info("Appointment updated: tenantId={} appointmentId={}", tenantId, id);
         appointmentSideEffectService.afterUpdate(
@@ -219,6 +247,7 @@ public class AppointmentService {
     public void deleteAppointment(UUID id) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = entityResolver.requireAppointment(tenantId, id);
+        appointmentAccessGuard.requireCancel(appointment);
         UUID projectId = appointment.getProject() != null ? appointment.getProject().getId() : null;
 
         appointmentSideEffectService.afterDelete(appointment, id);
@@ -236,6 +265,7 @@ public class AppointmentService {
     public AppointmentDetailDto.PhotoDto addPhoto(UUID appointmentId, String url, String stage) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = entityResolver.requireAppointment(tenantId, appointmentId);
+        appointmentAccessGuard.requireEdit(appointment);
 
         GalleryPhoto photo = GalleryPhoto.builder()
                 .tenantId(tenantId)
@@ -262,6 +292,7 @@ public class AppointmentService {
     public void deletePhoto(UUID appointmentId, UUID photoId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Appointment appointment = entityResolver.requireAppointment(tenantId, appointmentId);
+        appointmentAccessGuard.requireEdit(appointment);
 
         GalleryPhoto photo = galleryPhotoRepository.findByIdAndAppointmentId(photoId, appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.APPOINTMENT_NOT_FOUND, "Photo not found: " + photoId));
@@ -283,9 +314,10 @@ public class AppointmentService {
         Instant from = filter.from() != null ? Instant.parse(filter.from()) : null;
         Instant to = filter.to() != null ? Instant.parse(filter.to()) : null;
         List<UUID> artistIds = resolveArtistIds(tenantId, filter.artistIds());
+        UUID locationId = LocationScope.resolveFilter(filter.locationId()).orElse(null);
 
         Specification<Appointment> spec = Specification.where(AppointmentSpecifications.notDeleted())
-                .and(AppointmentSpecifications.withLocation(filter.locationId()))
+                .and(AppointmentSpecifications.withLocation(locationId))
                 .and(AppointmentSpecifications.withArtists(artistIds))
                 .and(AppointmentSpecifications.withService(filter.serviceId()))
                 .and(filter.statuses() != null && !filter.statuses().isEmpty()
@@ -320,11 +352,38 @@ public class AppointmentService {
      * warning so that overtime / out-of-schedule bookings remain possible.
      */
     private void validateArtistAvailable(UUID tenantId, UUID artistId, Instant startTime) {
-        LocalDate date = startTime.atZone(inkflowProperties.defaultZoneId()).toLocalDate();
-        List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate( artistId, date);
+        LocalDate date = startTime.atZone(resolveTenantZoneId(tenantId)).toLocalDate();
+        List<LeaveRequest> activeLeaves = leaveRequestRepository.findActiveLeaveForDate(artistId, date);
         if (!activeLeaves.isEmpty()) {
             throw BusinessRuleException.artistOnLeave();
         }
+    }
+
+    private ZoneId resolveTenantZoneId(UUID tenantId) {
+        return tenantRepository.findById(tenantId)
+                .map(Tenant::getTimezone)
+                .map(ZoneId::of)
+                .orElseGet(inkflowProperties::defaultZoneId);
+    }
+
+    private void validateTimeSlotAfterItemsRecompute(
+            Appointment appointment,
+            Instant previousEndTime,
+            UUID appointmentId) {
+        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
+            return;
+        }
+
+        Instant currentEnd = appointment.getEndTime();
+        if (currentEnd == null || currentEnd.equals(previousEndTime)) {
+            return;
+        }
+
+        validateTimeSlot(
+                appointment.getArtist().getId(),
+                appointment.getStartTime(),
+                currentEnd,
+                appointmentId);
     }
 
     private Appointment buildAppointment(
@@ -368,6 +427,7 @@ public class AppointmentService {
 
     private void applyRelationUpdates(UUID tenantId, Appointment appointment, UpdateAppointmentRequest request) {
         if (request.getArtistId() != null) {
+            appointmentAccessGuard.requireAssignableArtist(request.getArtistId());
             appointment.setArtist(entityResolver.requireStaff(tenantId, request.getArtistId()));
         }
         if (request.getServiceId() != null) {
@@ -389,6 +449,7 @@ public class AppointmentService {
             UpdateAppointmentRequest request,
             UUID previousArtistId,
             Instant previousStartTime,
+            Instant previousEndTime,
             UUID appointmentId) {
         if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
             return;
@@ -399,7 +460,8 @@ public class AppointmentService {
         UUID artistId = appointment.getArtist().getId();
 
         boolean artistChanged = !artistId.equals(previousArtistId);
-        boolean timeChanged = request.getStartTime() != null && !request.getStartTime().equals(previousStartTime);
+        boolean timeChanged = (request.getStartTime() != null && !request.getStartTime().equals(previousStartTime))
+                || (request.getEndTime() != null && !request.getEndTime().equals(previousEndTime));
         if (!artistChanged && !timeChanged) {
             return;
         }
@@ -428,7 +490,7 @@ public class AppointmentService {
             appointment.setNotes(request.getNotes());
         }
         if (request.getSketchImage() != null) {
-            appointment.setSketchImage(request.getSketchImage());
+            appointment.setSketchImage(request.getSketchImage().isBlank() ? null : request.getSketchImage());
         }
         if (request.getPrice() != null && request.getItems() == null) {
             appointment.setPrice(request.getPrice());
@@ -491,17 +553,17 @@ public class AppointmentService {
         }
     }
 
-    private UUID resolvePrimaryServiceId(CreateAppointmentRequest request) {
+    private Service resolvePrimaryService(UUID tenantId, CreateAppointmentRequest request) {
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             return request.getItems().stream()
                     .filter(item -> item.getServiceId() != null)
                     .findFirst()
-                    .map(AppointmentItemRequest::getServiceId)
-                    .orElseThrow(() -> new BusinessRuleException("At least one service line item is required"));
+                    .map(item -> entityResolver.requireService(tenantId, item.getServiceId()))
+                    .orElse(null);
         }
         if (request.getServiceId() == null) {
             throw new BusinessRuleException("Service ID is required when items are not provided");
         }
-        return request.getServiceId();
+        return entityResolver.requireService(tenantId, request.getServiceId());
     }
 }

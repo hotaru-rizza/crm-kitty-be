@@ -1,6 +1,5 @@
 package com.inkflow.crm.security;
 
-import com.inkflow.crm.common.exception.AccessDeniedException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.sql.DataSource;
@@ -44,21 +42,6 @@ public class TenantContextFilter extends OncePerRequestFilter {
                 log.warn("Failed to set tenant context in DB session: {}", e.getMessage());
             }
 
-            String locationHeader = request.getHeader("X-Location-Id");
-            if (StringUtils.hasText(locationHeader)) {
-                try {
-                    UUID locationId = UUID.fromString(locationHeader);
-                    UserPrincipal user = SecurityUtils.getCurrentUser();
-
-                    if (user != null && !user.hasAccessToLocation(locationId)) {
-                        throw AccessDeniedException.locationAccessDenied();
-                    }
-
-                    TenantContext.setCurrentLocation(locationId);
-                } catch (IllegalArgumentException e) {
-                    log.warn("Invalid location ID in header: {}", locationHeader);
-                }
-            }
         }
 
         filterChain.doFilter(request, response);

@@ -46,9 +46,24 @@ public class GlobalExceptionHandler {
                 .map(this::mapFieldError)
                 .collect(Collectors.toList());
 
+        ex.getBindingResult().getGlobalErrors().stream()
+                .map(error -> ErrorResponse.FieldError.builder()
+                        .field(error.getObjectName())
+                        .message(error.getDefaultMessage())
+                        .build())
+                .forEach(fieldErrors::add);
+
+        if (!fieldErrors.isEmpty()) {
+            log.warn("Validation failed: {}", fieldErrors.stream()
+                    .map(error -> error.getField() + ": " + error.getMessage())
+                    .collect(Collectors.joining("; ")));
+        } else {
+            log.warn("Validation failed without field details");
+        }
+
         ErrorResponse errorResponse = ErrorResponse.of(
                 ErrorCode.VALIDATION_ERROR.getCode(),
-                "Validation failed",
+                fieldErrors.isEmpty() ? "Validation failed" : fieldErrors.getFirst().getMessage(),
                 fieldErrors
         );
 

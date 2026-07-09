@@ -16,6 +16,7 @@ class EmailLayoutTest {
                 EmailLayout.toHtml("Привіт, Олено!"),
                 TemplateCategory.CLIENT_OP,
                 "InkFlow Studio",
+                "https://studio.example.com/logo.png",
                 "https://app.inkat.studio/action",
                 "Переглянути запис"
         );
@@ -23,8 +24,9 @@ class EmailLayoutTest {
         String html = EmailLayout.wrap(context);
 
         assertThat(html).contains("#060608");
-        assertThat(html).contains("data:image/png;base64,");
-        assertThat(html).contains("INKAT");
+        assertThat(html).contains("https://studio.example.com/logo.png");
+        assertThat(html).contains("InkFlow Studio");
+        assertThat(html).contains("Powered by INKAT");
         assertThat(html).contains("Ваш запис підтверджено");
         assertThat(html).contains("Привіт, Олено!");
         assertThat(html).contains("https://app.inkat.studio/action");
@@ -41,6 +43,7 @@ class EmailLayoutTest {
                 "<p>Body</p>",
                 TemplateCategory.MARKETING,
                 "Studio",
+                null,
                 null,
                 null
         );

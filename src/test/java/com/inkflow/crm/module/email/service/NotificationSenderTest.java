@@ -52,7 +52,7 @@ class NotificationSenderTest {
                 TemplateKey.BOOKING_CONFIRMED,
                 Map.of("client_name", "Anna"),
                 ENTITY,
-                new EmailTenantContext("Ink Studio", "Europe/Kyiv", SupportedLocale.UK)
+                new EmailTenantContext("Ink Studio", null, "Europe/Kyiv", SupportedLocale.UK)
         );
     }
 
@@ -98,7 +98,7 @@ class NotificationSenderTest {
                 TemplateKey.BOOKING_CONFIRMED,
                 Map.of(),
                 null,
-                new EmailTenantContext("Studio", "Europe/Kyiv", SupportedLocale.UK)
+                new EmailTenantContext("Studio", null, "Europe/Kyiv", SupportedLocale.UK)
         );
 
         notificationSender.send(command);

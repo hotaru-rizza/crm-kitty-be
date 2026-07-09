@@ -23,7 +23,9 @@ import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.project.dto.*;
 import com.inkflow.crm.module.project.mapper.ProjectMapper;
+import com.inkflow.crm.module.project.support.ProjectAccessGuard;
 import com.inkflow.crm.module.settings.service.RolePermissionService;
+import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,17 +52,21 @@ public class ProjectService {
     private final ProjectMapper projectMapper;
     private final AuditRecorder auditRecorder;
     private final AuditLabelFormatter auditLabelFormatter;
+    private final ProjectAccessGuard projectAccessGuard;
 
     @Transactional(readOnly = true)
     public PageResult<ProjectDto> getAllProjects(PageRequest pageRequest, ProjectFilterRequest filter, UUID locationId) {
-        Page<Project> page = getProjectsPage(pageRequest, filter, locationId);
+        UUID effectiveLocationId = LocationScope.resolveFilter(locationId).orElse(null);
+        Page<Project> page = getProjectsPage(pageRequest, filter, effectiveLocationId);
         List<ProjectDto> data = page.getContent().stream().map(projectMapper::toListDto).toList();
         return new PageResult<>(data, PaginationDto.from(page));
     }
 
     @Transactional(readOnly = true)
     public ProjectDto getProjectById(UUID id) {
-        return mapToDto(requireProject(SecurityUtils.getCurrentTenantId(), id));
+        Project project = requireProject(SecurityUtils.getCurrentTenantId(), id);
+        projectAccessGuard.requireView(project);
+        return mapToDto(project);
     }
 
     @Transactional
@@ -107,6 +113,7 @@ public class ProjectService {
     public ProjectDto updateProject(UUID id, UpdateProjectRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Project project = requireProject(tenantId, id);
+        projectAccessGuard.requireEdit(project);
 
         applyUpdate(tenantId, project, request);
         project = projectRepository.save(project);
@@ -126,6 +133,7 @@ public class ProjectService {
     public void deleteProject(UUID id) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Project project = requireProject(tenantId, id);
+        projectAccessGuard.requireEdit(project);
 
         if (project.getStatus() != ProjectStatus.ARCHIVED) {
             throw BusinessRuleException.projectDeleteRequiresArchive();
@@ -147,6 +155,7 @@ public class ProjectService {
     public ProjectDto.PhotoDto addPhoto(UUID projectId, String url, String stage) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Project project = requireProject(tenantId, projectId);
+        projectAccessGuard.requireEdit(project);
 
         GalleryPhoto photo = GalleryPhoto.builder()
                 .tenantId(tenantId)
@@ -173,6 +182,7 @@ public class ProjectService {
     public void deletePhoto(UUID projectId, UUID photoId) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         Project project = requireProject(tenantId, projectId);
+        projectAccessGuard.requireEdit(project);
 
         GalleryPhoto photo = galleryPhotoRepository.findByIdAndProjectId(photoId, projectId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -247,6 +257,7 @@ public class ProjectService {
         if (request.getArtistId() != null) {
             UUID currentArtistId = project.getArtist() != null ? project.getArtist().getId() : null;
             if (!request.getArtistId().equals(currentArtistId)) {
+                projectAccessGuard.requireLeadReassignment(request.getArtistId());
                 var artist = staffRepository.findByIdAndDeletedAtIsNull(request.getArtistId())
                         .orElseThrow(() -> ResourceNotFoundException.staff(request.getArtistId().toString()));
                 project.setArtist(artist);

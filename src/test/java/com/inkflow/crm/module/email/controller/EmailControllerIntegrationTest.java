@@ -111,7 +111,8 @@ class EmailControllerIntegrationTest {
                 null,
                 "Campaign",
                 "Hello clients",
-                false
+                false,
+                null
         );
 
         mockMvc.perform(post("/emails/send")
@@ -135,7 +136,8 @@ class EmailControllerIntegrationTest {
                 null,
                 "Studio update",
                 "We moved to a new location",
-                false
+                false,
+                null
         );
 
         mockMvc.perform(post("/emails/send")
@@ -223,7 +225,8 @@ class EmailControllerIntegrationTest {
                 null,
                 "Subject",
                 "Body",
-                false
+                false,
+                null
         );
 
         mockMvc.perform(post("/emails/send")
@@ -249,7 +252,8 @@ class EmailControllerIntegrationTest {
                 null,
                 "Subject",
                 "Body",
-                false
+                false,
+                null
         );
 
         mockMvc.perform(post("/emails/send")
@@ -298,7 +302,8 @@ class EmailControllerIntegrationTest {
         EmailComposeRequest body = new EmailComposeRequest(
                 "Flash Day",
                 "<p>Hello {client_name} from {studio_name}</p>",
-                true);
+                true,
+                null);
 
         mockMvc.perform(post("/emails/preview")
                         .with(crmUser(bundle.owner()))

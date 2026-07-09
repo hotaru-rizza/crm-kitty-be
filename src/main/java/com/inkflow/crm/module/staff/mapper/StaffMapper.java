@@ -96,6 +96,7 @@ public interface StaffMapper {
                 .calendarColor(staff.getCalendarColor())
                 .role(staff.getRole().getValue())
                 .accountStatus(staff.getAccountStatus().getValue())
+                .deleted(staff.isDeleted())
                 .build();
     }
 

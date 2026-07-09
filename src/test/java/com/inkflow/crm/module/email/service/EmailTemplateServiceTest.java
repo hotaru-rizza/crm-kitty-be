@@ -3,6 +3,8 @@ package com.inkflow.crm.module.email.service;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.domain.entity.EmailTemplate;
 import com.inkflow.crm.domain.repository.EmailTemplateRepository;
+import com.inkflow.crm.module.audit.service.AuditRecorder;
+import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.email.dto.CreateEmailTemplateRequest;
 import com.inkflow.crm.module.email.dto.EmailTemplateResponseDto;
 import com.inkflow.crm.module.email.dto.UpdateEmailTemplateRequest;
@@ -31,10 +33,19 @@ class EmailTemplateServiceTest {
     private EmailTemplateRepository emailTemplateRepository;
 
     @Mock
+    private BuiltInTemplateSeeder builtInTemplateSeeder;
+
+    @Mock
     private TemplateEmailRenderer templateEmailRenderer;
 
     @Mock
     private EmailTenantContextLoader tenantContextLoader;
+
+    @Mock
+    private AuditRecorder auditRecorder;
+
+    @Mock
+    private AuditLabelFormatter auditLabelFormatter;
 
     @InjectMocks
     private EmailTemplateService service;
@@ -56,7 +67,7 @@ class EmailTemplateServiceTest {
                 .category(BuiltInTemplateKey.CONFIRMATION.getCategory())
                 .build();
 
-        when(emailTemplateRepository.findAllByOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc())
+        when(emailTemplateRepository.findAllByTenantIdOrderByCategoryAscTriggerTypeAscBuiltinKeyAsc(TENANT))
                 .thenReturn(List.of(template));
 
         List<EmailTemplateResponseDto> result = service.list(TENANT);

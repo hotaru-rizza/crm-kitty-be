@@ -22,7 +22,8 @@ public class TemplateEmailRenderer {
 
     private final InkflowProperties inkflowProperties;
 
-    public RenderedEmail render(EmailTemplate template, Map<String, String> variables, String studioName) {
+    public RenderedEmail render(EmailTemplate template, Map<String, String> variables,
+                                String studioName, String studioLogoUrl) {
         Map<String, String> resolvedVariables = enrichVariables(variables, studioName, template.getTriggerType());
 
         return renderContent(
@@ -31,11 +32,13 @@ public class TemplateEmailRenderer {
                 resolvedVariables,
                 template.getCategory(),
                 studioName,
+                studioLogoUrl,
                 resolvedVariables.get(TemplateVar.ACTION_URL.getPlaceholder())
         );
     }
 
-    public RenderedEmail renderDraft(TriggerType triggerType, String subject, String body, String studioName) {
+    public RenderedEmail renderDraft(TriggerType triggerType, String subject, String body,
+                                     String studioName, String studioLogoUrl) {
         Map<String, String> resolvedVariables = enrichVariables(
                 sampleVariables(triggerType, studioName),
                 studioName,
@@ -48,6 +51,7 @@ public class TemplateEmailRenderer {
                 resolvedVariables,
                 triggerType.getCategory(),
                 studioName,
+                studioLogoUrl,
                 resolvedVariables.get(TemplateVar.ACTION_URL.getPlaceholder())
         );
     }
@@ -58,6 +62,7 @@ public class TemplateEmailRenderer {
             Map<String, String> resolvedVariables,
             TemplateCategory category,
             String studioName,
+            String studioLogoUrl,
             String actionUrl) {
 
         String resolvedSubject = TemplateVarSubstitutor.substitute(subject, resolvedVariables);
@@ -70,6 +75,7 @@ public class TemplateEmailRenderer {
                 htmlBody,
                 category,
                 studioName,
+                studioLogoUrl,
                 actionUrl,
                 null
         );

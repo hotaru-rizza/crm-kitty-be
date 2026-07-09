@@ -12,6 +12,7 @@ public class TenantContext {
     private static final ThreadLocal<UserRole> currentRole = new ThreadLocal<>();
     private static final ThreadLocal<List<UUID>> currentLocationIds = new ThreadLocal<>();
     private static final ThreadLocal<UUID> currentLocation = new ThreadLocal<>();
+    private static final ThreadLocal<Boolean> entityScope = new ThreadLocal<>();
 
     public static UUID getCurrentTenant() {
         return currentTenant.get();
@@ -53,11 +54,20 @@ public class TenantContext {
         currentLocation.set(locationId);
     }
 
+    public static boolean isEntityScope() {
+        return Boolean.TRUE.equals(entityScope.get());
+    }
+
+    public static void setEntityScope(boolean value) {
+        entityScope.set(value);
+    }
+
     public static void clear() {
         currentTenant.remove();
         currentUser.remove();
         currentRole.remove();
         currentLocationIds.remove();
         currentLocation.remove();
+        entityScope.remove();
     }
 }

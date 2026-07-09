@@ -128,7 +128,20 @@ class GoogleCalendarControllerIntegrationTest {
     }
 
     @Test
-    void getStatus_withArtistAuth_returnsForbidden() throws Exception {
+    void getStatus_withArtistAuth_returnsOwnStatus() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        mockMvc.perform(get("/staff/{id}/google/status", artist.getId())
+                        .with(crmUser(artist)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.connected").value(false));
+    }
+
+    @Test
+    void getStatus_withArtistAuth_returnsForbiddenForOtherStaff() throws Exception {
         TenantBundle bundle = IntegrationTestData.seedTenant(
                 tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
         Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
@@ -140,7 +153,20 @@ class GoogleCalendarControllerIntegrationTest {
     }
 
     @Test
-    void getAuthUrl_withArtistAuth_returnsForbidden() throws Exception {
+    void getAuthUrl_withArtistAuth_returnsOwnAuthorizationUrl() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        mockMvc.perform(get("/staff/{id}/google/auth-url", artist.getId())
+                        .with(crmUser(artist)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.url").isNotEmpty());
+    }
+
+    @Test
+    void getAuthUrl_withArtistAuth_returnsForbiddenForOtherStaff() throws Exception {
         TenantBundle bundle = IntegrationTestData.seedTenant(
                 tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
         Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
@@ -152,7 +178,24 @@ class GoogleCalendarControllerIntegrationTest {
     }
 
     @Test
-    void disconnect_withArtistAuth_returnsForbidden() throws Exception {
+    void disconnect_withArtistAuth_disconnectsOwnCalendar() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        artist.setGoogleRefreshToken("refresh-token");
+        artist.setGoogleAccessToken("access-token");
+        artist.setGoogleCalendarId("primary");
+        artist.setGoogleCalendarEmail("artist@gmail.com");
+        staffRepository.save(artist);
+
+        mockMvc.perform(delete("/staff/{id}/google/disconnect", artist.getId())
+                        .with(crmUser(artist)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void disconnect_withArtistAuth_returnsForbiddenForOtherStaff() throws Exception {
         TenantBundle bundle = IntegrationTestData.seedTenant(
                 tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
         Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());

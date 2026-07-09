@@ -1,22 +1,33 @@
 package com.inkflow.crm.module.appointment.service;
 
+import com.inkflow.crm.common.dto.PageRequest;
+import com.inkflow.crm.common.exception.AccessDeniedException;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.entity.Appointment;
+import com.inkflow.crm.domain.entity.Location;
+import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
+import com.inkflow.crm.module.appointment.dto.AppointmentFilterRequest;
+import com.inkflow.crm.module.appointment.dto.CreateAppointmentRequest;
+import com.inkflow.crm.module.appointment.dto.UpdateAppointmentRequest;
+import com.inkflow.crm.module.payment.service.PaymentService;
+import com.inkflow.crm.module.settings.service.RolePermissionService;
+import com.inkflow.crm.domain.enums.UserRole;
+import com.inkflow.crm.domain.enums.PaymentType;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TenantRepository;
-import com.inkflow.crm.module.appointment.dto.CreateAppointmentRequest;
-import com.inkflow.crm.module.appointment.dto.UpdateAppointmentRequest;
+import com.inkflow.crm.domain.repository.TransactionRepository;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
 import com.inkflow.crm.support.IntegrationTestData.TenantBundle;
 import com.inkflow.crm.support.PersistenceTestSupport;
 import com.inkflow.crm.support.SecurityTestSupport;
+import com.inkflow.crm.security.TenantContext;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -26,8 +37,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -58,7 +72,16 @@ class AppointmentServiceIntegrationTest {
     private LocationRepository locationRepository;
 
     @Autowired
+    private TransactionRepository transactionRepository;
+
+    @Autowired
+    private PaymentService paymentService;
+
+    @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private RolePermissionService rolePermissionService;
 
     @AfterEach
     void tearDown() {
@@ -121,6 +144,36 @@ class AppointmentServiceIntegrationTest {
         assertEquals(tenant.owner().getId(), saved.getArtist().getId());
         assertEquals(BigDecimal.valueOf(1000), saved.getFinalPrice());
         assertEquals(start.truncatedTo(ChronoUnit.MILLIS), saved.getStartTime().truncatedTo(ChronoUnit.MILLIS));
+    }
+
+    @Test
+    void createAppointment_withPrepayment_createsDepositPaymentRecord() {
+        TenantBundle tenant = seedTenant();
+        SecurityTestSupport.authenticate(tenant.owner());
+
+        Instant start = Instant.now().plus(5, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        var created = appointmentService.createAppointment(CreateAppointmentRequest.builder()
+                .clientId(tenant.client().getId())
+                .artistId(tenant.owner().getId())
+                .serviceId(tenant.service().getId())
+                .locationId(tenant.location().getId())
+                .startTime(start)
+                .endTime(end)
+                .price(BigDecimal.valueOf(100))
+                .prepayment(BigDecimal.valueOf(90))
+                .build());
+
+        var transactions = transactionRepository.findByAppointmentIdAndDeletedAtIsNullOrderByDateDesc(created.getId());
+        assertEquals(1, transactions.size());
+        assertEquals(PaymentType.DEPOSIT, transactions.getFirst().getPaymentType());
+        assertEquals(0, transactions.getFirst().getAmount().compareTo(BigDecimal.valueOf(90)));
+
+        var summary = paymentService.getAppointmentPaymentSummary(created.getId());
+        assertEquals(1, summary.getPayments().size());
+        assertEquals(0, summary.getTotalPaid().compareTo(BigDecimal.valueOf(90)));
+        assertEquals(0, summary.getRemainingBalance().compareTo(BigDecimal.valueOf(10)));
     }
 
     @Test
@@ -198,6 +251,100 @@ class AppointmentServiceIntegrationTest {
         assertNotNull(persisted.getDeletedAt());
     }
 
+    @Test
+    void getAllAppointments_excludesOtherLocationWhenWorkspaceLocationSet() {
+        TenantBundle bundle = seedTenant();
+        Location locationB = locationRepository.save(Location.builder()
+                .tenantId(bundle.tenant().getId())
+                .name("Studio B")
+                .address("Lviv")
+                .color("#22c55e")
+                .isActive(true)
+                .build());
+
+        Instant base = Instant.now().plus(10, ChronoUnit.DAYS);
+        Appointment atA = appointmentRepository.save(Appointment.builder()
+                .tenantId(bundle.tenant().getId())
+                .client(bundle.client())
+                .artist(bundle.owner())
+                .service(bundle.service())
+                .location(bundle.location())
+                .startTime(base)
+                .endTime(base.plus(1, ChronoUnit.HOURS))
+                .status(AppointmentStatus.SCHEDULED)
+                .price(BigDecimal.valueOf(1000))
+                .prepayment(BigDecimal.ZERO)
+                .discount(BigDecimal.ZERO)
+                .finalPrice(BigDecimal.valueOf(1000))
+                .build());
+        Appointment atB = appointmentRepository.save(Appointment.builder()
+                .tenantId(bundle.tenant().getId())
+                .client(bundle.client())
+                .artist(bundle.owner())
+                .service(bundle.service())
+                .location(locationB)
+                .startTime(base.plus(1, ChronoUnit.DAYS))
+                .endTime(base.plus(1, ChronoUnit.DAYS).plus(1, ChronoUnit.HOURS))
+                .status(AppointmentStatus.SCHEDULED)
+                .price(BigDecimal.valueOf(1000))
+                .prepayment(BigDecimal.ZERO)
+                .discount(BigDecimal.ZERO)
+                .finalPrice(BigDecimal.valueOf(1000))
+                .build());
+
+        SecurityTestSupport.authenticate(bundle.owner());
+        TenantContext.setCurrentLocation(bundle.location().getId());
+
+        PageRequest pageRequest = new PageRequest();
+        pageRequest.setPage(0);
+        pageRequest.setSize(50);
+
+        var result = appointmentService.getAllAppointments(
+                pageRequest,
+                new AppointmentFilterRequest(null, null, null, null, null,
+                        base.minus(1, ChronoUnit.DAYS).toString(),
+                        base.plus(3, ChronoUnit.DAYS).toString())
+        );
+
+        List<UUID> ids = result.getData().stream().map(dto -> dto.getId()).toList();
+        assertTrue(ids.contains(atA.getId()));
+        assertFalse(ids.contains(atB.getId()));
+    }
+
+    @Test
+    void updateAppointment_rejectsArtistEditingAnotherArtistsAppointment() {
+        TenantBundle bundle = seedTenant();
+        Staff artistA = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        Staff artistB = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+
+        Instant start = Instant.now().plus(6, ChronoUnit.DAYS);
+        Appointment appointment = appointmentRepository.save(Appointment.builder()
+                .tenantId(bundle.tenant().getId())
+                .client(bundle.client())
+                .artist(artistB)
+                .service(bundle.service())
+                .location(bundle.location())
+                .startTime(start)
+                .endTime(start.plus(1, ChronoUnit.HOURS))
+                .status(AppointmentStatus.SCHEDULED)
+                .price(BigDecimal.valueOf(1000))
+                .prepayment(BigDecimal.ZERO)
+                .discount(BigDecimal.ZERO)
+                .finalPrice(BigDecimal.valueOf(1000))
+                .build());
+
+        SecurityTestSupport.authenticate(artistA);
+        ensureDefaultPermissions(bundle);
+        SecurityTestSupport.authenticate(artistA);
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> appointmentService.updateAppointment(appointment.getId(), UpdateAppointmentRequest.builder()
+                        .notes("Denied")
+                        .build())
+        );
+    }
+
     private TenantBundle seedTenant() {
         return IntegrationTestData.seedTenant(
                 tenantRepository,
@@ -206,5 +353,11 @@ class AppointmentServiceIntegrationTest {
                 serviceRepository,
                 locationRepository
         );
+    }
+
+    private void ensureDefaultPermissions(TenantBundle bundle) {
+        SecurityTestSupport.authenticate(bundle.owner());
+        rolePermissionService.getGrantedPermissions(bundle.tenant().getId(), UserRole.ARTIST);
+        SecurityTestSupport.clearAuthentication();
     }
 }

@@ -6,6 +6,7 @@ import com.inkflow.crm.module.email.dto.EmailTenantContext;
 import com.inkflow.crm.module.email.dto.NotificationDispatchContext;
 import com.inkflow.crm.module.email.enums.TemplateVar;
 import com.inkflow.crm.module.email.enums.TriggerType;
+import com.inkflow.crm.module.appointment.support.AppointmentLabels;
 import com.inkflow.crm.module.email.template.TemplateVars;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,8 @@ public class TriggerVariableBuilder {
                 client.getFullName(),
                 appointment.getId(),
                 variables,
-                tenantContext.studioName()
+                tenantContext.studioName(),
+                tenantContext.studioLogoUrl()
         );
     }
 
@@ -58,7 +60,8 @@ public class TriggerVariableBuilder {
                 client.getFullName(),
                 client.getId(),
                 variables,
-                tenantContext.studioName()
+                tenantContext.studioName(),
+                tenantContext.studioLogoUrl()
         );
     }
 
@@ -70,16 +73,24 @@ public class TriggerVariableBuilder {
         TemplateVars variables = new TemplateVars()
                 .put(TemplateVar.CLIENT_NAME, appointment.getClient().getFirstName())
                 .put(TemplateVar.MASTER_NAME, appointment.getArtist().getFullName())
-                .put(TemplateVar.SERVICE, appointment.getService().getTitle())
+                .put(TemplateVar.SERVICE, AppointmentLabels.serviceTitle(appointment))
                 .put(TemplateVar.DATE, formatDate(appointment.getStartTime(), tenantContext))
                 .put(TemplateVar.TIME, formatTime(appointment.getStartTime(), tenantContext.timezone()))
-                .put(TemplateVar.ADDRESS, tenantContext.studioName());
+                .put(TemplateVar.ADDRESS, resolveAddress(appointment));
 
         if (offsetMinutes != null) {
             variables.put(TemplateVar.REMINDER_WINDOW, formatOffsetWindow(offsetMinutes));
         }
 
         return variables.toMap();
+    }
+
+    private String resolveAddress(Appointment appointment) {
+        if (appointment.getLocation() == null) {
+            return "";
+        }
+        String address = appointment.getLocation().getAddress();
+        return address != null ? address : "";
     }
 
     private String formatOffsetWindow(int offsetMinutes) {

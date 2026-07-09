@@ -1,8 +1,11 @@
 package com.inkflow.crm.module.payment.mapper;
 
 import com.inkflow.crm.domain.entity.Transaction;
+import com.inkflow.crm.domain.enums.PaymentType;
 import com.inkflow.crm.module.payment.dto.PaymentDto;
 import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
 
 @Component
 public class PaymentMapper {
@@ -24,6 +27,7 @@ public class PaymentMapper {
                 .isRefunded(transaction.getIsRefunded())
                 .refundedAmount(transaction.getRefundedAmount())
                 .refundableAmount(transaction.getRefundableAmount())
+                .canVoid(resolveCanVoid(transaction))
                 .originalTransactionId(transaction.getOriginalTransactionId())
                 .refundReason(transaction.getRefundReason())
                 .processedById(transaction.getProcessedBy() != null ? transaction.getProcessedBy().getId() : null)
@@ -39,5 +43,20 @@ public class PaymentMapper {
         }
         var client = transaction.getAppointment().getClient();
         return client.getFirstName() + " " + client.getLastName();
+    }
+
+    private boolean resolveCanVoid(Transaction transaction) {
+        if (transaction.isRefund() || transaction.getPaymentType() == PaymentType.TIP) {
+            return false;
+        }
+        if (transaction.getPaymentType() != PaymentType.SERVICE_PAYMENT
+                && transaction.getPaymentType() != PaymentType.DEPOSIT) {
+            return false;
+        }
+        if (transaction.getRefundedAmount() != null
+                && transaction.getRefundedAmount().compareTo(BigDecimal.ZERO) > 0) {
+            return false;
+        }
+        return transaction.getAppointment() != null && transaction.canBeRefunded();
     }
 }

@@ -20,6 +20,7 @@ public class LocationDto {
     private String googleMapsLink;
     private String color;
     private Boolean isActive;
+    private Boolean isDefault;
     private String photoUrl;
     private String navigationInstructions;
     private String telegramContact;

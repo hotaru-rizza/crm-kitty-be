@@ -23,18 +23,24 @@ public final class EmailLayout {
                 <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0" style="max-width:480px;">
                   %s
                   <tr>
-                    <td align="center" style="padding:0 8px 20px;font-family:%s;font-size:26px;font-weight:700;line-height:1.25;letter-spacing:-0.025em;color:%s;">
+                    <td align="center" style="padding:0 8px 24px;font-family:%s;font-size:26px;font-weight:700;line-height:1.25;letter-spacing:-0.025em;color:%s;">
                       %s
                     </td>
                   </tr>
                   <tr>
-                    <td style="padding:0 8px 8px;font-family:%s;font-size:15px;line-height:1.6;color:%s;">
-                      %s
+                    <td style="padding:0 0 8px;">
+                      <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0" style="background:%s;border:1px solid %s;border-radius:16px;">
+                        <tr>
+                          <td style="padding:24px 24px 16px;font-family:%s;font-size:15px;line-height:1.6;color:%s;">
+                            %s
+                          </td>
+                        </tr>
+                      </table>
                     </td>
                   </tr>
                   %s
                   <tr>
-                    <td style="padding:24px 24px 24px;">
+                    <td style="padding:16px 24px 24px;">
                       <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0">
                         <tr>
                           <td height="1" style="height:1px;background-color:%s;font-size:0;line-height:0;">&nbsp;</td>
@@ -59,10 +65,12 @@ public final class EmailLayout {
                 EmailBrandAssets.BG_COLOR,
                 EmailBrandAssets.BG_COLOR,
                 EmailBrandAssets.TOP_GLOW,
-                buildBrandRow(context.appName()),
+                buildBrandRow(context.studioName(), context.studioLogoUrl()),
                 EmailBrandAssets.FONT_STACK,
                 EmailBrandAssets.TEXT_PRIMARY,
                 escapeHtml(context.title()),
+                EmailBrandAssets.CARD_BG,
+                EmailBrandAssets.CARD_BORDER,
                 EmailBrandAssets.FONT_STACK,
                 EmailBrandAssets.TEXT_BODY,
                 context.bodyHtml(),
@@ -139,15 +147,26 @@ public final class EmailLayout {
         return html.toString();
     }
 
-    private static String buildBrandRow(String appName) {
-        String logo = EmailBrandAssets.logoDataUri();
-        String logoCell = logo.isBlank()
-                ? ""
-                : """
+    private static String buildBrandRow(String studioName, String studioLogoUrl) {
+        boolean hasStudioLogo = studioLogoUrl != null && !studioLogoUrl.isBlank();
+
+        String logoCell;
+        if (hasStudioLogo) {
+            logoCell = """
                   <td style="padding-right:10px;vertical-align:middle;">
-                    <img src="%s" alt="%s" width="52" height="52" style="display:block;width:52px;height:52px;border:0;border-radius:50%%;object-fit:contain;" />
+                    <img src="%s" alt="%s" width="44" height="44" style="display:block;width:44px;height:44px;border:0;border-radius:12px;object-fit:cover;" />
                   </td>
-                """.formatted(logo, escapeHtml(appName));
+                """.formatted(escapeHtml(studioLogoUrl), escapeHtml(studioName));
+        } else {
+            String platformLogo = EmailBrandAssets.logoDataUri();
+            logoCell = platformLogo.isBlank()
+                    ? ""
+                    : """
+                  <td style="padding-right:10px;vertical-align:middle;">
+                    <img src="%s" alt="%s" width="44" height="44" style="display:block;width:44px;height:44px;border:0;border-radius:50%%;object-fit:contain;" />
+                  </td>
+                """.formatted(platformLogo, escapeHtml(studioName));
+        }
 
         return """
                   <tr>
@@ -166,7 +185,7 @@ public final class EmailLayout {
                 logoCell,
                 EmailBrandAssets.FONT_STACK,
                 EmailBrandAssets.TEXT_PRIMARY,
-                escapeHtml(appName)
+                escapeHtml(studioName)
         );
     }
 
@@ -205,18 +224,31 @@ public final class EmailLayout {
     }
 
     private static String buildFooter(String appName, String studioName, TemplateCategory category) {
-        String base = """
+        String studioLine = """
                   <tr>
                     <td align="center" style="padding:0 12px;font-family:%s;font-size:12px;line-height:1.6;color:%s;">
-                      %s · %s
+                      %s
                     </td>
                   </tr>
                 """.formatted(
                 EmailBrandAssets.FONT_STACK,
                 EmailBrandAssets.TEXT_FOOTER,
-                escapeHtml(studioName),
+                escapeHtml(studioName)
+        );
+
+        String poweredBy = """
+                  <tr>
+                    <td align="center" style="padding:6px 12px 0;font-family:%s;font-size:10px;line-height:1.6;color:%s;">
+                      Powered by %s
+                    </td>
+                  </tr>
+                """.formatted(
+                EmailBrandAssets.FONT_STACK,
+                EmailBrandAssets.TEXT_MUTED,
                 escapeHtml(appName)
         );
+
+        String base = studioLine + poweredBy;
 
         if (category != TemplateCategory.MARKETING) {
             return base;

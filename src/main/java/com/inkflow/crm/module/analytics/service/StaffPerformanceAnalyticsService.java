@@ -10,6 +10,7 @@ import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.module.analytics.support.AppointmentMetricsCalculator;
 import com.inkflow.crm.module.analytics.support.CommissionCalculator;
 import com.inkflow.crm.module.analytics.support.StaffUtilizationCalculator;
+import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,7 +39,8 @@ public class StaffPerformanceAnalyticsService {
     @Transactional(readOnly = true)
     public List<StaffPerformanceDto> getStaffPerformance(Instant from, Instant to) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
-        List<Appointment> appointments = appointmentRepository.findByDateRange( from, to);
+        UUID locationId = LocationScope.resolveFilter(null).orElse(null);
+        List<Appointment> appointments = appointmentRepository.findByDateRange(from, to, locationId);
 
         Map<UUID, List<Appointment>> appointmentsByArtist = groupAppointmentsByArtist(appointments);
         Map<UUID, List<StaffSchedule>> schedulesByArtist = loadSchedulesByArtist(appointmentsByArtist.keySet());

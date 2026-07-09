@@ -27,11 +27,12 @@ public class EmailContentRenderer {
     private final InkflowProperties inkflowProperties;
 
     public RenderedEmail render(NotificationCommand command) {
-        return render(command.tenantId(), command.templateKey(), command.variables(), command.studioName());
+        return render(command.tenantId(), command.templateKey(), command.variables(),
+                command.studioName(), command.studioLogoUrl());
     }
 
     public RenderedEmail render(UUID tenantId, TemplateKey templateKey, Map<String, String> variables,
-                                String studioName) {
+                                String studioName, String studioLogoUrl) {
         RenderedContent template = templateResolver.resolve(tenantId, templateKey);
         Map<String, String> resolvedVariables = enrichVariables(variables, studioName);
 
@@ -45,6 +46,7 @@ public class EmailContentRenderer {
                 htmlBody,
                 templateKey.getCategory(),
                 studioName,
+                studioLogoUrl,
                 resolvedVariables.get(TemplateVar.ACTION_URL.getPlaceholder()),
                 null
         );

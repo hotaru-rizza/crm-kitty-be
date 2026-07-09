@@ -41,7 +41,7 @@ public class CategoryConfigService {
 
     private record DefaultCategory(String key, String label, String color, String plType) {}
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<CategoryConfigDto> getAll() {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         ensureDefaults(tenantId);
@@ -120,7 +120,7 @@ public class CategoryConfigService {
         });
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public TransactionCategoryConfig requireActiveCategoryForTransaction(
             UUID tenantId,
             String categoryKey,
@@ -155,7 +155,7 @@ public class CategoryConfigService {
 
     @Transactional
     public void ensureDefaults(UUID tenantId) {
-        if (repo.existsByDeletedAtIsNull()) return;
+        if (repo.existsByTenantIdAndDeletedAtIsNull(tenantId)) return;
         SYSTEM_DEFAULTS.forEach(d -> repo.save(buildConfig(tenantId, d, true)));
         OPTIONAL_DEFAULTS.forEach(d -> repo.save(buildConfig(tenantId, d, false)));
     }

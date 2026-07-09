@@ -490,8 +490,10 @@ class TenantCrossTenantIsolationIntegrationTest {
         SecurityTestSupport.authenticate(tenantA.owner());
 
         var templates = emailTemplateService.list(tenantA.tenant().getId());
-        assertEquals(1, templates.size());
-        assertEquals("A only", templates.getFirst().subject());
+        var subjects = templates.stream().map(t -> t.subject()).toList();
+
+        assertTrue(subjects.contains("A only"), () -> "Expected tenant A custom template, got: " + subjects);
+        assertFalse(subjects.contains("B only"), () -> "Foreign tenant template leaked: " + subjects);
     }
 
     private TenantBundle seedTenant() {

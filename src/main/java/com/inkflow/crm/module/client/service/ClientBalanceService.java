@@ -9,6 +9,7 @@ import com.inkflow.crm.domain.enums.ClientBalanceReason;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.ClientBalanceEntryRepository;
 import com.inkflow.crm.domain.repository.ClientRepository;
+import com.inkflow.crm.module.client.dto.AdjustClientBalanceRequest;
 import com.inkflow.crm.module.client.dto.ClientBalanceDto;
 import com.inkflow.crm.module.client.mapper.ClientBalanceMapper;
 import com.inkflow.crm.security.SecurityUtils;
@@ -90,32 +91,7 @@ public class ClientBalanceService {
 
     @Transactional
     public void chargeAppointmentOnCompletion(UUID appointmentId, UUID tenantId) {
-        Appointment appointment = appointmentRepository
-                .findByIdAndDeletedAtIsNull(appointmentId)
-                .orElseThrow(() -> ResourceNotFoundException.appointment(appointmentId.toString()));
-
-        if (appointment.getClient() == null || appointment.isReservation() || appointment.getBalanceChargedAt() != null) {
-            return;
-        }
-
-        BigDecimal finalPrice = appointment.getFinalPrice();
-        if (finalPrice == null || finalPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            appointment.setBalanceChargedAt(Instant.now());
-            appointmentRepository.save(appointment);
-            return;
-        }
-
-        record(
-                appointment.getClient(),
-                finalPrice.negate(),
-                ClientBalanceReason.CHARGE,
-                appointment.getId(),
-                null,
-                null
-        );
-
-        appointment.setBalanceChargedAt(Instant.now());
-        appointmentRepository.save(appointment);
+        // Balance changes only through explicit payments — never auto-charge on completion.
     }
 
     @Transactional
@@ -165,6 +141,23 @@ public class ClientBalanceService {
     public boolean isBalanceCredit(Client client) {
         BigDecimal balance = client.getBalance();
         return balance != null && balance.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    @Transactional
+    public ClientBalanceDto adjustBalance(UUID clientId, AdjustClientBalanceRequest request) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        Client client = requireClient(clientId, tenantId);
+
+        record(
+                client,
+                request.getAmount(),
+                ClientBalanceReason.MANUAL_ADJUSTMENT,
+                null,
+                null,
+                request.getNote()
+        );
+
+        return getClientBalance(clientId);
     }
 
     private Client requireClient(UUID clientId, UUID tenantId) {

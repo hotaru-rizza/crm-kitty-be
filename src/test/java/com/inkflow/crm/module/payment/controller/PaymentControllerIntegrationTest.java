@@ -38,6 +38,7 @@ import static com.inkflow.crm.support.SecurityTestSupport.crmUser;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -187,6 +188,53 @@ class PaymentControllerIntegrationTest {
     }
 
     @Test
+    void processPayment_artistCanProcessOwnAppointmentWhenPermitted() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        grantArtistPaymentProcess(bundle);
+
+        Appointment appointment = saveAppointment(bundle, artist);
+        ProcessPaymentRequest body = ProcessPaymentRequest.builder()
+                .appointmentId(appointment.getId())
+                .amount(BigDecimal.valueOf(200))
+                .paymentMethod("cash")
+                .build();
+
+        mockMvc.perform(post("/payments/process")
+                        .with(crmUser(artist))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.amount").value(200));
+
+        assertEquals(1, transactionRepository.findByAppointmentIdAndDeletedAtIsNullOrderByDateDesc(appointment.getId()).size());
+    }
+
+    @Test
+    void processPayment_artistCannotProcessAnotherArtistsAppointmentWhenPermitted() throws Exception {
+        TenantBundle bundle = IntegrationTestData.seedTenant(
+                tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+        Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
+        grantArtistPaymentProcess(bundle);
+
+        Appointment appointment = saveAppointment(bundle, bundle.owner());
+        ProcessPaymentRequest body = ProcessPaymentRequest.builder()
+                .appointmentId(appointment.getId())
+                .amount(BigDecimal.valueOf(200))
+                .paymentMethod("cash")
+                .build();
+
+        mockMvc.perform(post("/payments/process")
+                        .with(crmUser(artist))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isForbidden());
+
+        assertEquals(0, transactionRepository.findByAppointmentIdAndDeletedAtIsNullOrderByDateDesc(appointment.getId()).size());
+    }
+
+    @Test
     void processRefund_withOwnerAuth_persistsRefundInDb() throws Exception {
         TenantBundle bundle = IntegrationTestData.seedTenant(
                 tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
@@ -283,10 +331,14 @@ class PaymentControllerIntegrationTest {
     }
 
     private Appointment saveConfirmedAppointment(TenantBundle bundle) {
+        return saveAppointment(bundle, bundle.owner());
+    }
+
+    private Appointment saveAppointment(TenantBundle bundle, Staff artist) {
         return appointmentRepository.save(Appointment.builder()
                 .tenantId(bundle.tenant().getId())
                 .client(bundle.client())
-                .artist(bundle.owner())
+                .artist(artist)
                 .service(bundle.service())
                 .location(bundle.location())
                 .startTime(Instant.now().plus(1, ChronoUnit.DAYS))
@@ -297,6 +349,17 @@ class PaymentControllerIntegrationTest {
                 .discount(BigDecimal.ZERO)
                 .finalPrice(BigDecimal.valueOf(1000))
                 .build());
+    }
+
+    private void grantArtistPaymentProcess(TenantBundle bundle) throws Exception {
+        String permissions = """
+                {"permissions":["clients.view_own","projects.view_own","calendar.view_own","calendar.create","calendar.edit","calendar.cancel","leaves.view","leaves.create","services.view","locations.view","emails.view","payments.view","payments.process","files.upload"]}
+                """;
+        mockMvc.perform(put("/settings/roles/artist")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(permissions))
+                .andExpect(status().isOk());
     }
 
     private Transaction processPaymentAndLoadTransaction(

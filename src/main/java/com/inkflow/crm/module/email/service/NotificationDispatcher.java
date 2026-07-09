@@ -74,9 +74,10 @@ public class NotificationDispatcher {
 
     private boolean enqueueTemplate(EmailTemplate template, TriggerType triggerType, NotificationDispatchContext context) {
         RenderedEmail rendered = templateEmailRenderer.render(
-                template, context.variables(), context.studioName());
+                template, context.variables(), context.studioName(), context.studioLogoUrl());
 
-        String dedupeKey = buildDedupeKey(context, template, triggerType);
+        String dedupeKey = EmailDedupeKeys.forEnqueue(
+                context.tenantId(), triggerType, context.entityId(), template.getId());
         if (dedupeKey != null && emailMessageRepository.existsByDedupeKey(dedupeKey)) {
             log.debug("Skipping duplicate enqueue: dedupeKey={}", dedupeKey);
             return false;
@@ -103,18 +104,6 @@ public class NotificationDispatcher {
             log.debug("Duplicate enqueue prevented by constraint: dedupeKey={}", dedupeKey);
             return false;
         }
-    }
-
-    private String buildDedupeKey(
-            NotificationDispatchContext context,
-            EmailTemplate template,
-            TriggerType triggerType) {
-
-        if (context.entityId() == null) {
-            return null;
-        }
-
-        return context.tenantId() + ":" + triggerType.name() + ":" + context.entityId() + ":" + template.getId();
     }
 
     private boolean isBlankEmail(String email) {

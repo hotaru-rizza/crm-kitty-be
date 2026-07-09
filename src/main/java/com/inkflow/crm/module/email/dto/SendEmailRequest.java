@@ -11,7 +11,8 @@ public record SendEmailRequest(
         List<UUID> staffIds,
         @NotBlank String subject,
         @NotBlank String body,
-        boolean html) {
+        boolean html,
+        UUID locationId) {
 
     public List<UUID> clientIds() {
         return clientIds == null ? List.of() : clientIds;

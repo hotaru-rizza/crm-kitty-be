@@ -7,18 +7,21 @@ import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.common.util.PhoneUtils;
 import com.inkflow.crm.domain.entity.Client;
+import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Request;
 import com.inkflow.crm.domain.enums.AuditAction;
 import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.enums.RequestSource;
 import com.inkflow.crm.domain.enums.RequestStatus;
 import com.inkflow.crm.domain.repository.ClientRepository;
+import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.RequestRepository;
 import com.inkflow.crm.domain.repository.RequestSpecifications;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.client.dto.ClientDto;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
 import com.inkflow.crm.module.request.dto.*;
+import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +43,7 @@ public class RequestService {
 
     private final RequestRepository requestRepository;
     private final ClientRepository clientRepository;
+    private final LocationRepository locationRepository;
     private final ClientMapper clientMapper;
     private final AuditRecorder auditRecorder;
 
@@ -69,6 +73,7 @@ public class RequestService {
                 .email(normalizeEmail(createRequest.getEmail()))
                 .instagram(createRequest.getInstagram())
                 .sketchUrl(createRequest.getSketchUrl())
+                .location(resolveDefaultLocation())
                 .status(RequestStatus.NEW)
                 .build();
 
@@ -215,11 +220,12 @@ public class RequestService {
         List<RequestSource> requestSources = effectiveFilter.getSource() != null && !effectiveFilter.getSource().isEmpty()
                 ? effectiveFilter.getSource().stream().map(RequestSource::fromValue).toList()
                 : null;
+        UUID effectiveLocationId = LocationScope.resolveFilter(effectiveFilter.getLocationId()).orElse(null);
 
         Specification<Request> spec = Specification.where(RequestSpecifications.statusIs(requestStatus))
                 .and(RequestSpecifications.sourceIn(requestSources))
                 .and(RequestSpecifications.createdBetween(effectiveFilter.getFrom(), effectiveFilter.getTo()))
-                .and(RequestSpecifications.locationIs(effectiveFilter.getLocationId()))
+                .and(RequestSpecifications.locationIs(effectiveLocationId))
                 .and(RequestSpecifications.searchLike(effectiveFilter.getSearch()))
                 .and(RequestSpecifications.cityEquals(effectiveFilter.getCity()))
                 .and(RequestSpecifications.tattooSizeEquals(effectiveFilter.getTattooSize()))
@@ -307,6 +313,14 @@ public class RequestService {
         }
         String normalized = PhoneUtils.normalize(rawPhone);
         return normalized.isBlank() ? null : normalized;
+    }
+
+    private Location resolveDefaultLocation() {
+        return locationRepository.findByIsActiveAndDeletedAtIsNull(true).stream()
+                .findFirst()
+                .orElseGet(() -> locationRepository.findByDeletedAtIsNull().stream()
+                        .findFirst()
+                        .orElse(null));
     }
 
     private String normalizeEmail(String email) {

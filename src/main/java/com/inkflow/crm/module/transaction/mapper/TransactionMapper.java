@@ -18,6 +18,10 @@ public class TransactionMapper {
                 .appointmentId(transaction.getAppointment() != null ? transaction.getAppointment().getId() : null)
                 .staffId(transaction.getStaff() != null ? transaction.getStaff().getId() : null)
                 .staffName(transaction.getStaff() != null ? transaction.getStaff().getFullName() : null)
+                .staffAccountStatus(transaction.getStaff() != null
+                        ? transaction.getStaff().getAccountStatus().getValue()
+                        : null)
+                .staffDeleted(transaction.getStaff() != null && transaction.getStaff().isDeleted())
                 .locationId(transaction.getLocation().getId())
                 .locationName(transaction.getLocation().getName())
                 .date(transaction.getDate())

@@ -9,7 +9,8 @@ public record NotificationDispatchContext(
         String recipientName,
         UUID entityId,
         Map<String, String> variables,
-        String studioName
+        String studioName,
+        String studioLogoUrl
 ) {
     public static NotificationDispatchContext of(
             UUID tenantId,
@@ -17,8 +18,9 @@ public record NotificationDispatchContext(
             String recipientName,
             UUID entityId,
             Map<String, String> variables,
-            String studioName) {
+            String studioName,
+            String studioLogoUrl) {
         return new NotificationDispatchContext(
-                tenantId, recipientEmail, recipientName, entityId, variables, studioName);
+                tenantId, recipientEmail, recipientName, entityId, variables, studioName, studioLogoUrl);
     }
 }

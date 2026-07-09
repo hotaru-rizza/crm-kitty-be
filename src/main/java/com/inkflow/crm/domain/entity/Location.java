@@ -39,6 +39,10 @@ public class Location extends BaseEntity {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "is_default", nullable = false)
+    @Builder.Default
+    private Boolean isDefault = false;
+
     @Column(name = "photo_url", columnDefinition = "TEXT")
     private String photoUrl;
 

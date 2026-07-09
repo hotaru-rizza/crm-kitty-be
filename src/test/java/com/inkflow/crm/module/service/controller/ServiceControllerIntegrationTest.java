@@ -3,6 +3,10 @@ package com.inkflow.crm.module.service.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.domain.entity.Service;
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.enums.AccountStatus;
+import com.inkflow.crm.domain.enums.StaffStatus;
+import com.inkflow.crm.domain.enums.UserRole;
+import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
@@ -23,10 +27,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import static com.inkflow.crm.support.SecurityTestSupport.crmUser;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -59,6 +65,9 @@ class ServiceControllerIntegrationTest {
 
     @Autowired
     private LocationRepository locationRepository;
+
+    @Autowired
+    private RolePermissionService rolePermissionService;
 
     @AfterEach
     void tearDown() {
@@ -184,6 +193,46 @@ class ServiceControllerIntegrationTest {
     }
 
     @Test
+    void deleteService_withAdminAuth_returnsForbidden() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff admin = seedAdmin(bundle);
+        ensureDefaultPermissions(bundle);
+
+        mockMvc.perform(delete("/services/{id}", bundle.service().getId())
+                        .with(crmUser(admin)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.error.code").value("FORBIDDEN"));
+
+        assertTrue(serviceRepository.findByIdAndDeletedAtIsNull(bundle.service().getId()).isPresent());
+    }
+
+    @Test
+    void createService_hourlyWithoutDuration_persistsWithDefaultSlot() throws Exception {
+        TenantBundle bundle = seedTenant();
+
+        CreateServiceRequest body = CreateServiceRequest.builder()
+                .title("Removal")
+                .pricingType("hourly")
+                .price(BigDecimal.valueOf(400))
+                .color("#6366f1")
+                .build();
+
+        String response = mockMvc.perform(post("/services")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.pricingType").value("hourly"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String serviceId = objectMapper.readTree(response).path("data").path("id").asText();
+        Service saved = serviceRepository.findById(java.util.UUID.fromString(serviceId)).orElseThrow();
+        assertEquals(60, saved.getDuration());
+    }
+
+    @Test
     void deleteService_withArtistAuth_returnsForbidden() throws Exception {
         TenantBundle bundle = seedTenant();
         Staff artist = IntegrationTestData.seedArtist(staffRepository, bundle.tenant());
@@ -247,5 +296,24 @@ class ServiceControllerIntegrationTest {
                 serviceRepository,
                 locationRepository
         );
+    }
+
+    private Staff seedAdmin(TenantBundle bundle) {
+        return staffRepository.save(Staff.builder()
+                .tenantId(bundle.tenant().getId())
+                .firstName("Admin")
+                .lastName("User")
+                .email("admin-" + UUID.randomUUID() + "@test.com")
+                .role(UserRole.ADMIN)
+                .calendarColor("#6366f1")
+                .status(StaffStatus.WORKING)
+                .accountStatus(AccountStatus.ACTIVE)
+                .build());
+    }
+
+    private void ensureDefaultPermissions(TenantBundle bundle) {
+        SecurityTestSupport.authenticate(bundle.owner());
+        rolePermissionService.getGrantedPermissions(bundle.tenant().getId(), UserRole.ADMIN);
+        SecurityTestSupport.clearAuthentication();
     }
 }

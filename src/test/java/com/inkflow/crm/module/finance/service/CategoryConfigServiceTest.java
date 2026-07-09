@@ -58,7 +58,7 @@ class CategoryConfigServiceTest {
     @Test
     void ensureDefaults_seedsDefaultCategoriesForNewTenant() {
         UUID tenantId = UUID.randomUUID();
-        when(repo.existsByDeletedAtIsNull()).thenReturn(false);
+        when(repo.existsByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(false);
         when(repo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.ensureDefaults(tenantId);
@@ -74,7 +74,7 @@ class CategoryConfigServiceTest {
     @Test
     void ensureDefaults_skipsWhenTenantAlreadyHasCategories() {
         UUID tenantId = UUID.randomUUID();
-        when(repo.existsByDeletedAtIsNull()).thenReturn(true);
+        when(repo.existsByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(true);
 
         service.ensureDefaults(tenantId);
 
@@ -130,7 +130,7 @@ class CategoryConfigServiceTest {
         UUID tenantId = UUID.randomUUID();
         authenticate(tenantId);
 
-        when(repo.existsByDeletedAtIsNull()).thenReturn(true);
+        when(repo.existsByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(true);
         when(repo.findByCategoryKeyAndDeletedAtIsNull("custom_key"))
                 .thenReturn(Optional.empty());
         when(repo.save(any())).thenAnswer(invocation -> {
@@ -162,7 +162,7 @@ class CategoryConfigServiceTest {
                 .isActive(true)
                 .build();
 
-        when(repo.existsByDeletedAtIsNull()).thenReturn(true);
+        when(repo.existsByTenantIdAndDeletedAtIsNull(tenantId)).thenReturn(true);
         when(repo.findByCategoryKeyAndDeletedAtIsNull("custom_key"))
                 .thenReturn(Optional.of(existing));
         when(repo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));

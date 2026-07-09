@@ -20,7 +20,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import org.springframework.data.domain.PageImpl;
+
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -74,10 +78,9 @@ class ClientBalanceServiceTest {
     }
 
     @Test
-    void chargeAppointmentOnCompletion_shouldCreateDebtWhenUnpaid() {
+    void chargeAppointmentOnCompletion_shouldNotChangeBalance() {
         UUID tenantId = UUID.randomUUID();
         UUID appointmentId = UUID.randomUUID();
-        authenticate(tenantId, UUID.randomUUID());
 
         Client client = client(tenantId, BigDecimal.ZERO);
         Appointment appointment = Appointment.builder()
@@ -87,16 +90,10 @@ class ClientBalanceServiceTest {
                 .finalPrice(BigDecimal.valueOf(500))
                 .build();
 
-        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
-                .thenReturn(Optional.of(appointment));
-        when(clientRepository.save(client)).thenAnswer(invocation -> invocation.getArgument(0));
-        when(appointmentRepository.save(appointment)).thenAnswer(invocation -> invocation.getArgument(0));
-        when(balanceEntryRepository.save(any(ClientBalanceEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
         clientBalanceService.chargeAppointmentOnCompletion(appointmentId, tenantId);
 
-        assertEquals(BigDecimal.valueOf(-500), client.getBalance());
-        assertNotNull(appointment.getBalanceChargedAt());
+        assertEquals(BigDecimal.ZERO, client.getBalance());
+        assertNull(appointment.getBalanceChargedAt());
     }
 
     @Test
@@ -112,9 +109,6 @@ class ClientBalanceServiceTest {
                 .finalPrice(BigDecimal.valueOf(500))
                 .balanceChargedAt(java.time.Instant.now())
                 .build();
-
-        when(appointmentRepository.findByIdAndDeletedAtIsNull(appointmentId))
-                .thenReturn(Optional.of(appointment));
 
         clientBalanceService.chargeAppointmentOnCompletion(appointmentId, tenantId);
 
@@ -170,6 +164,35 @@ class ClientBalanceServiceTest {
 
         assertThrows(BusinessRuleException.class,
                 () -> clientBalanceService.validateBalanceSpend(client, BigDecimal.valueOf(100)));
+    }
+
+    @Test
+    void adjustBalance_shouldRecordManualAdjustmentEntry() {
+        UUID tenantId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        authenticate(tenantId, userId);
+
+        Client client = client(tenantId, BigDecimal.ZERO);
+        client.setId(clientId);
+
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId)).thenReturn(Optional.of(client));
+        when(balanceEntryRepository.save(any(ClientBalanceEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(balanceEntryRepository.findByClientIdAndDeletedAtIsNullOrderByCreatedAtDesc(
+                eq(clientId), any())).thenReturn(new PageImpl<>(List.of()));
+
+        var request = com.inkflow.crm.module.client.dto.AdjustClientBalanceRequest.builder()
+                .amount(BigDecimal.valueOf(150))
+                .note("Bonus credit")
+                .build();
+
+        clientBalanceService.adjustBalance(clientId, request);
+
+        assertEquals(BigDecimal.valueOf(150), client.getBalance());
+        ArgumentCaptor<ClientBalanceEntry> entryCaptor = ArgumentCaptor.forClass(ClientBalanceEntry.class);
+        verify(balanceEntryRepository).save(entryCaptor.capture());
+        assertEquals(ClientBalanceReason.MANUAL_ADJUSTMENT, entryCaptor.getValue().getReason());
+        assertEquals("Bonus credit", entryCaptor.getValue().getNote());
     }
 
     private Client client(UUID tenantId, BigDecimal balance) {

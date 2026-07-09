@@ -63,7 +63,7 @@ class ServicePopularityAnalyticsServiceTest {
                 .build();
         List<Appointment> appointments = List.of(appointment);
 
-        when(appointmentRepository.findByDateRange(from, to)).thenReturn(appointments);
+        when(appointmentRepository.findByDateRange(from, to, null)).thenReturn(appointments);
         when(metrics.hasService(appointment)).thenReturn(true);
         when(metrics.countTotal(appointments)).thenReturn(1);
         when(metrics.countCompleted(appointments)).thenReturn(1);
@@ -89,7 +89,7 @@ class ServicePopularityAnalyticsServiceTest {
         Instant from = Instant.parse("2026-06-01T00:00:00Z");
         Instant to = Instant.parse("2026-06-30T23:59:59Z");
 
-        when(appointmentRepository.findByDateRange(from, to)).thenReturn(List.of());
+        when(appointmentRepository.findByDateRange(from, to, null)).thenReturn(List.of());
 
         assertTrue(servicePopularityAnalyticsService.getServicePopularity(from, to).isEmpty());
     }
@@ -107,7 +107,7 @@ class ServicePopularityAnalyticsServiceTest {
                 .finalPrice(BigDecimal.valueOf(150))
                 .build();
 
-        when(appointmentRepository.findByDateRange(from, to))
+        when(appointmentRepository.findByDateRange(from, to, null))
                 .thenReturn(List.of(withoutService));
         when(metrics.hasService(withoutService)).thenReturn(false);
 

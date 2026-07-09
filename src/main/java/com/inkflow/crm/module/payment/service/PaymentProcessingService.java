@@ -6,15 +6,24 @@ import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.entity.Transaction;
-import com.inkflow.crm.domain.enums.*;
+import com.inkflow.crm.domain.enums.AppointmentStatus;
+import com.inkflow.crm.domain.enums.AuditAction;
+import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.domain.enums.ClientBalanceReason;
+import com.inkflow.crm.domain.enums.PaymentMethod;
+import com.inkflow.crm.domain.enums.PaymentType;
+import com.inkflow.crm.domain.enums.TransactionCategory;
+import com.inkflow.crm.domain.enums.TransactionType;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
+import com.inkflow.crm.domain.repository.ClientBalanceEntryRepository;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TransactionRepository;
+import com.inkflow.crm.module.appointment.support.AppointmentLabels;
+import com.inkflow.crm.module.appointment.support.AppointmentAccessGuard;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
 import com.inkflow.crm.module.client.service.ClientBalanceService;
-import com.inkflow.crm.domain.enums.ClientBalanceReason;
 import com.inkflow.crm.module.payment.dto.AppointmentPaymentSummaryDto;
 import com.inkflow.crm.module.payment.dto.PaymentDto;
 import com.inkflow.crm.module.payment.dto.PaymentLineRequest;
@@ -31,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -50,14 +60,19 @@ public class PaymentProcessingService {
     private final AuditRecorder auditRecorder;
     private final AuditLabelFormatter auditLabelFormatter;
     private final ClientBalanceService clientBalanceService;
+    private final ClientBalanceEntryRepository balanceEntryRepository;
+    private final AppointmentAccessGuard appointmentAccessGuard;
 
     @Transactional
     public PaymentDto processPayment(ProcessPaymentRequest request) {
-        if (hasLines(request)) {
-            return processPaymentLines(request);
+        ProcessPaymentRequest normalized = normalizeSplitPayments(request);
+
+        if (hasLines(normalized)) {
+            return processPaymentLines(normalized);
         }
-        validateLegacyRequest(request);
-        return processSinglePayment(request);
+
+        validateLegacyRequest(normalized);
+        return processSinglePayment(normalized);
     }
 
     private PaymentDto processSinglePayment(ProcessPaymentRequest request) {
@@ -65,6 +80,7 @@ public class PaymentProcessingService {
         UUID currentUserId = SecurityUtils.getCurrentUserId();
 
         Appointment appointment = requireAppointment(request.getAppointmentId(), tenantId);
+        appointmentAccessGuard.requireEdit(appointment);
         rejectCancelledAppointment(appointment);
         rejectReservationPayment(appointment);
 
@@ -77,9 +93,6 @@ public class PaymentProcessingService {
         PaymentMethod paymentMethod = PaymentMethod.fromValue(request.getPaymentMethod());
         if (paymentMethod == PaymentMethod.BALANCE) {
             validateBalancePayment(appointment, request.getAmount(), paymentType);
-        }
-        if (paymentMethod == PaymentMethod.SPLIT) {
-            validateSplitPayment(request.getAmount(), request.getCashAmount(), request.getCardAmount());
         }
 
         Transaction transaction = buildPaymentTransaction(
@@ -101,7 +114,13 @@ public class PaymentProcessingService {
                 tenantId, transaction.getId(), appointment.getId());
 
         auditPayment(appointment, transaction);
-        recordClientBalanceForPayment(appointment, transaction, paymentMethod, paymentType);
+        recordClientBalanceForPayment(
+                appointment,
+                transaction,
+                paymentMethod,
+                paymentType,
+                summary.getRemainingBalance()
+        );
         recordTipIfPresent(request, appointment, paymentMethod, processedBy, tenantId);
         applyDepositIfNeeded(request.getAmount(), appointment, paymentType);
         syncLinkedProjectProgress(appointment);
@@ -109,11 +128,60 @@ public class PaymentProcessingService {
         return paymentMapper.toDto(transaction);
     }
 
+    public void recordInitialPrepayment(Appointment appointment) {
+        if (appointment.isReservation()) {
+            return;
+        }
+
+        BigDecimal amount = appointment.getPrepayment() != null ? appointment.getPrepayment() : BigDecimal.ZERO;
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        UUID tenantId = appointment.getTenantId();
+        Staff processedBy = findProcessedByStaff(SecurityUtils.getCurrentUserId(), tenantId);
+        String serviceName = AppointmentLabels.serviceTitle(appointment);
+
+        Transaction transaction = Transaction.builder()
+                .tenantId(tenantId)
+                .type(TransactionType.INCOME)
+                .category(TransactionCategory.SERVICE.getValue())
+                .paymentType(PaymentType.DEPOSIT)
+                .amount(amount)
+                .paymentMethod(PaymentMethod.CASH)
+                .description(String.format("Передоплата: %s", serviceName))
+                .appointment(appointment)
+                .staff(appointment.getArtist())
+                .processedBy(processedBy)
+                .location(appointment.getLocation())
+                .date(Instant.now())
+                .receiptNumber(receiptNumberGenerator.generate())
+                .isRefunded(false)
+                .refundedAmount(BigDecimal.ZERO)
+                .build();
+
+        transaction = transactionRepository.save(transaction);
+
+        log.info("Initial prepayment recorded: tenantId={} transactionId={} appointmentId={} amount={}",
+                tenantId, transaction.getId(), appointment.getId(), amount);
+
+        auditPayment(appointment, transaction);
+        recordClientBalanceForPayment(
+                appointment,
+                transaction,
+                PaymentMethod.CASH,
+                PaymentType.DEPOSIT,
+                appointment.getFinalPrice() != null ? appointment.getFinalPrice() : BigDecimal.ZERO
+        );
+        syncLinkedProjectProgress(appointment);
+    }
+
     private PaymentDto processPaymentLines(ProcessPaymentRequest request) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UUID currentUserId = SecurityUtils.getCurrentUserId();
 
         Appointment appointment = requireAppointment(request.getAppointmentId(), tenantId);
+        appointmentAccessGuard.requireEdit(appointment);
         rejectCancelledAppointment(appointment);
         rejectReservationPayment(appointment);
 
@@ -125,6 +193,7 @@ public class PaymentProcessingService {
 
         Transaction lastPrimary = null;
         BigDecimal depositTotal = BigDecimal.ZERO;
+        BigDecimal runningRemaining = summary.getRemainingBalance();
 
         for (PaymentLineRequest line : lines) {
             PaymentType paymentType = resolveLinePaymentType(line);
@@ -150,7 +219,16 @@ public class PaymentProcessingService {
                     tenantId, transaction.getId(), appointment.getId(), paymentMethod.getValue());
 
             auditPayment(appointment, transaction);
-            recordClientBalanceForPayment(appointment, transaction, paymentMethod, paymentType);
+            if (paymentType == PaymentType.SERVICE_PAYMENT || paymentType == PaymentType.DEPOSIT) {
+                recordClientBalanceForPayment(
+                        appointment,
+                        transaction,
+                        paymentMethod,
+                        paymentType,
+                        runningRemaining
+                );
+                runningRemaining = runningRemaining.subtract(line.getAmount()).max(BigDecimal.ZERO);
+            }
 
             if (paymentType == PaymentType.DEPOSIT) {
                 depositTotal = depositTotal.add(line.getAmount());
@@ -199,9 +277,6 @@ public class PaymentProcessingService {
 
             validatePaymentAmount(line.getAmount(), summary, paymentType);
 
-            if (paymentMethod == PaymentMethod.SPLIT) {
-                validateSplitPayment(line.getAmount(), line.getCashAmount(), line.getCardAmount());
-            }
             if (paymentMethod == PaymentMethod.BALANCE) {
                 validateBalanceLine(appointment, tenantId, line.getAmount(), paymentType);
             }
@@ -393,17 +468,89 @@ public class PaymentProcessingService {
         }
     }
 
-    private void validateSplitPayment(BigDecimal amount, BigDecimal cashAmount, BigDecimal cardAmount) {
+    private ProcessPaymentRequest normalizeSplitPayments(ProcessPaymentRequest request) {
+        if (hasLines(request)) {
+            List<PaymentLineRequest> expandedLines = new ArrayList<>();
+            for (PaymentLineRequest line : request.getLines()) {
+                expandedLines.addAll(expandSplitLine(line));
+            }
+            return request.toBuilder().lines(expandedLines).build();
+        }
+
+        if (request.getPaymentMethod() != null
+                && PaymentMethod.SPLIT.getValue().equalsIgnoreCase(request.getPaymentMethod())) {
+            List<PaymentLineRequest> lines = expandSplitAmounts(
+                    request.getCashAmount(),
+                    request.getCardAmount(),
+                    request.getPaymentType(),
+                    null
+            );
+            return request.toBuilder()
+                    .lines(lines)
+                    .paymentMethod(null)
+                    .amount(null)
+                    .cashAmount(null)
+                    .cardAmount(null)
+                    .build();
+        }
+
+        return request;
+    }
+
+    private List<PaymentLineRequest> expandSplitLine(PaymentLineRequest line) {
+        if (line.getPaymentMethod() == null
+                || !PaymentMethod.SPLIT.getValue().equalsIgnoreCase(line.getPaymentMethod())) {
+            return List.of(line);
+        }
+
+        return expandSplitAmounts(
+                line.getCashAmount(),
+                line.getCardAmount(),
+                line.getPaymentType(),
+                line.getCategory()
+        );
+    }
+
+    private List<PaymentLineRequest> expandSplitAmounts(
+            BigDecimal cashAmount,
+            BigDecimal cardAmount,
+            String paymentType,
+            String category) {
+        validateSplitAmounts(cashAmount, cardAmount);
+
+        List<PaymentLineRequest> lines = new ArrayList<>();
+        if (isPositiveAmount(cashAmount)) {
+            lines.add(PaymentLineRequest.builder()
+                    .amount(cashAmount)
+                    .paymentMethod(PaymentMethod.CASH.getValue())
+                    .paymentType(paymentType)
+                    .category(category)
+                    .build());
+        }
+        if (isPositiveAmount(cardAmount)) {
+            lines.add(PaymentLineRequest.builder()
+                    .amount(cardAmount)
+                    .paymentMethod(PaymentMethod.CARD.getValue())
+                    .paymentType(paymentType)
+                    .category(category)
+                    .build());
+        }
+
+        if (lines.isEmpty()) {
+            throw new BusinessRuleException("Split payment requires a positive cash or card amount");
+        }
+
+        return lines;
+    }
+
+    private void validateSplitAmounts(BigDecimal cashAmount, BigDecimal cardAmount) {
         if (cashAmount == null || cardAmount == null) {
             throw new BusinessRuleException("Split payment requires both cash and card amounts");
         }
+    }
 
-        BigDecimal total = cashAmount.add(cardAmount);
-        if (total.compareTo(amount) != 0) {
-            throw new BusinessRuleException(
-                    String.format("Split amounts (%.2f + %.2f = %.2f) must equal total amount (%.2f)",
-                            cashAmount, cardAmount, total, amount));
-        }
+    private boolean isPositiveAmount(BigDecimal amount) {
+        return amount != null && amount.compareTo(BigDecimal.ZERO) > 0;
     }
 
     private String buildPaymentDescription(
@@ -411,7 +558,7 @@ public class PaymentProcessingService {
             Appointment appointment,
             PaymentType paymentType) {
         String typeLabel = paymentType == PaymentType.DEPOSIT ? "Передоплата" : "Оплата послуги";
-        String serviceName = appointment.getService() != null ? appointment.getService().getTitle() : "Послуга";
+        String serviceName = AppointmentLabels.serviceTitle(appointment);
 
         if (request.getDescription() != null && !request.getDescription().isEmpty()) {
             return String.format("%s: %s - %s", typeLabel, serviceName, request.getDescription());
@@ -442,7 +589,8 @@ public class PaymentProcessingService {
             Appointment appointment,
             Transaction transaction,
             PaymentMethod paymentMethod,
-            PaymentType paymentType) {
+            PaymentType paymentType,
+            BigDecimal remainingBeforePayment) {
         if (appointment.getClient() == null) {
             return;
         }
@@ -466,15 +614,114 @@ public class PaymentProcessingService {
         }
 
         if (paymentMethod.isRealMoney()) {
+            BigDecimal balanceCredit = calculateBalanceCredit(transaction.getAmount(), remainingBeforePayment);
+            if (balanceCredit.compareTo(BigDecimal.ZERO) <= 0) {
+                return;
+            }
+
             clientBalanceService.record(
                     client,
-                    transaction.getAmount(),
+                    balanceCredit,
                     ClientBalanceReason.PAYMENT,
                     appointment.getId(),
                     transaction.getId(),
                     null
             );
         }
+    }
+
+    private BigDecimal calculateBalanceCredit(BigDecimal paymentAmount, BigDecimal remainingBeforePayment) {
+        if (remainingBeforePayment == null || remainingBeforePayment.compareTo(BigDecimal.ZERO) <= 0) {
+            return paymentAmount;
+        }
+
+        BigDecimal appliedToAppointment = paymentAmount.min(remainingBeforePayment);
+        return paymentAmount.subtract(appliedToAppointment);
+    }
+
+    @Transactional
+    public void voidPayment(UUID transactionId) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+
+        Transaction transaction = transactionRepository.findByIdAndDeletedAtIsNull(transactionId)
+                .orElseThrow(() -> ResourceNotFoundException.transaction(transactionId.toString()));
+
+        validateVoidable(transaction);
+
+        Appointment appointment = transaction.getAppointment();
+        appointmentAccessGuard.requireEdit(appointment);
+
+        reverseBalanceForVoid(transaction);
+        adjustDepositAfterVoid(transaction);
+
+        transaction.softDelete();
+        transactionRepository.save(transaction);
+
+        log.info("Payment voided: tenantId={} transactionId={} appointmentId={}",
+                tenantId, transaction.getId(), appointment.getId());
+
+        auditRecorder.record(
+                AuditAction.DELETE,
+                AuditEntityType.TRANSACTION,
+                transaction.getId().toString(),
+                auditLabelFormatter.appointment(appointment.getClient(), appointment.getStartTime()),
+                appointment.getClient() != null ? appointment.getClient().getId() : null,
+                "Void payment: " + transaction.getAmount()
+        );
+
+        syncLinkedProjectProgress(appointment);
+    }
+
+    private void validateVoidable(Transaction transaction) {
+        if (transaction.isRefund() || transaction.getPaymentType() == PaymentType.TIP) {
+            throw new BusinessRuleException("This payment cannot be deleted");
+        }
+        if (transaction.getPaymentType() != PaymentType.SERVICE_PAYMENT
+                && transaction.getPaymentType() != PaymentType.DEPOSIT) {
+            throw new BusinessRuleException("This payment cannot be deleted");
+        }
+        if (transaction.getRefundedAmount() != null
+                && transaction.getRefundedAmount().compareTo(BigDecimal.ZERO) > 0) {
+            throw new BusinessRuleException("Cannot delete a payment that has refunds");
+        }
+        if (transaction.getAppointment() == null) {
+            throw new BusinessRuleException("Payment is not linked to an appointment");
+        }
+    }
+
+    private void reverseBalanceForVoid(Transaction transaction) {
+        Appointment appointment = transaction.getAppointment();
+        if (appointment == null || appointment.getClient() == null) {
+            return;
+        }
+
+        Client client = clientRepository.findByIdAndDeletedAtIsNull(appointment.getClient().getId())
+                .orElse(appointment.getClient());
+
+        balanceEntryRepository.findByTransactionIdAndDeletedAtIsNull(transaction.getId())
+                .ifPresent(entry -> clientBalanceService.record(
+                        client,
+                        entry.getAmount().negate(),
+                        ClientBalanceReason.PAYMENT_VOID,
+                        appointment.getId(),
+                        transaction.getId(),
+                        null
+                ));
+    }
+
+    private void adjustDepositAfterVoid(Transaction transaction) {
+        if (transaction.getPaymentType() != PaymentType.DEPOSIT) {
+            return;
+        }
+
+        Appointment appointment = transaction.getAppointment();
+        if (appointment == null) {
+            return;
+        }
+
+        BigDecimal newPrepayment = appointment.getPrepayment().subtract(transaction.getAmount());
+        appointment.setPrepayment(newPrepayment.max(BigDecimal.ZERO));
+        appointmentRepository.save(appointment);
     }
 
     private void auditPayment(Appointment appointment, Transaction transaction) {

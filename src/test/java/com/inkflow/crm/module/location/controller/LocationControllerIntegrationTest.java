@@ -3,6 +3,10 @@ package com.inkflow.crm.module.location.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Staff;
+import com.inkflow.crm.domain.enums.AccountStatus;
+import com.inkflow.crm.domain.enums.StaffStatus;
+import com.inkflow.crm.domain.enums.UserRole;
+import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
@@ -13,6 +17,7 @@ import com.inkflow.crm.module.location.dto.CreateLocationRequest;
 import com.inkflow.crm.module.location.dto.UpdateLocationRequest;
 
 import java.util.List;
+import java.util.UUID;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.IntegrationTestData;
 import com.inkflow.crm.support.IntegrationTestData.TenantBundle;
@@ -61,6 +66,9 @@ class LocationControllerIntegrationTest {
 
     @Autowired
     private LocationRepository locationRepository;
+
+    @Autowired
+    private RolePermissionService rolePermissionService;
 
     @AfterEach
     void tearDown() {
@@ -146,6 +154,32 @@ class LocationControllerIntegrationTest {
 
         Location deleted = locationRepository.findById(bundle.location().getId()).orElseThrow();
         assertNotNull(deleted.getDeletedAt());
+    }
+
+    @Test
+    void deleteLocation_withAdminAuth_returnsForbidden() throws Exception {
+        TenantBundle bundle = seedTenant();
+        Staff admin = seedAdmin(bundle);
+        ensureDefaultPermissions(bundle);
+
+        CreateLocationRequest extraLocation = CreateLocationRequest.builder()
+                .name("Backup Studio")
+                .address("Kyiv, Backup St 2")
+                .color("#14b8a6")
+                .build();
+
+        mockMvc.perform(post("/locations")
+                        .with(crmUser(bundle.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(extraLocation)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(delete("/locations/{id}", bundle.location().getId())
+                        .with(crmUser(admin)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.error.code").value("FORBIDDEN"));
+
+        assertTrue(locationRepository.findByIdAndDeletedAtIsNull(bundle.location().getId()).isPresent());
     }
 
     @Test
@@ -265,5 +299,24 @@ class LocationControllerIntegrationTest {
     private TenantBundle seedTenant() {
         return IntegrationTestData.seedTenant(
                 tenantRepository, staffRepository, clientRepository, serviceRepository, locationRepository);
+    }
+
+    private Staff seedAdmin(TenantBundle bundle) {
+        return staffRepository.save(Staff.builder()
+                .tenantId(bundle.tenant().getId())
+                .firstName("Admin")
+                .lastName("User")
+                .email("admin-" + UUID.randomUUID() + "@test.com")
+                .role(UserRole.ADMIN)
+                .calendarColor("#6366f1")
+                .status(StaffStatus.WORKING)
+                .accountStatus(AccountStatus.ACTIVE)
+                .build());
+    }
+
+    private void ensureDefaultPermissions(TenantBundle bundle) {
+        SecurityTestSupport.authenticate(bundle.owner());
+        rolePermissionService.getGrantedPermissions(bundle.tenant().getId(), UserRole.ADMIN);
+        SecurityTestSupport.clearAuthentication();
     }
 }

@@ -10,6 +10,7 @@ import com.inkflow.crm.domain.enums.TransactionType;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.domain.repository.TransactionRepository;
+import com.inkflow.crm.module.appointment.support.AppointmentAccessGuard;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.payment.dto.PaymentDto;
 import com.inkflow.crm.module.payment.dto.ProcessRefundRequest;
@@ -17,6 +18,7 @@ import com.inkflow.crm.module.payment.mapper.PaymentMapper;
 import com.inkflow.crm.module.payment.support.ReceiptNumberGenerator;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -34,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -58,8 +61,16 @@ class RefundProcessingServiceTest {
     @Mock
     private AuditRecorder auditRecorder;
 
+    @Mock
+    private AppointmentAccessGuard appointmentAccessGuard;
+
     @InjectMocks
     private RefundProcessingService refundProcessingService;
+
+    @BeforeEach
+    void stubAccessGuard() {
+        lenient().doNothing().when(appointmentAccessGuard).requireEdit(any());
+    }
 
     @AfterEach
     void clearSecurityContext() {
