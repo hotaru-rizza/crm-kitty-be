@@ -15,6 +15,6 @@ public class R2Properties {
     private String secretAccessKey;
     private String bucketName;
     private String publicUrl;
-
     private boolean verifyConnection = true;
+    private int signedDownloadTtlMinutes = 60;
 }

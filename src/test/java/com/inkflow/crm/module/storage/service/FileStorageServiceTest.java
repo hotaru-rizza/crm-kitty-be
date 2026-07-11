@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.storage.service;
 
 import com.inkflow.crm.config.R2Properties;
+import com.inkflow.crm.module.storage.dto.PresignedDownloadResult;
 import com.inkflow.crm.module.storage.dto.PresignedUploadResult;
 import com.inkflow.crm.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
@@ -19,6 +20,8 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
@@ -113,6 +116,25 @@ class FileStorageServiceTest {
                                 && req.key().startsWith(tenantId + "/gallery/")
                                 && "image/png".equals(req.contentType())),
                 any(RequestBody.class));
+    }
+
+    @Test
+    void generatePresignedDownloadUrl_returnsSignedUrl() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        authenticate(tenantId);
+        when(r2Properties.getBucketName()).thenReturn("test-bucket");
+        when(r2Properties.getSignedDownloadTtlMinutes()).thenReturn(30);
+
+        String key = tenantId + "/gallery/file.jpg";
+        PresignedGetObjectRequest presigned = mock(PresignedGetObjectRequest.class);
+        when(presigned.url()).thenReturn(new URL("https://download.example.com/signed"));
+        when(s3Presigner.presignGetObject(any(GetObjectPresignRequest.class))).thenReturn(presigned);
+
+        PresignedDownloadResult result = fileStorageService.generatePresignedDownloadUrl(key);
+
+        assertEquals(key, result.getKey());
+        assertEquals("https://download.example.com/signed", result.getDownloadUrl());
+        assertTrue(result.getExpiresAt().isAfter(java.time.Instant.now()));
     }
 
     @Test

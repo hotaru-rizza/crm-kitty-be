@@ -82,6 +82,8 @@ inkflow:
     retention-cron: ${INKFLOW_AUDIT_RETENTION_CRON:0 0 3 * * *}
   appointments:
     default-reservation-duration-minutes: ${INKFLOW_DEFAULT_RESERVATION_DURATION_MINUTES:60}
+  rate-limit:
+    enabled: ${INKFLOW_RATE_LIMIT_ENABLED:true}
 
 r2:
   account-id: ${R2_ACCOUNT_ID}
@@ -90,6 +92,7 @@ r2:
   bucket-name: ${R2_BUCKET_NAME}
   public-url: ${R2_PUBLIC_URL}
   verify-connection: ${R2_VERIFY_CONNECTION:true}
+  signed-download-ttl-minutes: ${R2_SIGNED_DOWNLOAD_TTL_MINUTES:60}
 
 demo:
   tenant-id: ${DEMO_TENANT_ID:}
@@ -106,6 +109,7 @@ supabase:
   jwt:
     issuer: ${SUPABASE_JWT_ISSUER}
     jwks-uri: ${SUPABASE_JWKS_URI}
+    audience: ${SUPABASE_JWT_AUDIENCE:authenticated}
 
 google:
   calendar:

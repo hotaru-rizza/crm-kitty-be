@@ -325,7 +325,7 @@ public class LeaveService {
             AuditAction attemptedAction = excludeId != null ? AuditAction.STATUS_CHANGE : AuditAction.CREATE;
             throw new BusinessRuleException(
                     ErrorCode.BUSINESS_RULE_VIOLATION,
-                    "Заявка перетинається з іншою схваленою відпусткою",
+                    "Заявка перетинається з іншою активною відсутністю на цей період",
                     AuditContext.of(attemptedAction, AuditEntityType.LEAVE, entityId, leaveLabel)
             );
         }

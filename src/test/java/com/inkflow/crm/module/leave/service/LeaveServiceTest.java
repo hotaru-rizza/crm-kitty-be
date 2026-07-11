@@ -145,6 +145,36 @@ class LeaveServiceTest {
     }
 
     @Test
+    void createLeave_rejectsOverlappingPendingLeave() {
+        UUID tenantId = UUID.randomUUID();
+        UUID staffId = UUID.randomUUID();
+        authenticate(tenantId, staffId);
+
+        Staff staff = Staff.builder().id(staffId).tenantId(tenantId).build();
+        LeaveRequest existing = LeaveRequest.builder()
+                .id(UUID.randomUUID())
+                .tenantId(tenantId)
+                .staff(staff)
+                .status(LeaveStatus.PENDING)
+                .startDate(LocalDate.of(2026, 7, 16))
+                .endDate(LocalDate.of(2026, 7, 16))
+                .build();
+
+        when(staffRepository.findByIdAndDeletedAtIsNull(staffId)).thenReturn(Optional.of(staff));
+        when(leaveRequestRepository.findOverlappingLeaves(staffId,
+                LocalDate.of(2026, 7, 16), LocalDate.of(2026, 7, 16))).thenReturn(List.of(existing));
+
+        CreateLeaveRequest request = CreateLeaveRequest.builder()
+                .staffId(staffId)
+                .leaveType("vacation")
+                .startDate(LocalDate.of(2026, 7, 16))
+                .endDate(LocalDate.of(2026, 7, 16))
+                .build();
+
+        assertThrows(BusinessRuleException.class, () -> leaveService.createLeave(request));
+    }
+
+    @Test
     void isStaffOnLeave_returnsTrueWhenActiveLeaveExists() {
         UUID tenantId = UUID.randomUUID();
         UUID staffId = UUID.randomUUID();

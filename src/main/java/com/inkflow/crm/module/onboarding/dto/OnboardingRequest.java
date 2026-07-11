@@ -1,5 +1,6 @@
 package com.inkflow.crm.module.onboarding.dto;
 
+import java.time.Instant;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -35,4 +36,9 @@ public class OnboardingRequest {
 
     @Valid
     private OnboardingServiceDraftDto service;
+
+    private Instant acceptedTermsAt;
+
+    @Size(max = 20)
+    private String termsVersion;
 }

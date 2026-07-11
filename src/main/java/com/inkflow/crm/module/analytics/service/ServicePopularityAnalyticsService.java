@@ -5,6 +5,7 @@ import com.inkflow.crm.domain.entity.Service;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.module.analytics.dto.ServicePopularityDto;
+import com.inkflow.crm.module.analytics.support.AnalyticsAppointmentScope;
 import com.inkflow.crm.module.analytics.support.AppointmentMetricsCalculator;
 import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
@@ -25,12 +26,13 @@ public class ServicePopularityAnalyticsService {
 
     private final AppointmentRepository appointmentRepository;
     private final AppointmentMetricsCalculator metrics;
+    private final AnalyticsAppointmentScope appointmentScope;
 
     @Transactional(readOnly = true)
     public List<ServicePopularityDto> getServicePopularity(Instant from, Instant to) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UUID locationId = LocationScope.resolveFilter(null).orElse(null);
-        List<Appointment> appointments = appointmentRepository.findByDateRange(from, to, locationId);
+        List<Appointment> appointments = appointmentScope.findForCalendarAnalytics(from, to, locationId);
 
         return groupAppointmentsByService(appointments).values().stream()
                 .map(this::toPopularityDto)

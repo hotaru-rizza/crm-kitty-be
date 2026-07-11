@@ -54,10 +54,10 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
             SELECT lr FROM LeaveRequest lr
             WHERE lr.deletedAt IS NULL
               AND lr.staff.id = :staffId
-              AND lr.status = com.inkflow.crm.domain.enums.LeaveStatus.APPROVED
-              AND (   (lr.startDate BETWEEN :startDate AND :endDate)
-                   OR (lr.endDate   BETWEEN :startDate AND :endDate)
-                   OR (lr.startDate <= :startDate AND lr.endDate >= :endDate))
+              AND lr.status IN (com.inkflow.crm.domain.enums.LeaveStatus.PENDING,
+                                com.inkflow.crm.domain.enums.LeaveStatus.APPROVED)
+              AND lr.startDate <= :endDate
+              AND lr.endDate >= :startDate
             """)
     List<LeaveRequest> findOverlappingLeaves(
             @Param("staffId") UUID staffId,

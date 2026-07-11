@@ -11,6 +11,7 @@ import com.inkflow.crm.domain.enums.AccountType;
 import com.inkflow.crm.domain.enums.StaffStatus;
 import com.inkflow.crm.domain.enums.SupportedCurrency;
 import com.inkflow.crm.domain.enums.SupportedLocale;
+import com.inkflow.crm.domain.enums.PricingType;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.ServiceRepository;
@@ -23,6 +24,7 @@ import com.inkflow.crm.module.onboarding.dto.OnboardingRequest;
 import com.inkflow.crm.module.onboarding.dto.OnboardingResponse;
 import com.inkflow.crm.module.onboarding.dto.OnboardingServiceDraftDto;
 import com.inkflow.crm.module.onboarding.support.OnboardingDefaults;
+import com.inkflow.crm.module.service.support.ServiceDurationPolicy;
 import com.inkflow.crm.module.subscription.service.SubscriptionService;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -146,6 +148,8 @@ public class OnboardingService {
                 .status(StaffStatus.WORKING)
                 .accountStatus(AccountStatus.ACTIVE)
                 .calendarColor(OnboardingDefaults.DEFAULT_LOCATION_COLOR)
+                .termsAcceptedAt(request.getAcceptedTermsAt())
+                .termsVersion(request.getTermsVersion())
                 .build();
         owner = staffRepository.save(owner);
         log.info("Created owner staff: {}", owner.getId());
@@ -174,17 +178,27 @@ public class OnboardingService {
             return;
         }
 
+        PricingType pricingType = resolvePricingType(serviceDraft.getPricingType());
+
         Service service = Service.builder()
                 .tenantId(tenantId)
                 .title(serviceDraft.getTitle().trim())
-                .pricingType(OnboardingDefaults.DEFAULT_SERVICE_PRICING_TYPE)
+                .pricingType(pricingType)
                 .price(serviceDraft.getPrice())
-                .duration(serviceDraft.getDuration())
+                .duration(ServiceDurationPolicy.resolveForCreate(pricingType, serviceDraft.getDuration()))
                 .color(OnboardingDefaults.DEFAULT_SERVICE_COLOR)
                 .isActive(true)
                 .build();
         serviceRepository.save(service);
-        log.info("Created initial service for tenant {}: title={}", tenantId, service.getTitle());
+        log.info("Created initial service for tenant {}: title={}, pricingType={}",
+                tenantId, service.getTitle(), pricingType);
+    }
+
+    private PricingType resolvePricingType(String pricingType) {
+        if (!StringUtils.hasText(pricingType)) {
+            return OnboardingDefaults.DEFAULT_SERVICE_PRICING_TYPE;
+        }
+        return PricingType.fromValue(pricingType.trim());
     }
 
     private String normalizeOptionalText(String value) {

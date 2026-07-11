@@ -498,6 +498,7 @@ class OnboardingServiceTest {
 
         OnboardingServiceDraftDto serviceDraft = new OnboardingServiceDraftDto();
         serviceDraft.setTitle("Small tattoo");
+        serviceDraft.setPricingType("fixed");
         serviceDraft.setDuration(90);
         serviceDraft.setPrice(new BigDecimal("1800"));
 
@@ -533,6 +534,49 @@ class OnboardingServiceTest {
         assertEquals(new BigDecimal("1800"), service.getPrice());
         assertEquals(PricingType.FIXED, service.getPricingType());
         assertTrue(service.getIsActive());
+    }
+
+    @Test
+    void completeOnboarding_createsHourlyServiceWithDefaultDuration() {
+        UUID supabaseUserId = UUID.randomUUID();
+
+        when(staffRepository.findByAuthUserIdAndDeletedAtIsNull(supabaseUserId.toString()))
+                .thenReturn(Optional.empty());
+        when(inkflowProperties.getDefaultTimezone()).thenReturn("Europe/Kyiv");
+        when(inkflowProperties.getDefaultLanguage()).thenReturn("uk");
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(invocation -> {
+            Tenant tenant = invocation.getArgument(0);
+            tenant.setId(UUID.randomUUID());
+            return tenant;
+        });
+        when(staffRepository.save(any(Staff.class))).thenAnswer(invocation -> {
+            Staff staff = invocation.getArgument(0);
+            staff.setId(UUID.randomUUID());
+            return staff;
+        });
+        when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OnboardingServiceDraftDto serviceDraft = new OnboardingServiceDraftDto();
+        serviceDraft.setTitle("Hourly session");
+        serviceDraft.setPricingType("hourly");
+        serviceDraft.setPrice(new BigDecimal("1200"));
+
+        OnboardingRequest request = new OnboardingRequest();
+        request.setCompanyName("Ink Studio");
+        request.setFirstName("Alex");
+        request.setLastName("Artist");
+        request.setTeamSize("solo");
+        request.setService(serviceDraft);
+
+        onboardingService.completeOnboarding(supabaseUserId, "alex@test.com", request);
+
+        ArgumentCaptor<Service> serviceCaptor = ArgumentCaptor.forClass(Service.class);
+        verify(serviceRepository).save(serviceCaptor.capture());
+        Service service = serviceCaptor.getValue();
+        assertEquals("Hourly session", service.getTitle());
+        assertEquals(PricingType.HOURLY, service.getPricingType());
+        assertEquals(60, service.getDuration());
+        assertEquals(new BigDecimal("1200"), service.getPrice());
     }
 
     @Test

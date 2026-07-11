@@ -103,6 +103,12 @@ public class Staff extends BaseEntity {
     @Column(name = "auth_user_id")
     private String authUserId;
 
+    @Column(name = "terms_accepted_at")
+    private java.time.Instant termsAcceptedAt;
+
+    @Column(name = "terms_version", length = 20)
+    private String termsVersion;
+
     @Column(name = "google_access_token", columnDefinition = "TEXT")
     private String googleAccessToken;
 

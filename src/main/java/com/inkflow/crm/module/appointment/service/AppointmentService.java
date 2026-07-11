@@ -112,6 +112,7 @@ public class AppointmentService {
                 .and(AppointmentSpecifications.withArtists(artistIds))
                 .and(AppointmentSpecifications.withLocation(locationId))
                 .and(AppointmentSpecifications.withService(request.getServiceId()))
+                .and(AppointmentSpecifications.withProject(request.getProjectId()))
                 .and(AppointmentSpecifications.withStatuses(request.getStatuses()));
 
         return appointmentRepository.findAll(spec, Pageable.unpaged(Sort.by("startTime")))
@@ -320,6 +321,7 @@ public class AppointmentService {
                 .and(AppointmentSpecifications.withLocation(locationId))
                 .and(AppointmentSpecifications.withArtists(artistIds))
                 .and(AppointmentSpecifications.withService(filter.serviceId()))
+                .and(AppointmentSpecifications.withProject(filter.projectId()))
                 .and(filter.statuses() != null && !filter.statuses().isEmpty()
                         ? AppointmentSpecifications.withStatuses(filter.statuses())
                         : AppointmentSpecifications.withStatus(filter.status()))
