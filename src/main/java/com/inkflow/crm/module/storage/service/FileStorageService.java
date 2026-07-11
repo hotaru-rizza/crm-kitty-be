@@ -1,6 +1,7 @@
 package com.inkflow.crm.module.storage.service;
 
 import com.inkflow.crm.config.R2Properties;
+import com.inkflow.crm.module.storage.dto.PresignedDownloadResult;
 import com.inkflow.crm.module.storage.dto.PresignedUploadResult;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -10,11 +11,14 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.io.InputStream;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -53,6 +57,38 @@ public class FileStorageService {
                 Map.copyOf(presigned.signedHeaders()),
                 buildPublicUrl(key)
         );
+    }
+
+    public PresignedDownloadResult generatePresignedDownloadUrl(String key) {
+        validateReadableKey(key);
+
+        Duration ttl = Duration.ofMinutes(Math.max(1, r2Properties.getSignedDownloadTtlMinutes()));
+        Instant expiresAt = Instant.now().plus(ttl);
+
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(ttl)
+                .getObjectRequest(GetObjectRequest.builder()
+                        .bucket(r2Properties.getBucketName())
+                        .key(key)
+                        .build())
+                .build();
+
+        PresignedGetObjectRequest presigned = s3Presigner.presignGetObject(presignRequest);
+
+        return PresignedDownloadResult.builder()
+                .key(key)
+                .downloadUrl(presigned.url().toString())
+                .expiresAt(expiresAt)
+                .build();
+    }
+
+    public PresignedDownloadResult resolvePresignedDownloadUrl(String urlOrKey) {
+        String key = urlOrKey.contains("://") ? extractKeyFromUrl(urlOrKey) : urlOrKey;
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("Invalid file reference");
+        }
+
+        return generatePresignedDownloadUrl(key);
     }
 
     public String uploadFile(String folder, String originalFilename, String contentType, InputStream inputStream, long contentLength) {
@@ -121,6 +157,14 @@ public class FileStorageService {
     }
 
     private void validateDeleteKey(String key) {
+        validateTenantKey(key);
+    }
+
+    private void validateReadableKey(String key) {
+        validateTenantKey(key);
+    }
+
+    private void validateTenantKey(String key) {
         if (key == null || key.isBlank()) {
             throw new IllegalArgumentException("Key is required");
         }

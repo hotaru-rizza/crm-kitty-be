@@ -4,6 +4,7 @@ import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.enums.AppointmentStatus;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.module.analytics.dto.AppointmentAnalyticsDto;
+import com.inkflow.crm.module.analytics.support.AnalyticsAppointmentScope;
 import com.inkflow.crm.module.analytics.support.AnalyticsTimeSeriesBuilder;
 import com.inkflow.crm.module.analytics.support.AppointmentMetricsCalculator;
 import com.inkflow.crm.security.LocationScope;
@@ -26,12 +27,13 @@ public class AppointmentAnalyticsQueryService {
     private final AppointmentRepository appointmentRepository;
     private final AnalyticsTimeSeriesBuilder timeSeriesBuilder;
     private final AppointmentMetricsCalculator metrics;
+    private final AnalyticsAppointmentScope appointmentScope;
 
     @Transactional(readOnly = true)
     public AppointmentAnalyticsDto getAppointmentAnalytics(Instant from, Instant to, String groupBy) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UUID locationId = LocationScope.resolveFilter(null).orElse(null);
-        List<Appointment> appointments = appointmentRepository.findByDateRange(from, to, locationId);
+        List<Appointment> appointments = appointmentScope.findForCalendarAnalytics(from, to, locationId);
 
         int total = metrics.countTotal(appointments);
         int completed = metrics.countCompleted(appointments);

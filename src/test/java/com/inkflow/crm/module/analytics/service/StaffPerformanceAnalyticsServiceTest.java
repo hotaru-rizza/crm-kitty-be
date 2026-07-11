@@ -8,6 +8,7 @@ import com.inkflow.crm.domain.enums.SalaryType;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.StaffScheduleRepository;
 import com.inkflow.crm.module.analytics.dto.StaffPerformanceDto;
+import com.inkflow.crm.module.analytics.support.AnalyticsAppointmentScope;
 import com.inkflow.crm.module.analytics.support.AppointmentMetricsCalculator;
 import com.inkflow.crm.module.analytics.support.CommissionCalculator;
 import com.inkflow.crm.module.analytics.support.StaffUtilizationCalculator;
@@ -55,6 +56,9 @@ class StaffPerformanceAnalyticsServiceTest {
     private AppointmentMetricsCalculator metrics;
 
     @Mock
+    private AnalyticsAppointmentScope appointmentScope;
+
+    @Mock
     private InkflowProperties inkflowProperties;
 
     @InjectMocks
@@ -92,7 +96,7 @@ class StaffPerformanceAnalyticsServiceTest {
                 .build();
         List<Appointment> appointments = List.of(appointment);
 
-        when(appointmentRepository.findByDateRange(from, to, null)).thenReturn(appointments);
+        when(appointmentScope.findForCalendarAnalytics(from, to, null)).thenReturn(appointments);
         when(metrics.hasArtist(appointment)).thenReturn(true);
         when(staffScheduleRepository.findByStaffIdIn(List.of(artistId))).thenReturn(List.of());
         when(metrics.countTotal(appointments)).thenReturn(1);
@@ -131,7 +135,7 @@ class StaffPerformanceAnalyticsServiceTest {
         Instant from = Instant.parse("2026-06-01T00:00:00Z");
         Instant to = Instant.parse("2026-06-30T23:59:59Z");
 
-        when(appointmentRepository.findByDateRange(from, to, null)).thenReturn(List.of());
+        when(appointmentScope.findForCalendarAnalytics(from, to, null)).thenReturn(List.of());
 
         assertTrue(staffPerformanceAnalyticsService.getStaffPerformance(from, to).isEmpty());
     }
@@ -149,7 +153,7 @@ class StaffPerformanceAnalyticsServiceTest {
                 .finalPrice(BigDecimal.valueOf(300))
                 .build();
 
-        when(appointmentRepository.findByDateRange(from, to, null))
+        when(appointmentScope.findForCalendarAnalytics(from, to, null))
                 .thenReturn(List.of(withoutArtist));
         when(metrics.hasArtist(withoutArtist)).thenReturn(false);
 
@@ -178,7 +182,7 @@ class StaffPerformanceAnalyticsServiceTest {
                 .artist(topEarner)
                 .build();
 
-        when(appointmentRepository.findByDateRange(from, to, null)).thenReturn(List.of(low, high));
+        when(appointmentScope.findForCalendarAnalytics(from, to, null)).thenReturn(List.of(low, high));
         when(metrics.hasArtist(low)).thenReturn(true);
         when(metrics.hasArtist(high)).thenReturn(true);
         when(staffScheduleRepository.findByStaffIdIn(any())).thenReturn(List.of());

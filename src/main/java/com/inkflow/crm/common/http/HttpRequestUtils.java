@@ -18,9 +18,21 @@ public final class HttpRequestUtils {
             return null;
         }
 
+        return resolveClientIp(request);
+    }
+
+    public static String resolveClientIp(HttpServletRequest request) {
         String forwarded = request.getHeader(FORWARDED_FOR_HEADER);
         if (StringUtils.hasText(forwarded)) {
-            return forwarded.split(",")[0].trim();
+            String first = forwarded.split(",")[0].trim();
+            if (StringUtils.hasText(first)) {
+                return first;
+            }
+        }
+
+        String realIp = request.getHeader("X-Real-IP");
+        if (StringUtils.hasText(realIp)) {
+            return realIp.trim();
         }
 
         return request.getRemoteAddr();

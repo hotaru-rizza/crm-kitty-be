@@ -57,8 +57,13 @@ public final class AppointmentSpecifications {
         return (root, query, cb) -> cb.lessThanOrEqualTo(root.get("startTime"), to);
     }
 
-    public static Specification<Appointment> withService(UUID serviceId) {
-        if (serviceId == null) return null;
-        return (root, query, cb) -> cb.equal(root.get("service").get("id"), serviceId);
-    }
+  public static Specification<Appointment> withService(UUID serviceId) {
+    if (serviceId == null) return null;
+    return (root, query, cb) -> cb.equal(root.get("service").get("id"), serviceId);
+  }
+
+  public static Specification<Appointment> withProject(UUID projectId) {
+    if (projectId == null) return null;
+    return (root, query, cb) -> cb.equal(root.get("project").get("id"), projectId);
+  }
 }

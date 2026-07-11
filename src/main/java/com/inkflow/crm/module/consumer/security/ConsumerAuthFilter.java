@@ -44,6 +44,9 @@ public class ConsumerAuthFilter extends OncePerRequestFilter {
     @Value("${supabase.jwt.jwks-uri}")
     private String jwksUri;
 
+    @Value("${supabase.jwt.audience:}")
+    private String jwtAudience;
+
     private JwkProvider jwkProvider;
 
     @PostConstruct
@@ -104,10 +107,14 @@ public class ConsumerAuthFilter extends OncePerRequestFilter {
         Jwk jwk = jwkProvider.get(unverified.getKeyId());
         ECPublicKey publicKey = (ECPublicKey) jwk.getPublicKey();
         Algorithm algorithm = Algorithm.ECDSA256(publicKey, null);
-        return JWT.require(algorithm)
-                .withIssuer(jwtIssuer)
-                .build()
-                .verify(token);
+        var verifierBuilder = JWT.require(algorithm)
+                .withIssuer(jwtIssuer);
+
+        if (StringUtils.hasText(jwtAudience)) {
+            verifierBuilder.withAudience(jwtAudience);
+        }
+
+        return verifierBuilder.build().verify(token);
     }
 
     private String extractJwt(HttpServletRequest request) {

@@ -34,6 +34,9 @@ public class JwtTokenProvider {
     @Value("${supabase.jwt.jwks-uri}")
     private String jwksUri;
 
+    @Value("${supabase.jwt.audience:}")
+    private String jwtAudience;
+
     private final StaffRepository staffRepository;
     private JwkProvider jwkProvider;
 
@@ -161,10 +164,14 @@ public class JwtTokenProvider {
             ECPublicKey publicKey = (ECPublicKey) jwk.getPublicKey();
 
             Algorithm algorithm = Algorithm.ECDSA256(publicKey, null);
-            return JWT.require(algorithm)
-                    .withIssuer(jwtIssuer)
-                    .build()
-                    .verify(token);
+            var verifierBuilder = JWT.require(algorithm)
+                    .withIssuer(jwtIssuer);
+
+            if (org.springframework.util.StringUtils.hasText(jwtAudience)) {
+                verifierBuilder.withAudience(jwtAudience);
+            }
+
+            return verifierBuilder.build().verify(token);
         } catch (JwkException e) {
             throw new JWTVerificationException("Failed to fetch JWK: " + e.getMessage(), e);
         }

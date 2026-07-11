@@ -34,5 +34,6 @@ public class FinanceStatsDto {
         private BigDecimal revenue;
         private Integer appointmentsCount;
         private String calendarColor;
+        private String avatar;
     }
 }

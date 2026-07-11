@@ -38,9 +38,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (StringUtils.hasText(jwt)) {
                 if (tokenProvider.validateToken(jwt)) {
                     UserPrincipal userPrincipal = tokenProvider.getUserPrincipal(jwt);
-                    log.info("JWT auth OK: user={}, tenant={}, role={}, authUserId={}",
+                    log.info("JWT auth OK: user={}, tenant={}, role={}",
                             userPrincipal.getId(), userPrincipal.getTenantId(),
-                            userPrincipal.getRole(), userPrincipal.getAuthUserId());
+                            userPrincipal.getRole());
 
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
@@ -92,7 +92,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         User user = new User();
         user.setId(principal.getId().toString());
-        user.setEmail(principal.getEmail());
         Sentry.setUser(user);
         Sentry.configureScope(scope -> {
             scope.setTag("tenantId", principal.getTenantId().toString());

@@ -190,7 +190,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     @Query("""
             SELECT t.staff.id, t.staff.firstName, t.staff.lastName,
-                   SUM(t.amount), COUNT(t), t.staff.calendarColor
+                   SUM(t.amount), COUNT(t), t.staff.calendarColor, t.staff.avatar
             FROM Transaction t
             WHERE t.type = 'INCOME'
               AND t.category = 'service'
@@ -199,7 +199,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.staff IS NOT NULL
               AND t.deletedAt IS NULL
               AND (:locationId IS NULL OR t.location.id = :locationId)
-            GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName, t.staff.calendarColor
+            GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName, t.staff.calendarColor, t.staff.avatar
             """)
     List<Object[]> sumByArtistAndDateRange(
             @Param("from") Instant from,
@@ -208,7 +208,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     @Query("""
             SELECT t.staff.id, t.staff.firstName, t.staff.lastName,
-                   SUM(t.amount), COUNT(t), t.staff.calendarColor
+                   SUM(t.amount), COUNT(t), t.staff.calendarColor, t.staff.avatar
             FROM Transaction t
             WHERE t.type = 'INCOME'
               AND t.category = 'service'
@@ -218,7 +218,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
               AND t.staff IS NOT NULL
               AND t.deletedAt IS NULL
               AND (:locationId IS NULL OR t.location.id = :locationId)
-            GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName, t.staff.calendarColor
+            GROUP BY t.staff.id, t.staff.firstName, t.staff.lastName, t.staff.calendarColor, t.staff.avatar
             """)
     List<Object[]> sumByArtistAndDateRangeForStaffs(
             @Param("from") Instant from,

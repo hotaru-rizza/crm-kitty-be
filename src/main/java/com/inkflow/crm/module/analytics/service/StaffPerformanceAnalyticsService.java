@@ -7,6 +7,7 @@ import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.domain.repository.StaffScheduleRepository;
 import com.inkflow.crm.module.analytics.dto.StaffPerformanceDto;
 import com.inkflow.crm.config.InkflowProperties;
+import com.inkflow.crm.module.analytics.support.AnalyticsAppointmentScope;
 import com.inkflow.crm.module.analytics.support.AppointmentMetricsCalculator;
 import com.inkflow.crm.module.analytics.support.CommissionCalculator;
 import com.inkflow.crm.module.analytics.support.StaffUtilizationCalculator;
@@ -35,12 +36,13 @@ public class StaffPerformanceAnalyticsService {
     private final StaffUtilizationCalculator utilizationCalculator;
     private final CommissionCalculator commissionCalculator;
     private final AppointmentMetricsCalculator metrics;
+    private final AnalyticsAppointmentScope appointmentScope;
 
     @Transactional(readOnly = true)
     public List<StaffPerformanceDto> getStaffPerformance(Instant from, Instant to) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UUID locationId = LocationScope.resolveFilter(null).orElse(null);
-        List<Appointment> appointments = appointmentRepository.findByDateRange(from, to, locationId);
+        List<Appointment> appointments = appointmentScope.findForCalendarAnalytics(from, to, locationId);
 
         Map<UUID, List<Appointment>> appointmentsByArtist = groupAppointmentsByArtist(appointments);
         Map<UUID, List<StaffSchedule>> schedulesByArtist = loadSchedulesByArtist(appointmentsByArtist.keySet());

@@ -211,6 +211,7 @@ public class TransactionService {
                     .revenue((BigDecimal) row[3])
                     .appointmentsCount(((Long) row[4]).intValue())
                     .calendarColor((String) row[5])
+                    .avatar((String) row[6])
                     .build());
         }
 

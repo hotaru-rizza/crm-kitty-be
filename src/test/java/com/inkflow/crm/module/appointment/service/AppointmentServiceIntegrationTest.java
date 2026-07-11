@@ -301,7 +301,7 @@ class AppointmentServiceIntegrationTest {
 
         var result = appointmentService.getAllAppointments(
                 pageRequest,
-                new AppointmentFilterRequest(null, null, null, null, null,
+                new AppointmentFilterRequest(null, null, null, null, null, null,
                         base.minus(1, ChronoUnit.DAYS).toString(),
                         base.plus(3, ChronoUnit.DAYS).toString())
         );

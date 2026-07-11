@@ -16,6 +16,7 @@ import com.inkflow.crm.module.subscription.service.SubscriptionService;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +43,7 @@ public class MonobankService {
     private final SubscriptionService subscriptionService;
     private final AuditRecorder auditRecorder;
     private final AuditLabelFormatter auditLabelFormatter;
+    private final Environment environment;
 
     private static final int CCY_UAH = 980;
 
@@ -162,7 +164,12 @@ public class MonobankService {
         }
 
         if (config.getToken() == null || config.getToken().startsWith("REPLACE_")) {
-            return true;
+            if (isDevProfile()) {
+                log.warn("Monobank webhook accepted without remote verification — dev profile only");
+                return true;
+            }
+            log.warn("Monobank webhook rejected — token not configured");
+            return false;
         }
 
         String remoteStatus = fetchRemoteInvoiceStatus(payload.getInvoiceId());
@@ -318,5 +325,14 @@ public class MonobankService {
                 .expiresAt(invoice.getExpiresAt())
                 .createdAt(invoice.getCreatedAt())
                 .build();
+    }
+
+    private boolean isDevProfile() {
+        for (String profile : environment.getActiveProfiles()) {
+            if ("dev".equals(profile) || "test".equals(profile)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

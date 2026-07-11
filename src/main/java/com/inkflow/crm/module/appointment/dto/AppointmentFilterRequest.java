@@ -7,6 +7,7 @@ public record AppointmentFilterRequest(
         UUID locationId,
         List<UUID> artistIds,
         UUID serviceId,
+        UUID projectId,
         String status,
         List<String> statuses,
         String from,

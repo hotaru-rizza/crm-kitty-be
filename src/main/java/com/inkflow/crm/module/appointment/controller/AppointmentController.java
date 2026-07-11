@@ -40,12 +40,13 @@ public class AppointmentController {
             @RequestParam(required = false) UUID locationId,
             @RequestParam(required = false) List<UUID> artistIds,
             @RequestParam(required = false) UUID serviceId,
+            @RequestParam(required = false) UUID projectId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) List<String> statuses,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
         AppointmentFilterRequest filter = new AppointmentFilterRequest(
-                locationId, artistIds, serviceId, status, statuses, from, to);
+                locationId, artistIds, serviceId, projectId, status, statuses, from, to);
         PageResult<AppointmentDto> result = appointmentService.getAllAppointments(pageRequest, filter);
 
         return ResponseEntity.ok(ApiResponse.success(result.getData(), result.getPagination()));

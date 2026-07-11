@@ -3,6 +3,7 @@ package com.inkflow.crm.module.analytics.service;
 import com.inkflow.crm.domain.entity.Appointment;
 import com.inkflow.crm.domain.repository.AppointmentRepository;
 import com.inkflow.crm.module.analytics.dto.ClientAnalyticsDto;
+import com.inkflow.crm.module.analytics.support.AnalyticsAppointmentScope;
 import com.inkflow.crm.module.analytics.support.AnalyticsTimeSeriesBuilder;
 import com.inkflow.crm.module.analytics.support.AppointmentMetricsCalculator;
 import com.inkflow.crm.security.LocationScope;
@@ -25,12 +26,13 @@ public class ClientAnalyticsQueryService {
     private final AppointmentRepository appointmentRepository;
     private final AnalyticsTimeSeriesBuilder timeSeriesBuilder;
     private final AppointmentMetricsCalculator metrics;
+    private final AnalyticsAppointmentScope appointmentScope;
 
     @Transactional(readOnly = true)
     public ClientAnalyticsDto getClientAnalytics(Instant from, Instant to, String groupBy) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
         UUID locationId = LocationScope.resolveFilter(null).orElse(null);
-        List<Appointment> appointments = appointmentRepository.findByDateRange(from, to, locationId);
+        List<Appointment> appointments = appointmentScope.findForClientAnalytics(from, to, locationId);
 
         Set<UUID> clientIdsInRange = collectClientIds(appointments);
         Set<UUID> existingClientIds = loadExistingClientIds(from, locationId);
@@ -57,8 +59,7 @@ public class ClientAnalyticsQueryService {
     }
 
     private Set<UUID> loadExistingClientIds(Instant before, UUID locationId) {
-        return appointmentRepository
-                .findByDateRange(Instant.EPOCH, before, locationId)
+        return appointmentScope.findForClientAnalytics(Instant.EPOCH, before, locationId)
                 .stream()
                 .filter(metrics::hasClient)
                 .map(appointment -> appointment.getClient().getId())

@@ -2,6 +2,7 @@ package com.inkflow.crm.module.storage.controller;
 
 import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.common.dto.ApiResponse;
+import com.inkflow.crm.module.storage.dto.PresignedDownloadResult;
 import com.inkflow.crm.module.storage.dto.PresignedUploadRequest;
 import com.inkflow.crm.module.storage.dto.PresignedUploadResult;
 import com.inkflow.crm.module.storage.service.FileStorageService;
@@ -42,6 +43,16 @@ public class FileController {
                 request.getContentType()
         );
         log.info("Presigned upload URL generated via API: folder={} filename={}", request.getFolder(), request.getFilename());
+
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    @GetMapping("/signed-url")
+    @RequirePermission(Permission.FILES_UPLOAD)
+    public ResponseEntity<ApiResponse<PresignedDownloadResult>> getSignedDownloadUrl(
+            @RequestParam String key) {
+        PresignedDownloadResult result = fileStorageService.generatePresignedDownloadUrl(key);
+        log.info("Signed download URL generated via API: key={}", key);
 
         return ResponseEntity.ok(ApiResponse.success(result));
     }
