@@ -145,6 +145,21 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     @Query("""
             SELECT t.category, SUM(t.amount) FROM Transaction t
+            WHERE t.type = :type
+              AND t.date >= :from
+              AND t.date < :to
+              AND t.deletedAt IS NULL
+              AND (:locationId IS NULL OR t.location.id = :locationId)
+            GROUP BY t.category
+            """)
+    List<Object[]> sumByCategoryTypeAndDateRange(
+            @Param("type") TransactionType type,
+            @Param("from") Instant from,
+            @Param("to") Instant to,
+            @Param("locationId") UUID locationId);
+
+    @Query("""
+            SELECT t.category, SUM(t.amount) FROM Transaction t
             WHERE t.date >= :from
               AND t.date < :to
               AND t.staff.id IN :staffIds
@@ -153,6 +168,23 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             GROUP BY t.category
             """)
     List<Object[]> sumByCategoryAndDateRangeForStaffs(
+            @Param("from") Instant from,
+            @Param("to") Instant to,
+            @Param("staffIds") List<UUID> staffIds,
+            @Param("locationId") UUID locationId);
+
+    @Query("""
+            SELECT t.category, SUM(t.amount) FROM Transaction t
+            WHERE t.type = :type
+              AND t.date >= :from
+              AND t.date < :to
+              AND t.staff.id IN :staffIds
+              AND t.deletedAt IS NULL
+              AND (:locationId IS NULL OR t.location.id = :locationId)
+            GROUP BY t.category
+            """)
+    List<Object[]> sumByCategoryTypeAndDateRangeForStaffs(
+            @Param("type") TransactionType type,
             @Param("from") Instant from,
             @Param("to") Instant to,
             @Param("staffIds") List<UUID> staffIds,

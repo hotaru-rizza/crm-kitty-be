@@ -15,7 +15,7 @@ import java.util.List;
 @ConfigurationProperties(prefix = "inkflow")
 public class InkflowProperties {
 
-    private String appName = "CRM";
+    private String appName = "Inkat CRM";
     private String defaultTimezone = "Europe/Kyiv";
     private String defaultLanguage = "uk";
     private String defaultStartPage = "/calendar";
@@ -28,6 +28,7 @@ public class InkflowProperties {
     private Email email = new Email();
     private Audit audit = new Audit();
     private Appointments appointments = new Appointments();
+    private Subscription subscription = new Subscription();
 
     public ZoneId defaultZoneId() {
         return ZoneId.of(defaultTimezone);
@@ -97,5 +98,11 @@ public class InkflowProperties {
     @Setter
     public static class Appointments {
         private int defaultReservationDurationMinutes = 60;
+    }
+
+    @Getter
+    @Setter
+    public static class Subscription {
+        private boolean enforcementEnabled = false;
     }
 }

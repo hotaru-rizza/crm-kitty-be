@@ -14,7 +14,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 public final class ClientSpecifications {
@@ -30,13 +32,38 @@ public final class ClientSpecifications {
             return null;
         }
         return (root, query, cb) -> {
-            String pattern = "%" + search.toLowerCase() + "%";
-            return cb.or(
-                    cb.like(cb.lower(root.get("firstName")), pattern),
-                    cb.like(cb.lower(root.get("lastName")), pattern),
-                    cb.like(root.get("phone"), "%" + search + "%"),
-                    cb.like(cb.lower(root.get("email")), pattern)
+            String trimmed = search.trim();
+            String normalized = trimmed.toLowerCase(Locale.ROOT);
+            Expression<String> fullName = cb.concat(
+                    cb.concat(cb.coalesce(cb.lower(root.get("firstName")), ""), " "),
+                    cb.coalesce(cb.lower(root.get("lastName")), "")
             );
+
+            List<String> tokens = Arrays.stream(normalized.split("\\s+"))
+                    .filter(token -> !token.isBlank())
+                    .toList();
+
+            List<Predicate> tokenPredicates = new ArrayList<>();
+            for (String token : tokens) {
+                String pattern = "%" + token + "%";
+                tokenPredicates.add(cb.or(
+                        cb.like(cb.lower(root.get("firstName")), pattern),
+                        cb.like(cb.lower(root.get("lastName")), pattern),
+                        cb.like(fullName, pattern),
+                        cb.like(cb.lower(root.get("email")), pattern),
+                        cb.like(root.get("phone"), "%" + token + "%")
+                ));
+            }
+
+            Predicate tokensMatch = cb.and(tokenPredicates.toArray(Predicate[]::new));
+            String phrasePattern = "%" + normalized + "%";
+            Predicate phraseMatch = cb.or(
+                    cb.like(fullName, phrasePattern),
+                    cb.like(cb.lower(root.get("email")), phrasePattern),
+                    cb.like(root.get("phone"), "%" + trimmed + "%")
+            );
+
+            return cb.or(tokensMatch, phraseMatch);
         };
     }
 

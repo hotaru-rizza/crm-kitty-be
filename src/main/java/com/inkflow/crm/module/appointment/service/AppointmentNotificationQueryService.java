@@ -25,35 +25,25 @@ public class AppointmentNotificationQueryService {
         entityResolver.requireAppointment(tenantId, appointmentId);
 
         return emailMessageRepository
-                .findByEntityIdOrderByCreatedAtDesc( appointmentId)
+                .findByEntityIdOrderByCreatedAtDesc(appointmentId)
                 .stream()
+                .filter(this::isClientAppointmentNotification)
                 .map(this::toDto)
                 .toList();
+    }
+
+    private boolean isClientAppointmentNotification(EmailMessage message) {
+        TriggerType triggerType = message.getTriggerType();
+        return triggerType != null && triggerType.isClientAppointmentNotification();
     }
 
     private AppointmentNotificationDto toDto(EmailMessage message) {
         TriggerType triggerType = message.getTriggerType();
         return AppointmentNotificationDto.builder()
                 .triggerType(triggerType != null ? triggerType.name() : null)
-                .triggerLabel(resolveTriggerLabel(triggerType))
                 .status(message.getStatus() != null ? message.getStatus().name() : null)
                 .sentAt(message.getSentAt())
                 .createdAt(message.getCreatedAt())
                 .build();
-    }
-
-    private String resolveTriggerLabel(TriggerType triggerType) {
-        if (triggerType == null) {
-            return null;
-        }
-        return switch (triggerType) {
-            case BOOKING_CONFIRMED -> "Appointment confirmation";
-            case BEFORE_BOOKING -> "Appointment reminder";
-            case AFTER_BOOKING -> "Repeat appointment reminder";
-            case BOOKING_COMPLETED -> "Review request";
-            case BOOKING_CANCELED -> "Cancellation notice";
-            case BOOKING_RESCHEDULED -> "Reschedule notice";
-            default -> triggerType.name();
-        };
     }
 }

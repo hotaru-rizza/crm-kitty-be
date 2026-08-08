@@ -2,10 +2,12 @@ package com.inkflow.crm.module.consumer.controller;
 
 import com.inkflow.crm.common.dto.ApiResponse;
 import com.inkflow.crm.common.dto.ApiResponses;
+import com.inkflow.crm.module.consumer.config.ConsumerAiProperties;
 import com.inkflow.crm.module.consumer.dto.TryOnRequest;
 import com.inkflow.crm.module.consumer.dto.TryOnResponse;
 import com.inkflow.crm.module.consumer.dto.PlacementDto;
 import com.inkflow.crm.module.consumer.entity.ConsumerUser;
+import com.inkflow.crm.module.consumer.service.ConsumerTokenService;
 import com.inkflow.crm.module.consumer.service.GeminiTattooService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,12 +25,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class TryOnController {
 
     private final GeminiTattooService geminiService;
+    private final ConsumerTokenService consumerTokenService;
+    private final ConsumerAiProperties consumerAiProperties;
 
     @PostMapping
     public ResponseEntity<ApiResponse<TryOnResponse>> tryOn(
             @AuthenticationPrincipal ConsumerUser consumer,
             @Valid @RequestBody TryOnRequest request) {
         ApiResponses.requireConsumer(consumer);
+
+        int cost = consumerAiProperties.getCost().getTryOn();
+        consumerTokenService.assertCanAfford(consumer, cost);
 
         try {
             PlacementDto placement = request.placement();
@@ -39,10 +46,12 @@ public class TryOnController {
                     placement.xNorm(), placement.yNorm(), placement.sizeNorm(), placement.angle()
             );
 
-            log.info("Tattoo try-on generated via API: consumerId={} xNorm={} yNorm={} sizeNorm={} angle={}",
-                    consumer.getId(), placement.xNorm(), placement.yNorm(), placement.sizeNorm(), placement.angle());
+            int remaining = consumerTokenService.chargeAndGetRemaining(consumer.getId(), cost);
 
-            return ApiResponses.ok(TryOnResponse.success(resultDataUri));
+            log.info("Tattoo try-on generated via API: consumerId={} xNorm={} yNorm={} sizeNorm={} angle={} remainingTokens={}",
+                    consumer.getId(), placement.xNorm(), placement.yNorm(), placement.sizeNorm(), placement.angle(), remaining);
+
+            return ApiResponses.ok(TryOnResponse.success(resultDataUri, remaining));
 
         } catch (Exception e) {
             log.error("Tattoo try-on generation failed via API: consumerId={}", consumer.getId(), e);

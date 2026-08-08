@@ -1,15 +1,20 @@
 package com.inkflow.crm.module.notification.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessagingException;
+import com.google.firebase.messaging.Message;
+import com.google.firebase.messaging.MessagingErrorCode;
+import com.google.firebase.messaging.Notification;
+import com.inkflow.crm.module.notification.config.FcmProperties;
 import com.inkflow.crm.module.notification.entity.DeviceToken;
 import com.inkflow.crm.module.notification.repository.DeviceTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -20,17 +25,14 @@ import java.util.UUID;
 public class FcmPushService {
 
     private final DeviceTokenRepository deviceTokenRepository;
-    private final ObjectMapper objectMapper;
+    private final FcmProperties fcmProperties;
+    private final ObjectProvider<FirebaseMessaging> firebaseMessaging;
 
-    @Value("${fcm.server-key:}")
-    private String fcmServerKey;
-
-    private static final String FCM_URL = "https://fcm.googleapis.com/fcm/send";
-    private final RestClient restClient = RestClient.create();
-
+    @Transactional
     public void sendToUser(UUID userId, String title, String body, Map<String, String> data) {
-        if (fcmServerKey == null || fcmServerKey.isBlank()) {
-            log.debug("FCM disabled (no server key), skipping push for user {}", userId);
+        FirebaseMessaging messaging = resolveMessaging();
+        if (messaging == null) {
+            log.debug("FCM disabled, skipping push for user {}", userId);
             return;
         }
 
@@ -40,40 +42,57 @@ public class FcmPushService {
             return;
         }
 
+        Map<String, String> payload = data != null ? data : Map.of();
+
         for (DeviceToken deviceToken : tokens) {
-            sendPush(deviceToken.getToken(), title, body, data);
+            sendToDevice(messaging, deviceToken, title, body, payload);
         }
     }
 
-    private void sendPush(String token, String title, String body, Map<String, String> data) {
-        try {
-            Map<String, Object> notification = Map.of(
-                    "title", title,
-                    "body", body,
-                    "sound", "default"
-            );
-
-            Map<String, Object> payload = Map.of(
-                    "to", token,
-                    "notification", notification,
-                    "data", data != null ? data : Map.of(),
-                    "priority", "high"
-            );
-
-            String json = objectMapper.writeValueAsString(payload);
-
-            restClient.post()
-                    .uri(FCM_URL)
-                    .header("Authorization", "key=" + fcmServerKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(json)
-                    .retrieve()
-                    .body(String.class);
-
-            log.debug("Push sent to token {}...", token.substring(0, Math.min(20, token.length())));
-
-        } catch (Exception e) {
-            log.warn("Failed to send FCM push: {}", e.getMessage());
+    private FirebaseMessaging resolveMessaging() {
+        if (!fcmProperties.isEnabled()) {
+            return null;
         }
+        return firebaseMessaging.getIfAvailable();
+    }
+
+    private void sendToDevice(
+            FirebaseMessaging messaging,
+            DeviceToken deviceToken,
+            String title,
+            String body,
+            Map<String, String> data) {
+        Message message = Message.builder()
+                .setToken(deviceToken.getToken())
+                .setNotification(Notification.builder()
+                        .setTitle(title)
+                        .setBody(body)
+                        .build())
+                .putAllData(data)
+                .build();
+
+        try {
+            messaging.send(message);
+            deviceToken.setLastUsedAt(Instant.now());
+            deviceTokenRepository.save(deviceToken);
+            log.debug("FCM push sent for user {}", deviceToken.getUserId());
+        } catch (FirebaseMessagingException e) {
+            handleSendFailure(deviceToken, e);
+        } catch (Exception e) {
+            log.warn("Failed to send FCM push for user {}: {}", deviceToken.getUserId(), e.getMessage());
+        }
+    }
+
+    private void handleSendFailure(DeviceToken deviceToken, FirebaseMessagingException e) {
+        MessagingErrorCode errorCode = e.getMessagingErrorCode();
+        if (errorCode == MessagingErrorCode.UNREGISTERED
+                || errorCode == MessagingErrorCode.INVALID_ARGUMENT) {
+            deviceTokenRepository.delete(deviceToken);
+            log.info("Removed invalid FCM token for user {}: {}", deviceToken.getUserId(), errorCode);
+            return;
+        }
+
+        log.warn("Failed to send FCM push for user {}: {} ({})",
+                deviceToken.getUserId(), e.getMessage(), errorCode);
     }
 }

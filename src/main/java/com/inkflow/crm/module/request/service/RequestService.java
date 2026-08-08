@@ -9,6 +9,7 @@ import com.inkflow.crm.common.util.PhoneUtils;
 import com.inkflow.crm.domain.entity.Client;
 import com.inkflow.crm.domain.entity.Location;
 import com.inkflow.crm.domain.entity.Request;
+import com.inkflow.crm.domain.entity.Staff;
 import com.inkflow.crm.domain.enums.AuditAction;
 import com.inkflow.crm.domain.enums.AuditEntityType;
 import com.inkflow.crm.domain.enums.RequestSource;
@@ -17,14 +18,17 @@ import com.inkflow.crm.domain.repository.ClientRepository;
 import com.inkflow.crm.domain.repository.LocationRepository;
 import com.inkflow.crm.domain.repository.RequestRepository;
 import com.inkflow.crm.domain.repository.RequestSpecifications;
+import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.client.dto.ClientDto;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
+import com.inkflow.crm.module.notification.event.NewRequestEvent;
 import com.inkflow.crm.module.request.dto.*;
 import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -44,8 +48,11 @@ public class RequestService {
     private final RequestRepository requestRepository;
     private final ClientRepository clientRepository;
     private final LocationRepository locationRepository;
+    private final StaffRepository staffRepository;
     private final ClientMapper clientMapper;
     private final AuditRecorder auditRecorder;
+    private final RequestMessageService requestMessageService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public PageResult<RequestDto> getAllRequests(PageRequest pageRequest, RequestFilterRequest filter) {
@@ -62,28 +69,89 @@ public class RequestService {
     @Transactional
     public RequestDto createRequest(CreateRequestRequest createRequest) {
         UUID tenantId = SecurityUtils.getCurrentTenantId();
+        Client linkedClient = resolveOptionalClient(createRequest.getClientId());
+        Staff assignedStaff = resolveOptionalStaff(createRequest.getAssignedStaffId());
+
+        String clientName = firstNonBlank(createRequest.getClientName(), linkedClient != null ? linkedClient.getFullName() : null);
+        if (clientName == null) {
+            throw new BusinessRuleException("Client name or existing client is required");
+        }
+
+        String phone = firstNonBlank(createRequest.getPhone(), linkedClient != null ? linkedClient.getPhone() : null);
+        String email = normalizeEmail(firstNonBlank(createRequest.getEmail(), linkedClient != null ? linkedClient.getEmail() : null));
+        String instagram = firstNonBlank(createRequest.getInstagram(), linkedClient != null ? linkedClient.getInstagram() : null);
 
         Request request = Request.builder()
                 .tenantId(tenantId)
                 .source(RequestSource.fromValue(createRequest.getSource()))
-                .clientName(createRequest.getClientName())
+                .clientName(clientName)
                 .clientNickname(createRequest.getClientNickname())
                 .message(createRequest.getMessage())
-                .phone(createRequest.getPhone())
-                .email(normalizeEmail(createRequest.getEmail()))
-                .instagram(createRequest.getInstagram())
+                .phone(phone)
+                .email(email)
+                .instagram(instagram)
                 .sketchUrl(createRequest.getSketchUrl())
-                .location(resolveDefaultLocation())
+                .assignedStaff(assignedStaff)
+                .tattooTiming(blankToNull(createRequest.getTattooTiming()))
+                .tattooSize(blankToNull(createRequest.getTattooSize()))
+                .bodyZones(joinBodyZones(createRequest.getBodyZones()))
+                .isCoverUp(createRequest.getIsCoverUp())
+                .idea(blankToNull(createRequest.getIdea()))
+                .referenceUrls(joinReferenceUrls(createRequest.getReferences()))
+                .city(blankToNull(createRequest.getCity()))
+                .contactMethod(blankToNull(createRequest.getContactMethod()))
+                .contactValue(blankToNull(createRequest.getContactValue()))
+                .location(resolveLocation(assignedStaff))
                 .status(RequestStatus.NEW)
                 .build();
 
         request = requestRepository.save(request);
-        log.info("Request created: tenantId={} requestId={}", tenantId, request.getId());
+        requestMessageService.seedInitialThread(request);
+
+        if (assignedStaff != null) {
+            eventPublisher.publishEvent(new NewRequestEvent(
+                    request.getId(),
+                    tenantId,
+                    assignedStaff.getId(),
+                    request.getClientName(),
+                    request.getIdea()
+            ));
+        }
+
+        log.info("Request created: tenantId={} requestId={} assignedStaffId={} clientId={}",
+                tenantId, request.getId(),
+                assignedStaff != null ? assignedStaff.getId() : null,
+                linkedClient != null ? linkedClient.getId() : null);
         auditRecorder.record(
                 AuditAction.CREATE,
                 AuditEntityType.REQUEST,
                 request.getId().toString(),
                 request.getClientName()
+        );
+        return toDto(request);
+    }
+
+    @Transactional
+    public RequestDto updateAssignment(UUID id, UpdateRequestAssignmentRequest updateRequest) {
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        Request request = requireRequest(tenantId, id);
+        Staff assignedStaff = resolveOptionalStaff(updateRequest.getAssignedStaffId());
+
+        request.setAssignedStaff(assignedStaff);
+        if (request.getLocation() == null && assignedStaff != null) {
+            request.setLocation(resolveLocation(assignedStaff));
+        }
+
+        request = requestRepository.save(request);
+        log.info("Request assignment updated: tenantId={} requestId={} assignedStaffId={}",
+                tenantId, id, assignedStaff != null ? assignedStaff.getId() : null);
+        auditRecorder.record(
+                AuditAction.UPDATE,
+                AuditEntityType.REQUEST,
+                id.toString(),
+                request.getClientName(),
+                null,
+                assignedStaff != null ? assignedStaff.getFullName() : "unassigned"
         );
         return toDto(request);
     }
@@ -260,6 +328,7 @@ public class RequestService {
                 .convertedClientId(request.getConvertedClientId())
                 .matchedClientId(matchedClient.id())
                 .matchedClientName(matchedClient.name())
+                .matchedClientAvatar(matchedClient.avatar())
                 .matchedClientBlacklisted(matchedClient.blacklisted())
                 .createdAt(request.getCreatedAt())
                 .repliedAt(request.getRepliedAt())
@@ -282,7 +351,7 @@ public class RequestService {
     private MatchedClient resolveMatchedClient(Request request) {
         if (request.getConvertedClient() != null) {
             Client client = request.getConvertedClient();
-            return new MatchedClient(client.getId(), client.getFullName(), client.isBlacklisted());
+            return new MatchedClient(client.getId(), client.getFullName(), client.isBlacklisted(), client.getAvatar());
         }
 
         String email = normalizeEmail(request.getEmail());
@@ -291,7 +360,7 @@ public class RequestService {
         }
 
         return clientRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(email)
-                .map(client -> new MatchedClient(client.getId(), client.getFullName(), client.isBlacklisted()))
+                .map(client -> new MatchedClient(client.getId(), client.getFullName(), client.isBlacklisted(), client.getAvatar()))
                 .orElse(MatchedClient.empty());
     }
 
@@ -315,6 +384,13 @@ public class RequestService {
         return normalized.isBlank() ? null : normalized;
     }
 
+    private Location resolveLocation(Staff assignedStaff) {
+        if (assignedStaff != null && assignedStaff.getLocations() != null && !assignedStaff.getLocations().isEmpty()) {
+            return assignedStaff.getLocations().iterator().next();
+        }
+        return resolveDefaultLocation();
+    }
+
     private Location resolveDefaultLocation() {
         return locationRepository.findByIsActiveAndDeletedAtIsNull(true).stream()
                 .findFirst()
@@ -323,11 +399,68 @@ public class RequestService {
                         .orElse(null));
     }
 
+    private Staff resolveOptionalStaff(UUID staffId) {
+        if (staffId == null) {
+            return null;
+        }
+        return staffRepository.findByIdAndDeletedAtIsNull(staffId)
+                .orElseThrow(() -> ResourceNotFoundException.staff(staffId.toString()));
+    }
+
+    private Client resolveOptionalClient(UUID clientId) {
+        if (clientId == null) {
+            return null;
+        }
+        Client client = clientRepository.findByIdAndDeletedAtIsNull(clientId)
+                .orElseThrow(() -> ResourceNotFoundException.client(clientId.toString()));
+        if (client.isBlacklisted()) {
+            throw BusinessRuleException.clientBlacklisted();
+        }
+        return client;
+    }
+
     private String normalizeEmail(String email) {
         if (email == null || email.isBlank()) {
             return null;
         }
         return email.trim().toLowerCase();
+    }
+
+    private String blankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private String firstNonBlank(String primary, String fallback) {
+        String normalizedPrimary = blankToNull(primary);
+        if (normalizedPrimary != null) {
+            return normalizedPrimary;
+        }
+        return blankToNull(fallback);
+    }
+
+    private String joinBodyZones(List<String> bodyZones) {
+        if (bodyZones == null || bodyZones.isEmpty()) {
+            return null;
+        }
+        List<String> values = bodyZones.stream()
+                .map(this::blankToNull)
+                .filter(value -> value != null)
+                .toList();
+        return values.isEmpty() ? null : String.join(",", values);
+    }
+
+    private String joinReferenceUrls(List<String> references) {
+        if (references == null || references.isEmpty()) {
+            return null;
+        }
+        List<String> values = references.stream()
+                .map(this::blankToNull)
+                .filter(value -> value != null)
+                .toList();
+        return values.isEmpty() ? null : String.join("|", values);
     }
 
     private List<String> parseBodyZones(String bodyZones) {
@@ -350,9 +483,9 @@ public class RequestService {
                 .toList();
     }
 
-    private record MatchedClient(UUID id, String name, boolean blacklisted) {
+    private record MatchedClient(UUID id, String name, boolean blacklisted, String avatar) {
         static MatchedClient empty() {
-            return new MatchedClient(null, null, false);
+            return new MatchedClient(null, null, false, null);
         }
     }
 }

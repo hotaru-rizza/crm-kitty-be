@@ -162,6 +162,7 @@ public class EmailTemplateService {
     @Transactional(readOnly = true)
     public List<TriggerTypeInfo> listTriggerTypes() {
         return Arrays.stream(TriggerType.values())
+                .filter(TriggerType::isMailingTemplateTrigger)
                 .map(type -> new TriggerTypeInfo(
                         type.name(),
                         type.getCategory(),

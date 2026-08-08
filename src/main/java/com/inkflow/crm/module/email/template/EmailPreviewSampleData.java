@@ -65,6 +65,9 @@ public final class EmailPreviewSampleData {
                 hasText(studioName) ? studioName : SAMPLE_STUDIO_NAME
         );
         result.put(TemplateVar.APP_NAME.getPlaceholder(), appName);
+        // Preview macros that may be unused unless a location address is set.
+        result.put(TemplateVar.ADDRESS.getPlaceholder(), SAMPLE_ADDRESS);
+        result.put(TemplateVar.LOCATION_NAME.getPlaceholder(), "Black Ink · Поділ");
         return result;
     }
 

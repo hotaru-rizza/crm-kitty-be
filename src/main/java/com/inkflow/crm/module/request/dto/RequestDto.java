@@ -26,6 +26,7 @@ public class RequestDto {
     private UUID convertedClientId;
     private UUID matchedClientId;
     private String matchedClientName;
+    private String matchedClientAvatar;
     private Boolean matchedClientBlacklisted;
     private Instant createdAt;
     private Instant repliedAt;

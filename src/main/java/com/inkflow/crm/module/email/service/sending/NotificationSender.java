@@ -55,7 +55,7 @@ public class NotificationSender {
                     command.templateKey(), command.tenantId(), command.recipient().email());
         } catch (Exception exception) {
             logEntry.setStatus(EmailMessageStatus.FAILED);
-            logEntry.setLastError(exception.getMessage());
+            logEntry.setLastError(truncate(exception.getMessage(), 512));
             log.error("Email failed: key={} tenant={} to={} error={}",
                     command.templateKey(), command.tenantId(), command.recipient().email(), exception.getMessage());
         }
@@ -87,11 +87,22 @@ public class NotificationSender {
             case BIRTHDAY -> TriggerType.CLIENT_BIRTHDAY;
             case WINBACK -> TriggerType.CLIENT_INACTIVE;
             case BULK_EMAIL -> TriggerType.MANUAL;
-            default -> TriggerType.MANUAL;
+            case NEW_APPOINTMENT, APPOINTMENT_CANCELED, APPOINTMENT_CHANGED -> TriggerType.STAFF_APPOINTMENT;
+            default -> {
+                log.warn("Unmapped TemplateKey {} — storing as MANUAL", templateKey);
+                yield TriggerType.MANUAL;
+            }
         };
     }
 
     private boolean isBlankEmail(String email) {
         return email == null || email.isBlank();
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 }

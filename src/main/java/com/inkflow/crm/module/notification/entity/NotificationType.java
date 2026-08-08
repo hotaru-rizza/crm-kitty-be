@@ -2,6 +2,7 @@ package com.inkflow.crm.module.notification.entity;
 
 public enum NotificationType {
     NEW_REQUEST,
+    REQUEST_MESSAGE,
     REQUEST_ASSIGNED,
     APPOINTMENT_REMINDER,
     APPOINTMENT_CONFIRMED,

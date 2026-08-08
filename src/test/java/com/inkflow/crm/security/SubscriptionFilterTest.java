@@ -1,6 +1,7 @@
 package com.inkflow.crm.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.domain.enums.UserRole;
 import com.inkflow.crm.module.subscription.service.SubscriptionService;
 import jakarta.servlet.FilterChain;
@@ -32,6 +33,9 @@ class SubscriptionFilterTest {
     private SubscriptionService subscriptionService;
 
     @Mock
+    private InkflowProperties inkflowProperties;
+
+    @Mock
     private ObjectMapper objectMapper;
 
     @Mock
@@ -40,14 +44,31 @@ class SubscriptionFilterTest {
     @InjectMocks
     private SubscriptionFilter filter;
 
+    private final InkflowProperties.Subscription subscriptionProps = new InkflowProperties.Subscription();
+
     @BeforeEach
     void setUp() throws Exception {
+        subscriptionProps.setEnforcementEnabled(true);
+        lenient().when(inkflowProperties.getSubscription()).thenReturn(subscriptionProps);
         lenient().when(objectMapper.writeValueAsString(any())).thenReturn("{\"error\":\"SUBSCRIPTION_EXPIRED\"}");
     }
 
     @AfterEach
     void clearContext() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void shouldPassThroughWhenEnforcementDisabled() throws Exception {
+        subscriptionProps.setEnforcementEnabled(false);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/clients");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        verify(subscriptionService, never()).isSubscriptionActive(any());
+        verify(filterChain).doFilter(request, response);
     }
 
     @Test

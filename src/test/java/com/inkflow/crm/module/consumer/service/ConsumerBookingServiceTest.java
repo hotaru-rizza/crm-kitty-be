@@ -12,6 +12,7 @@ import com.inkflow.crm.module.consumer.dto.ConsumerBookingRequest;
 import com.inkflow.crm.module.consumer.dto.ConsumerBookingResultDto;
 import com.inkflow.crm.module.consumer.entity.ConsumerUser;
 import com.inkflow.crm.module.notification.event.NewRequestEvent;
+import com.inkflow.crm.module.request.service.RequestMessageService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -44,6 +45,9 @@ class ConsumerBookingServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private RequestMessageService requestMessageService;
 
     @InjectMocks
     private ConsumerBookingService consumerBookingService;

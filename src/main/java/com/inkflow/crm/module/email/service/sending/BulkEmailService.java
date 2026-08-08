@@ -161,6 +161,8 @@ public class BulkEmailService {
     private void putLocationVars(Map<String, String> vars, Location location) {
         if (hasText(location.getAddress())) {
             vars.put(TemplateVar.ADDRESS.getPlaceholder(), location.getAddress());
+        } else {
+            vars.putIfAbsent(TemplateVar.ADDRESS.getPlaceholder(), EmailPreviewSampleData.SAMPLE_ADDRESS);
         }
         if (hasText(location.getName())) {
             vars.put(TemplateVar.LOCATION_NAME.getPlaceholder(), location.getName());

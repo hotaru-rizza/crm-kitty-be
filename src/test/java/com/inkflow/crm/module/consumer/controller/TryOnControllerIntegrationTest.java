@@ -3,6 +3,8 @@ package com.inkflow.crm.module.consumer.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.module.consumer.dto.PlacementDto;
 import com.inkflow.crm.module.consumer.dto.TryOnRequest;
+import com.inkflow.crm.module.consumer.entity.ConsumerUser;
+import com.inkflow.crm.module.consumer.repository.ConsumerUserRepository;
 import com.inkflow.crm.module.consumer.service.GeminiTattooService;
 import com.inkflow.crm.support.IntegrationTest;
 import com.inkflow.crm.support.SecurityTestSupport;
@@ -44,6 +46,9 @@ class TryOnControllerIntegrationTest {
     @MockBean
     private GeminiTattooService geminiTattooService;
 
+    @Autowired
+    private ConsumerUserRepository consumerUserRepository;
+
     @AfterEach
     void tearDown() {
         SecurityTestSupport.clearAuthentication();
@@ -61,19 +66,23 @@ class TryOnControllerIntegrationTest {
     }
 
     @Test
-    void tryOn_withConsumerAuth_returnsResultUrl() throws Exception {
+    void tryOn_withConsumerAuth_returnsResultUrlAndDecrementsTokens() throws Exception {
+        UUID consumerId = UUID.randomUUID();
+        consumerUserRepository.save(new ConsumerUser(consumerId, "consumer-" + consumerId + "@test.com", "User"));
+
         when(geminiTattooService.generateTattooTryOn(
                 anyString(), anyString(), anyDouble(), anyDouble(), anyDouble(), anyDouble()))
                 .thenReturn("data:image/png;base64,abc123");
 
         mockMvc.perform(post("/public/consumer/try-on")
-                        .with(consumerUser(UUID.randomUUID()))
+                        .with(consumerUser(consumerId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(sampleRequest())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.resultUrl").value("data:image/png;base64,abc123"))
-                .andExpect(jsonPath("$.data.error").doesNotExist());
+                .andExpect(jsonPath("$.data.error").doesNotExist())
+                .andExpect(jsonPath("$.data.remainingTokens").value(4));
 
         ArgumentCaptor<Double> doubleCaptor = ArgumentCaptor.forClass(Double.class);
         verify(geminiTattooService).generateTattooTryOn(
@@ -88,19 +97,40 @@ class TryOnControllerIntegrationTest {
     }
 
     @Test
-    void tryOn_whenServiceThrows_returnsOkWithError() throws Exception {
+    void tryOn_withNoTokens_returnsPaymentRequired() throws Exception {
+        UUID consumerId = UUID.randomUUID();
+        ConsumerUser user = new ConsumerUser(consumerId, "consumer-" + consumerId + "@test.com", "User");
+        user.setAiTokens(0);
+        consumerUserRepository.save(user);
+
+        mockMvc.perform(post("/public/consumer/try-on")
+                        .with(consumerUser(consumerId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(sampleRequest())))
+                .andExpect(status().isPaymentRequired())
+                .andExpect(jsonPath("$.error.error.code").value("INSUFFICIENT_TOKENS"));
+    }
+
+    @Test
+    void tryOn_whenServiceThrows_doesNotChargeTokens() throws Exception {
+        UUID consumerId = UUID.randomUUID();
+        consumerUserRepository.save(new ConsumerUser(consumerId, "consumer-" + consumerId + "@test.com", "User"));
+
         when(geminiTattooService.generateTattooTryOn(
                 anyString(), anyString(), anyDouble(), anyDouble(), anyDouble(), anyDouble()))
                 .thenThrow(new RuntimeException("Gemini unavailable"));
 
         mockMvc.perform(post("/public/consumer/try-on")
-                        .with(consumerUser(UUID.randomUUID()))
+                        .with(consumerUser(consumerId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(sampleRequest())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.error").value("Gemini unavailable"))
-                .andExpect(jsonPath("$.data.resultUrl").doesNotExist());
+                .andExpect(jsonPath("$.data.resultUrl").doesNotExist())
+                .andExpect(jsonPath("$.data.remainingTokens").doesNotExist());
+
+        assertEquals(5, consumerUserRepository.findById(consumerId).orElseThrow().getAiTokens());
     }
 
     @Test

@@ -33,7 +33,7 @@ public class AIGeneratorService {
             String imageDataUri = geminiImageClient.generateImage(apiRequest);
 
             log.info("AI generate succeeded");
-            return GenerateResponse.success(List.of(imageDataUri));
+            return new GenerateResponse(List.of(imageDataUri), null, null);
 
         } catch (Exception e) {
             log.error("AI generate failed: {}", e.getMessage(), e);

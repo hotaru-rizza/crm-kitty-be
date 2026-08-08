@@ -105,7 +105,9 @@ public class PnlAnalyticsService {
         BigDecimal commission = commissionCalculator.calculate(artist, artistRevenue);
 
         return PnlDto.StaffLine.builder()
+                .staffId(artist.getId())
                 .name(formatStaffName(artist))
+                .avatar(artist.getAvatar())
                 .revenue(artistRevenue)
                 .commission(commission)
                 .salaryType(salaryType.getValue())

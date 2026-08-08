@@ -3,6 +3,7 @@ package com.inkflow.crm.module.notification.event;
 import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.module.notification.entity.NotificationType;
 import com.inkflow.crm.module.notification.service.NotificationService;
+import com.inkflow.crm.module.notification.support.PushPayload;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -46,7 +47,7 @@ class NotificationEventListenerTest {
                 eq(NotificationType.NEW_REQUEST),
                 eq("Новий запит на запис"),
                 eq("Anna Client"),
-                eq(Map.of("requestId", requestId.toString(), "type", "new_request"))
+                eq(PushPayload.forRequest(PushPayload.TYPE_NEW_REQUEST, requestId, tenantId))
         );
     }
 
@@ -66,13 +67,33 @@ class NotificationEventListenerTest {
                 eq(NotificationType.NEW_REQUEST),
                 eq("Новий запит на запис"),
                 bodyCaptor.capture(),
-                eq(Map.of("requestId", requestId.toString(), "type", "new_request"))
+                eq(PushPayload.forRequest(PushPayload.TYPE_NEW_REQUEST, requestId, tenantId))
         );
 
         String body = bodyCaptor.getValue();
         assertTrue(body.startsWith("Anna Client: "));
         assertTrue(body.endsWith("…"));
         assertEquals(80 + "Anna Client: ".length() + 1, body.length());
+    }
+
+    @Test
+    void shouldSendClientRequestMessageNotification() {
+        UUID tenantId = UUID.randomUUID();
+        UUID staffId = UUID.randomUUID();
+        UUID requestId = UUID.randomUUID();
+
+        listener.onClientRequestMessage(new ClientRequestMessageEvent(
+                requestId, tenantId, staffId, "Anna Client", "Можна завтра?"
+        ));
+
+        verify(notificationService).send(
+                eq(tenantId),
+                eq(staffId),
+                eq(NotificationType.REQUEST_MESSAGE),
+                eq("Нове повідомлення від клієнта"),
+                eq("Anna Client: Можна завтра?"),
+                eq(PushPayload.forRequest(PushPayload.TYPE_REQUEST_MESSAGE, requestId, tenantId))
+        );
     }
 
     @Test
@@ -89,15 +110,21 @@ class NotificationEventListenerTest {
         ));
 
         ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, String>> dataCaptor = ArgumentCaptor.forClass(Map.class);
         verify(notificationService).send(
                 eq(tenantId),
                 eq(staffId),
                 eq(NotificationType.APPOINTMENT_REMINDER),
                 eq("Нагадування про запис"),
                 bodyCaptor.capture(),
-                eq(Map.of("appointmentId", appointmentId.toString(), "type", "reminder"))
+                dataCaptor.capture()
         );
 
         assertTrue(bodyCaptor.getValue().startsWith("John Doe о "));
+        assertEquals(
+                PushPayload.forAppointment(PushPayload.TYPE_APPOINTMENT_REMINDER, appointmentId, tenantId),
+                dataCaptor.getValue()
+        );
     }
 }

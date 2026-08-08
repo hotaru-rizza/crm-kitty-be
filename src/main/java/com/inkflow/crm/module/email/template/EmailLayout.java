@@ -17,30 +17,24 @@ public final class EmailLayout {
           <meta http-equiv="X-UA-Compatible" content="IE=edge">
         </head>
         <body style="margin:0;padding:0;background-color:%s;-webkit-text-size-adjust:100%%;-ms-text-size-adjust:100%%;">
-          <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0" style="background-color:%s;min-height:100%%;">
+          <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0" style="background-color:%s;">
             <tr>
-              <td align="center" style="padding:28px 20px 48px;background-color:%s;background-image:%s;">
-                <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0" style="max-width:480px;">
+              <td align="center" style="padding:40px 20px 48px;background-color:%s;">
+                <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;">
                   %s
                   <tr>
-                    <td align="center" style="padding:0 8px 24px;font-family:%s;font-size:26px;font-weight:700;line-height:1.25;letter-spacing:-0.025em;color:%s;">
+                    <td style="padding:0 0 28px;font-family:%s;font-size:22px;font-weight:600;line-height:1.3;letter-spacing:-0.02em;color:%s;">
                       %s
                     </td>
                   </tr>
                   <tr>
-                    <td style="padding:0 0 8px;">
-                      <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0" style="background:%s;border:1px solid %s;border-radius:16px;">
-                        <tr>
-                          <td style="padding:24px 24px 16px;font-family:%s;font-size:15px;line-height:1.6;color:%s;">
-                            %s
-                          </td>
-                        </tr>
-                      </table>
+                    <td style="padding:0;font-family:%s;font-size:15px;line-height:1.65;color:%s;">
+                      %s
                     </td>
                   </tr>
                   %s
                   <tr>
-                    <td style="padding:16px 24px 24px;">
+                    <td style="padding:32px 0 16px;">
                       <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0">
                         <tr>
                           <td height="1" style="height:1px;background-color:%s;font-size:0;line-height:0;">&nbsp;</td>
@@ -49,11 +43,6 @@ public final class EmailLayout {
                     </td>
                   </tr>
                   %s
-                </table>
-                <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0" style="max-width:480px;margin-top:32px;">
-                  <tr>
-                    <td height="80" style="height:80px;background:%s;font-size:0;line-height:0;">&nbsp;</td>
-                  </tr>
                 </table>
               </td>
             </tr>
@@ -64,20 +53,16 @@ public final class EmailLayout {
                 EmailBrandAssets.BG_COLOR,
                 EmailBrandAssets.BG_COLOR,
                 EmailBrandAssets.BG_COLOR,
-                EmailBrandAssets.TOP_GLOW,
                 buildBrandRow(context.studioName(), context.studioLogoUrl()),
                 EmailBrandAssets.FONT_STACK,
                 EmailBrandAssets.TEXT_PRIMARY,
                 escapeHtml(context.title()),
-                EmailBrandAssets.CARD_BG,
-                EmailBrandAssets.CARD_BORDER,
                 EmailBrandAssets.FONT_STACK,
                 EmailBrandAssets.TEXT_BODY,
                 context.bodyHtml(),
                 buildButton(context.actionUrl(), context.actionLabel()),
                 EmailBrandAssets.BORDER_SUBTLE,
-                buildFooter(context.appName(), context.studioName(), context.category()),
-                EmailBrandAssets.BOTTOM_GLOW
+                buildFooter(context.appName(), context.studioName(), context.category())
         );
     }
 
@@ -103,7 +88,7 @@ public final class EmailLayout {
                     html.append(ulTag());
                     inBulletList = true;
                 }
-                html.append("<li>%s</li>\n".formatted(escapeHtml(line.substring(2))));
+                html.append("<li style=\"margin:0 0 6px;\">%s</li>\n".formatted(escapeHtml(line.substring(2))));
                 continue;
             }
 
@@ -116,7 +101,8 @@ public final class EmailLayout {
                     html.append(olTag());
                     inOrderedList = true;
                 }
-                html.append("<li>%s</li>\n".formatted(escapeHtml(line.replaceFirst("^\\d+\\. ", ""))));
+                html.append("<li style=\"margin:0 0 6px;\">%s</li>\n"
+                        .formatted(escapeHtml(line.replaceFirst("^\\d+\\. ", ""))));
                 continue;
             }
 
@@ -130,9 +116,9 @@ public final class EmailLayout {
             }
 
             if (line.isBlank()) {
-                html.append("<br/>\n");
+                html.append("<div style=\"height:12px;line-height:12px;font-size:0;\">&nbsp;</div>\n");
             } else {
-                html.append("<p style=\"color:%s;font-size:15px;line-height:1.6;margin:0 0 10px;\">%s</p>\n"
+                html.append("<p style=\"color:%s;font-size:15px;line-height:1.65;margin:0 0 12px;\">%s</p>\n"
                         .formatted(EmailBrandAssets.TEXT_BODY, escapeHtml(line)));
             }
         }
@@ -154,7 +140,7 @@ public final class EmailLayout {
         if (hasStudioLogo) {
             logoCell = """
                   <td style="padding-right:10px;vertical-align:middle;">
-                    <img src="%s" alt="%s" width="44" height="44" style="display:block;width:44px;height:44px;border:0;border-radius:12px;object-fit:cover;" />
+                    <img src="%s" alt="%s" width="28" height="28" style="display:block;width:28px;height:28px;border:0;border-radius:8px;object-fit:cover;" />
                   </td>
                 """.formatted(escapeHtml(studioLogoUrl), escapeHtml(studioName));
         } else {
@@ -163,18 +149,18 @@ public final class EmailLayout {
                     ? ""
                     : """
                   <td style="padding-right:10px;vertical-align:middle;">
-                    <img src="%s" alt="%s" width="44" height="44" style="display:block;width:44px;height:44px;border:0;border-radius:50%%;object-fit:contain;" />
+                    <img src="%s" alt="%s" width="28" height="28" style="display:block;width:28px;height:28px;border:0;border-radius:50%%;object-fit:contain;" />
                   </td>
                 """.formatted(platformLogo, escapeHtml(studioName));
         }
 
         return """
                   <tr>
-                    <td align="center" style="padding-bottom:28px;">
-                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                    <td style="padding-bottom:32px;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
                           %s
-                          <td style="vertical-align:middle;font-family:%s;font-size:20px;font-weight:700;letter-spacing:-0.03em;color:%s;">
+                          <td style="vertical-align:middle;font-family:%s;font-size:13px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:%s;">
                             %s
                           </td>
                         </tr>
@@ -184,18 +170,18 @@ public final class EmailLayout {
                 """.formatted(
                 logoCell,
                 EmailBrandAssets.FONT_STACK,
-                EmailBrandAssets.TEXT_PRIMARY,
+                EmailBrandAssets.TEXT_MUTED,
                 escapeHtml(studioName)
         );
     }
 
     private static String ulTag() {
-        return "<ul style=\"color:%s;font-size:14px;line-height:1.8;padding-left:20px;margin:12px 0;\">\n"
+        return "<ul style=\"color:%s;font-size:15px;line-height:1.65;padding-left:18px;margin:4px 0 16px;\">\n"
                 .formatted(EmailBrandAssets.TEXT_BODY);
     }
 
     private static String olTag() {
-        return "<ol style=\"color:%s;font-size:14px;line-height:1.8;padding-left:20px;margin:12px 0;\">\n"
+        return "<ol style=\"color:%s;font-size:15px;line-height:1.65;padding-left:18px;margin:4px 0 16px;\">\n"
                 .formatted(EmailBrandAssets.TEXT_BODY);
     }
 
@@ -208,25 +194,31 @@ public final class EmailLayout {
 
         return """
                   <tr>
-                    <td align="center" style="padding:20px 0 8px;">
+                    <td style="padding:28px 0 0;">
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
-                          <td align="center" style="border-radius:12px;background-color:#ffffff;">
-                            <a href="%s" style="display:inline-block;padding:14px 36px;font-family:%s;font-size:15px;font-weight:600;line-height:1;color:%s;text-decoration:none;border-radius:12px;border:1px solid rgba(255,255,255,0.8);">
-                              %s →
+                          <td style="border-radius:8px;background-color:%s;">
+                            <a href="%s" style="display:inline-block;padding:12px 22px;font-family:%s;font-size:14px;font-weight:600;line-height:1;color:%s;text-decoration:none;border-radius:8px;">
+                              %s
                             </a>
                           </td>
                         </tr>
                       </table>
                     </td>
                   </tr>
-                """.formatted(url, EmailBrandAssets.FONT_STACK, EmailBrandAssets.BG_COLOR, buttonLabel);
+                """.formatted(
+                EmailBrandAssets.BUTTON_BG,
+                url,
+                EmailBrandAssets.FONT_STACK,
+                EmailBrandAssets.BUTTON_TEXT,
+                buttonLabel
+        );
     }
 
     private static String buildFooter(String appName, String studioName, TemplateCategory category) {
         String studioLine = """
                   <tr>
-                    <td align="center" style="padding:0 12px;font-family:%s;font-size:12px;line-height:1.6;color:%s;">
+                    <td style="padding:0;font-family:%s;font-size:12px;line-height:1.5;color:%s;">
                       %s
                     </td>
                   </tr>
@@ -238,7 +230,7 @@ public final class EmailLayout {
 
         String poweredBy = """
                   <tr>
-                    <td align="center" style="padding:6px 12px 0;font-family:%s;font-size:10px;line-height:1.6;color:%s;">
+                    <td style="padding:4px 0 0;font-family:%s;font-size:11px;line-height:1.5;color:%s;">
                       Powered by %s
                     </td>
                   </tr>
@@ -256,12 +248,16 @@ public final class EmailLayout {
 
         return base + """
                   <tr>
-                    <td align="center" style="padding:12px 12px 0;font-family:%s;font-size:11px;line-height:1.6;color:%s;">
+                    <td style="padding:16px 0 0;font-family:%s;font-size:11px;line-height:1.5;color:%s;">
                       Ви отримали цей лист, оскільки погодилися на маркетингові розсилки.<br/>
-                      <a href="{action_url}" style="color:rgba(255,255,255,0.35);text-decoration:underline;">Відписатися</a>
+                      <a href="{action_url}" style="color:%s;text-decoration:underline;">Відписатися</a>
                     </td>
                   </tr>
-                """.formatted(EmailBrandAssets.FONT_STACK, EmailBrandAssets.TEXT_MUTED);
+                """.formatted(
+                EmailBrandAssets.FONT_STACK,
+                EmailBrandAssets.TEXT_MUTED,
+                EmailBrandAssets.TEXT_MUTED
+        );
     }
 
     private static String escapeHtml(String text) {

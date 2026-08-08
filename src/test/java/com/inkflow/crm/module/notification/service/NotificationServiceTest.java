@@ -1,10 +1,12 @@
 package com.inkflow.crm.module.notification.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.module.notification.entity.Notification;
 import com.inkflow.crm.module.notification.entity.NotificationChannel;
 import com.inkflow.crm.module.notification.entity.NotificationType;
 import com.inkflow.crm.module.notification.repository.NotificationRepository;
 import com.inkflow.crm.security.SecurityUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -40,8 +43,16 @@ class NotificationServiceTest {
     @Mock
     private FcmPushService fcmPushService;
 
+    @Mock
+    private ObjectMapper objectMapper;
+
     @InjectMocks
     private NotificationService notificationService;
+
+    @BeforeEach
+    void stubObjectMapper() throws Exception {
+        lenient().when(objectMapper.writeValueAsString(any())).thenReturn("{\"type\":\"new_request\"}");
+    }
 
     @Test
     void send_marksNotificationAsSentWhenPushSucceeds() {

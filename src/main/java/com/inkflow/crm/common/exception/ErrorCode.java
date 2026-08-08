@@ -21,6 +21,7 @@ public enum ErrorCode {
 
     CONFLICT("CONFLICT", "Resource conflict", HttpStatus.CONFLICT),
     BUSINESS_RULE_VIOLATION("BUSINESS_RULE_VIOLATION", "Business rule violation", HttpStatus.UNPROCESSABLE_ENTITY),
+    INSUFFICIENT_TOKENS("INSUFFICIENT_TOKENS", "Insufficient AI credits", HttpStatus.PAYMENT_REQUIRED),
 
 
     CLIENT_NOT_FOUND("CLIENT_NOT_FOUND", "Client not found", HttpStatus.NOT_FOUND),

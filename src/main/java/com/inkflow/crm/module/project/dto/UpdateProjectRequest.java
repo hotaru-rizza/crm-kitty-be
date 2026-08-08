@@ -22,10 +22,10 @@ public class UpdateProjectRequest {
 
     private UUID artistId;
 
-    @DecimalMin(value = "0.0", message = "Estimated cost must be positive")
+    @DecimalMin(value = "0.0", message = "Estimated cost must be non-negative")
     private BigDecimal estimatedCost;
 
-    @Min(value = 1, message = "Total sessions must be at least 1")
+    @Min(value = 0, message = "Total sessions must be non-negative")
     private Integer totalSessions;
 
     @Pattern(regexp = "^(in_progress|completed|archived)$", message = "Invalid status")

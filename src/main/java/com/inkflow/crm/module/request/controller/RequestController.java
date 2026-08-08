@@ -6,6 +6,7 @@ import com.inkflow.crm.common.dto.PageRequest;
 import com.inkflow.crm.common.dto.PageResult;
 import com.inkflow.crm.module.client.dto.ClientDto;
 import com.inkflow.crm.module.request.dto.*;
+import com.inkflow.crm.module.request.service.RequestMessageService;
 import com.inkflow.crm.module.request.service.RequestService;
 import com.inkflow.crm.security.RequirePermission;
 import jakarta.validation.Valid;
@@ -27,6 +28,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class RequestController {
 
     private final RequestService requestService;
+    private final RequestMessageService requestMessageService;
 
     @GetMapping
     @RequirePermission(Permission.REQUESTS_VIEW)
@@ -64,6 +66,18 @@ public class RequestController {
         return ResponseEntity.ok(ApiResponse.success(updated));
     }
 
+    @PatchMapping("/{id}/assignment")
+    @RequirePermission(Permission.REQUESTS_CHANGE_STATUS)
+    public ResponseEntity<ApiResponse<RequestDto>> updateRequestAssignment(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateRequestAssignmentRequest request) {
+        RequestDto updated = requestService.updateAssignment(id, request);
+        log.info("Request assignment updated via API: requestId={} assignedStaffId={}",
+                id, request.getAssignedStaffId());
+
+        return ResponseEntity.ok(ApiResponse.success(updated));
+    }
+
     @PostMapping("/{id}/convert")
     @RequirePermission(value = {Permission.REQUESTS_CHANGE_STATUS, Permission.CLIENTS_CREATE}, requireAll = true)
     public ResponseEntity<ApiResponse<ClientDto>> convertToClient(
@@ -82,5 +96,22 @@ public class RequestController {
         log.info("Request deleted via API: requestId={}", id);
 
         return ResponseEntity.ok(ApiResponse.empty());
+    }
+
+    @GetMapping("/{id}/messages")
+    @RequirePermission(Permission.REQUESTS_VIEW)
+    public ResponseEntity<ApiResponse<List<RequestMessageDto>>> getRequestMessages(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(requestMessageService.getMessagesForStaff(id)));
+    }
+
+    @PostMapping("/{id}/messages")
+    @RequirePermission(Permission.REQUESTS_CHANGE_STATUS)
+    public ResponseEntity<ApiResponse<RequestMessageDto>> sendRequestMessage(
+            @PathVariable UUID id,
+            @Valid @RequestBody CreateRequestMessageRequest request) {
+        RequestMessageDto message = requestMessageService.sendStaffMessage(id, request);
+        log.info("Request message sent via API: requestId={} messageId={}", id, message.getId());
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(message));
     }
 }

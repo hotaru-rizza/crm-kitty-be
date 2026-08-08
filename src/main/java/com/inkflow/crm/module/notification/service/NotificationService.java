@@ -1,5 +1,7 @@
 package com.inkflow.crm.module.notification.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkflow.crm.module.notification.entity.Notification;
 import com.inkflow.crm.module.notification.entity.NotificationChannel;
 import com.inkflow.crm.module.notification.entity.NotificationType;
@@ -22,6 +24,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final FcmPushService fcmPushService;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public Notification send(UUID tenantId, UUID recipientId, NotificationType type,
@@ -33,7 +36,7 @@ public class NotificationService {
                 .type(type)
                 .title(title)
                 .body(body)
-                .data(data != null ? data.toString() : null)
+                .data(serializeData(data))
                 .build();
 
         notification = notificationRepository.save(notification);
@@ -86,5 +89,18 @@ public class NotificationService {
             n.markAsRead();
             notificationRepository.save(n);
         });
+    }
+
+    private String serializeData(Map<String, String> data) {
+        if (data == null || data.isEmpty()) {
+            return null;
+        }
+
+        try {
+            return objectMapper.writeValueAsString(data);
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to serialize notification data as JSON: {}", e.getMessage());
+            return null;
+        }
     }
 }

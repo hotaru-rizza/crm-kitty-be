@@ -37,7 +37,10 @@ public enum TriggerType {
             APP_NAME, STUDIO_NAME, CLIENT_NAME)),
 
     MANUAL(MARKETING, false, false, EnumSet.of(
-            APP_NAME, STUDIO_NAME, CLIENT_NAME));
+            APP_NAME, STUDIO_NAME, CLIENT_NAME)),
+
+    STAFF_APPOINTMENT(CLIENT_OP, false, false, EnumSet.of(
+            APP_NAME, STUDIO_NAME, CLIENT_NAME, MASTER_NAME, SERVICE, DATE, TIME, ADDRESS));
 
     private final TemplateCategory category;
     private final boolean scheduled;
@@ -52,6 +55,22 @@ public enum TriggerType {
     }
 
     public boolean isEventDriven() {
-        return !scheduled && this != MANUAL;
+        return !scheduled && this != MANUAL && this != STAFF_APPOINTMENT;
+    }
+
+    public boolean isClientAppointmentNotification() {
+        return switch (this) {
+            case BOOKING_CONFIRMED,
+                 BOOKING_CANCELED,
+                 BOOKING_RESCHEDULED,
+                 BOOKING_COMPLETED,
+                 BEFORE_BOOKING,
+                 AFTER_BOOKING -> true;
+            default -> false;
+        };
+    }
+
+    public boolean isMailingTemplateTrigger() {
+        return this != STAFF_APPOINTMENT;
     }
 }

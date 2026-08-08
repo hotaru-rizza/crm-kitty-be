@@ -129,7 +129,9 @@ class PublicEndpointSecurityIntegrationTest {
 
     @Test
     void aiGenerate_withConsumerAuth_returnsOk() throws Exception {
-        when(aiGeneratorService.generate(any())).thenReturn(GenerateResponse.success(List.of("https://example.com/img.png")));
+        when(aiGeneratorService.generate(any())).thenReturn(
+                new GenerateResponse(List.of("https://example.com/img.png"), null, null)
+        );
 
         GenerateRequest body = new GenerateRequest("dragon tattoo", "traditional", null, null, null, null);
 

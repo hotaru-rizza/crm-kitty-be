@@ -1,6 +1,7 @@
 package com.inkflow.crm.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.inkflow.crm.config.InkflowProperties;
 import com.inkflow.crm.module.subscription.service.SubscriptionService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -31,12 +32,18 @@ public class SubscriptionFilter extends OncePerRequestFilter {
     );
 
     private final SubscriptionService subscriptionService;
+    private final InkflowProperties inkflowProperties;
     private final ObjectMapper objectMapper;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
+
+        if (!inkflowProperties.getSubscription().isEnforcementEnabled()) {
+            chain.doFilter(request, response);
+            return;
+        }
 
         String method = request.getMethod();
         String uri    = request.getRequestURI();

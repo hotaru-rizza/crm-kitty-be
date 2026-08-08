@@ -189,8 +189,10 @@ public class TransactionService {
 
         Map<String, BigDecimal> byCategory = new HashMap<>();
         for (Object[] row : filterByStaff
-                ? transactionRepository.sumByCategoryAndDateRangeForStaffs(from, to, staffFilter, locationId)
-                : transactionRepository.sumByCategoryAndDateRange(from, to, locationId)) {
+                ? transactionRepository.sumByCategoryTypeAndDateRangeForStaffs(
+                        TransactionType.INCOME, from, to, staffFilter, locationId)
+                : transactionRepository.sumByCategoryTypeAndDateRange(
+                        TransactionType.INCOME, from, to, locationId)) {
             byCategory.put((String) row[0], (BigDecimal) row[1]);
         }
 

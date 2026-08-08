@@ -1,10 +1,12 @@
 package com.inkflow.crm.module.leave.service;
 
+import com.inkflow.crm.common.exception.AccessDeniedException;
 import com.inkflow.crm.common.exception.BusinessRuleException;
 import com.inkflow.crm.common.exception.ErrorCode;
 import com.inkflow.crm.common.exception.ResourceNotFoundException;
 import com.inkflow.crm.domain.enums.AuditAction;
 import com.inkflow.crm.domain.enums.AuditEntityType;
+import com.inkflow.crm.domain.enums.Permission;
 import com.inkflow.crm.module.audit.dto.AuditContext;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.audit.support.AuditLabelFormatter;
@@ -20,6 +22,7 @@ import com.inkflow.crm.module.leave.dto.LeaveRequestDto;
 import com.inkflow.crm.module.leave.dto.UpdateLeaveStatusRequest;
 import com.inkflow.crm.module.leave.dto.LeaveQueryParts;
 import com.inkflow.crm.module.leave.mapper.LeaveRequestMapper;
+import com.inkflow.crm.module.settings.service.RolePermissionService;
 import com.inkflow.crm.security.LocationScope;
 import com.inkflow.crm.security.SecurityUtils;
 import jakarta.persistence.EntityManager;
@@ -51,6 +54,7 @@ public class LeaveService {
     private final EntityManager entityManager;
     private final AuditRecorder auditRecorder;
     private final AuditLabelFormatter auditLabelFormatter;
+    private final RolePermissionService rolePermissionService;
 
     @Transactional(readOnly = true)
     public List<LeaveRequestDto> getLeavesByStaffId(UUID staffId) {
@@ -204,6 +208,7 @@ public class LeaveService {
     @Transactional
     public LeaveRequestDto cancelLeave(UUID id) {
         LeaveRequest leave = requireLeave(id);
+        requireCanCancelLeave(leave);
 
         if (leave.getStatus() == LeaveStatus.REJECTED) {
             throw new BusinessRuleException("Cannot cancel a rejected leave request");
@@ -226,6 +231,8 @@ public class LeaveService {
     @Transactional
     public void deleteLeave(UUID id) {
         LeaveRequest leave = requireLeave(id);
+        requireCanDeleteLeave(leave);
+
         String leaveLabel = auditLabelFormatter.leave(
                 leave.getStaff(), leave.getLeaveType(), leave.getStartDate(), leave.getEndDate());
         leave.softDelete();
@@ -236,6 +243,40 @@ public class LeaveService {
                 AuditEntityType.LEAVE,
                 leave.getId().toString(),
                 leaveLabel
+        );
+    }
+
+    private void requireCanCancelLeave(LeaveRequest leave) {
+        if (canManageLeaves()) {
+            return;
+        }
+        if (!isOwnLeave(leave)) {
+            throw AccessDeniedException.insufficientPermissions();
+        }
+    }
+
+    private void requireCanDeleteLeave(LeaveRequest leave) {
+        if (canManageLeaves()) {
+            return;
+        }
+        if (!isOwnLeave(leave) || leave.getStatus() != LeaveStatus.PENDING) {
+            throw AccessDeniedException.insufficientPermissions();
+        }
+    }
+
+    private boolean isOwnLeave(LeaveRequest leave) {
+        return leave.getStaff() != null
+                && SecurityUtils.getCurrentUserId().equals(leave.getStaff().getId());
+    }
+
+    private boolean canManageLeaves() {
+        if (SecurityUtils.getCurrentUserRole() == UserRole.OWNER) {
+            return true;
+        }
+        return rolePermissionService.hasPermission(
+                SecurityUtils.getCurrentTenantId(),
+                SecurityUtils.getCurrentUserRole(),
+                Permission.LEAVES_MANAGE.getValue()
         );
     }
 

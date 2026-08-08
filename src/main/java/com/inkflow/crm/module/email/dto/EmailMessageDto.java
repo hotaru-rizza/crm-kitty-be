@@ -17,6 +17,8 @@ public record EmailMessageDto(
         String subject,
         EmailMessageStatus status,
         String lastError,
+        Integer attempts,
+        Instant nextAttemptAt,
         Instant createdAt,
         Instant sentAt
 ) {}
