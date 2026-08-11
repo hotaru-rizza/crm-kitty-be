@@ -120,4 +120,24 @@ class NotificationSenderTest {
         assertThat(notificationSender.wasAlreadySent(TemplateKey.BOOKING_REMINDER, null)).isFalse();
         verifyNoInteractions(emailMessageRepository);
     }
+
+    @Test
+    void send_mapsStaffAppointmentTemplateToStaffTrigger() {
+        NotificationCommand command = NotificationCommand.forTenant(
+                TENANT,
+                EmailRecipient.of("artist@test.com", "Mykyta"),
+                TemplateKey.NEW_APPOINTMENT,
+                Map.of("client_name", "Anna"),
+                ENTITY,
+                new EmailTenantContext("Ink Studio", null, "Europe/Kyiv", SupportedLocale.UK)
+        );
+        when(contentRenderer.render(any(NotificationCommand.class)))
+                .thenReturn(new RenderedEmail("New appointment", "<html>body</html>"));
+
+        notificationSender.send(command);
+
+        ArgumentCaptor<EmailMessage> logCaptor = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(emailMessageRepository).save(logCaptor.capture());
+        assertThat(logCaptor.getValue().getTriggerType()).isEqualTo(TriggerType.STAFF_APPOINTMENT);
+    }
 }

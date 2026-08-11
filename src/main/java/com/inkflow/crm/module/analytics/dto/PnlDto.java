@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -37,7 +38,9 @@ public class PnlDto {
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class StaffLine {
+        private UUID staffId;
         private String name;
+        private String avatar;
         private BigDecimal revenue;
         private BigDecimal commission;
         private String salaryType;

@@ -90,9 +90,13 @@ public class ProjectService {
                 .artist(artist)
                 .location(location)
                 .status(ProjectStatus.IN_PROGRESS)
-                .estimatedCost(request.getEstimatedCost())
+                .estimatedCost(request.getEstimatedCost() != null
+                        ? request.getEstimatedCost()
+                        : BigDecimal.ZERO)
                 .totalPaid(BigDecimal.ZERO)
-                .totalSessions(request.getTotalSessions())
+                .totalSessions(request.getTotalSessions() != null
+                        ? request.getTotalSessions()
+                        : 0)
                 .completedSessions(0)
                 .sketchImage(request.getSketchImage())
                 .build();
@@ -230,8 +234,7 @@ public class ProjectService {
                 .and(ProjectSpecifications.createdBetween(effectiveFilter.getCreatedAtFrom(), effectiveFilter.getCreatedAtTo()))
                 .and(ProjectSpecifications.updatedBetween(effectiveFilter.getUpdatedAtFrom(), effectiveFilter.getUpdatedAtTo()))
                 .and(ProjectSpecifications.hasSketch(effectiveFilter.getHasSketch()))
-                .and(ProjectSpecifications.hasPhotos(effectiveFilter.getHasPhotos()))
-                .and(ProjectSpecifications.hasDebt(effectiveFilter.getHasDebt()));
+                .and(ProjectSpecifications.hasPhotos(effectiveFilter.getHasPhotos()));
 
         return projectRepository.findAll(spec, pageRequest.toPageable());
     }

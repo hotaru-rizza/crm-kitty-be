@@ -29,8 +29,10 @@ import java.util.UUID;
 public class FileStorageService {
 
     public static final Set<String> ALLOWED_FOLDERS = Set.of(
-            "avatars", "gallery", "sketches", "portfolio", "locations", "studio"
+            "avatars", "gallery", "sketches", "portfolio", "locations", "studio", "request_messages"
     );
+
+    public static final String REQUEST_MESSAGES_FOLDER = "request_messages";
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
@@ -92,7 +94,25 @@ public class FileStorageService {
     }
 
     public String uploadFile(String folder, String originalFilename, String contentType, InputStream inputStream, long contentLength) {
-        String key = buildTenantKey(folder, originalFilename);
+        return uploadFileForTenant(
+                SecurityUtils.getCurrentTenantId(),
+                folder,
+                originalFilename,
+                contentType,
+                inputStream,
+                contentLength
+        );
+    }
+
+    public String uploadFileForTenant(
+            UUID tenantId,
+            String folder,
+            String originalFilename,
+            String contentType,
+            InputStream inputStream,
+            long contentLength) {
+        validateFolder(folder);
+        String key = buildKeyForTenant(tenantId, folder, originalFilename);
 
         s3Client.putObject(
                 PutObjectRequest.builder()
@@ -150,10 +170,19 @@ public class FileStorageService {
     }
 
     private String buildTenantKey(String folder, String originalFilename) {
+        return buildKeyForTenant(SecurityUtils.getCurrentTenantId(), folder, originalFilename);
+    }
+
+    private String buildKeyForTenant(UUID tenantId, String folder, String originalFilename) {
         String ext = extractExtension(originalFilename);
         String suffix = UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
-        UUID tenantId = SecurityUtils.getCurrentTenantId();
         return tenantId + "/" + folder + "/" + suffix;
+    }
+
+    private void validateFolder(String folder) {
+        if (!ALLOWED_FOLDERS.contains(folder)) {
+            throw new IllegalArgumentException("Invalid folder: " + folder + ". Allowed: " + ALLOWED_FOLDERS);
+        }
     }
 
     private void validateDeleteKey(String key) {

@@ -29,12 +29,10 @@ public class CreateProjectRequest {
 
     private UUID locationId;
 
-    @NotNull(message = "Estimated cost is required")
-    @DecimalMin(value = "0.0", message = "Estimated cost must be positive")
+    @DecimalMin(value = "0.0", message = "Estimated cost must be non-negative")
     private BigDecimal estimatedCost;
 
-    @NotNull(message = "Total sessions is required")
-    @Min(value = 1, message = "Total sessions must be at least 1")
+    @Min(value = 0, message = "Total sessions must be non-negative")
     private Integer totalSessions;
 
     private String sketchImage;

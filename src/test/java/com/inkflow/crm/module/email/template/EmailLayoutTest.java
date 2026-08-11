@@ -9,9 +9,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EmailLayoutTest {
 
     @Test
-    void wrap_usesInkDarkLayoutAndBrandAssets() {
+    void wrap_usesMinimalDarkLayoutAndBrandAssets() {
         EmailLayoutContext context = new EmailLayoutContext(
-                "INKAT",
+                "Inkat CRM",
                 "Ваш запис підтверджено",
                 EmailLayout.toHtml("Привіт, Олено!"),
                 TemplateCategory.CLIENT_OP,
@@ -23,14 +23,16 @@ class EmailLayoutTest {
 
         String html = EmailLayout.wrap(context);
 
-        assertThat(html).contains("#060608");
+        assertThat(html).contains("#0a0a0b");
         assertThat(html).contains("https://studio.example.com/logo.png");
         assertThat(html).contains("InkFlow Studio");
-        assertThat(html).contains("Powered by INKAT");
+        assertThat(html).contains("Powered by Inkat CRM");
         assertThat(html).contains("Ваш запис підтверджено");
         assertThat(html).contains("Привіт, Олено!");
         assertThat(html).contains("https://app.inkat.studio/action");
-        assertThat(html).contains("Переглянути запис →");
+        assertThat(html).contains("Переглянути запис");
+        assertThat(html).doesNotContain("radial-gradient");
+        assertThat(html).doesNotContain("border-radius:16px");
         assertThat(html).doesNotContain("#c026d3");
         assertThat(html).doesNotContain("#25262b");
     }

@@ -120,7 +120,10 @@ public class Client extends BaseEntity {
     private List<Appointment> appointments = new ArrayList<>();
 
     public String getFullName() {
-        return firstName + " " + lastName;
+        if (lastName == null || lastName.isBlank()) {
+            return firstName;
+        }
+        return (firstName + " " + lastName).trim();
     }
 
     public boolean hasMedicalConditions() {

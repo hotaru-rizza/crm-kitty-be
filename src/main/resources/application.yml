@@ -50,7 +50,7 @@ server:
     context-path: /api
 
 inkflow:
-  app-name: ${INKFLOW_APP_NAME:CRM}
+  app-name: ${INKFLOW_APP_NAME:Inkat CRM}
   default-timezone: ${INKFLOW_DEFAULT_TIMEZONE:Europe/Kyiv}
   default-language: ${INKFLOW_DEFAULT_LANGUAGE:uk}
   default-start-page: ${INKFLOW_DEFAULT_START_PAGE:/calendar}
@@ -75,6 +75,8 @@ inkflow:
     allowed-origins:
       - ${FRONTEND_URL:http://localhost:5173}
       - ${CONSUMER_FRONTEND_URL:http://localhost:5174}
+      - http://localhost:8081
+      - http://localhost:19006
     allow-credentials: true
   audit:
     retention-enabled: ${INKFLOW_AUDIT_RETENTION_ENABLED:true}
@@ -82,8 +84,16 @@ inkflow:
     retention-cron: ${INKFLOW_AUDIT_RETENTION_CRON:0 0 3 * * *}
   appointments:
     default-reservation-duration-minutes: ${INKFLOW_DEFAULT_RESERVATION_DURATION_MINUTES:60}
+  subscription:
+    enforcement-enabled: ${INKFLOW_SUBSCRIPTION_ENFORCEMENT_ENABLED:false}
   rate-limit:
     enabled: ${INKFLOW_RATE_LIMIT_ENABLED:true}
+  consumer:
+    ai:
+      welcome-credits: ${CONSUMER_AI_WELCOME_CREDITS:5}
+      cost:
+        generation: ${CONSUMER_AI_COST_GENERATION:1}
+        try-on: ${CONSUMER_AI_COST_TRY_ON:1}
 
 r2:
   account-id: ${R2_ACCOUNT_ID}
@@ -101,7 +111,7 @@ resend:
   api-key: ${RESEND_API_KEY}
   api-url: ${RESEND_API_URL:https://api.resend.com/emails}
   from-email: ${RESEND_FROM_EMAIL}
-  from-name: ${RESEND_FROM_NAME:${inkflow.app-name:CRM}}
+  from-name: ${RESEND_FROM_NAME:${inkflow.app-name:Inkat CRM}}
 
 supabase:
   url: ${SUPABASE_URL:}
@@ -144,7 +154,10 @@ unsplash:
     per-page: 50
 
 fcm:
-  server-key: ${FCM_SERVER_KEY:}
+  enabled: ${FCM_ENABLED:false}
+  credentials-json: ${FCM_CREDENTIALS_JSON:}
+  credentials-path: ${FCM_CREDENTIALS_PATH:}
+  # Legacy server-key is no longer used (Firebase Admin / FCM HTTP v1).
 
 monobank:
   acquiring:

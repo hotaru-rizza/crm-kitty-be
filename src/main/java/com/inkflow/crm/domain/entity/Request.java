@@ -38,7 +38,7 @@ public class Request {
     @Column(name = "source", nullable = false)
     private RequestSource source;
 
-    @Column(name = "client_name", nullable = false)
+    @Column(name = "client_name")
     private String clientName;
 
     @Column(name = "client_nickname")

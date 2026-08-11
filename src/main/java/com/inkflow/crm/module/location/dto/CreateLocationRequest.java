@@ -18,7 +18,6 @@ public class CreateLocationRequest {
     @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
     private String name;
 
-    @NotBlank(message = "Address is required")
     @Size(max = 255, message = "Address must not exceed 255 characters")
     private String address;
 

@@ -1,12 +1,13 @@
 # Copy subject lines into Supabase → Authentication → Email Templates
 #
 # Logo: embedded as base64 in HTML (R2 URL fails in Supabase preview due to missing CORS)
+# After editing HTML here, paste into Supabase dashboard — templates are not auto-synced.
 
 confirm-signup.subject
-  Підтвердьте email — INKAT
+  Підтвердьте email — Inkat CRM
 
 reset-password.subject
-  Скиньте пароль — INKAT
+  Скиньте пароль — Inkat CRM
 
 password-changed.subject
-  Ваш пароль змінено — INKAT
+  Ваш пароль змінено — Inkat CRM

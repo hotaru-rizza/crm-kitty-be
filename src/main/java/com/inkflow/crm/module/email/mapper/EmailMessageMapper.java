@@ -17,6 +17,8 @@ public class EmailMessageMapper {
                 .subject(message.getSubject())
                 .status(message.getStatus())
                 .lastError(message.getLastError())
+                .attempts(message.getAttempts())
+                .nextAttemptAt(message.getNextAttemptAt())
                 .createdAt(message.getCreatedAt())
                 .sentAt(message.getSentAt())
                 .build();

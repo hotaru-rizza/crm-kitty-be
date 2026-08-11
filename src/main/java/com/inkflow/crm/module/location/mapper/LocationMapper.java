@@ -50,6 +50,9 @@ public interface LocationMapper {
     default void applyCreateWorkingHours(CreateLocationRequest request, @MappingTarget Location location) {
         location.setWorkingHoursStart(resolveWorkingHoursStart(request.getWorkingHoursStart()));
         location.setWorkingHoursEnd(resolveWorkingHoursEnd(request.getWorkingHoursEnd()));
+        if (location.getAddress() == null) {
+            location.setAddress("");
+        }
     }
 
     @AfterMapping

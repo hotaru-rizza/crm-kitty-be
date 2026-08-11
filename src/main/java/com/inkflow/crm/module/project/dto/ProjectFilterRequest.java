@@ -29,5 +29,4 @@ public class ProjectFilterRequest {
     private Instant updatedAtTo;
     private Boolean hasSketch;
     private Boolean hasPhotos;
-    private Boolean hasDebt;
 }

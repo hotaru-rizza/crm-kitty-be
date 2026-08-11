@@ -1,6 +1,5 @@
 package com.inkflow.crm.module.consumer.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
@@ -8,7 +7,7 @@ import java.util.UUID;
 
 public record ConsumerBookingRequest(
         @NotNull UUID artistId,
-        @NotBlank String clientName,
+        String clientName,
         String timing,
         String size,
         List<String> bodyZones,
@@ -16,8 +15,8 @@ public record ConsumerBookingRequest(
         String idea,
         List<String> references,
         String city,
-        @NotBlank String contactMethod,
-        @NotBlank String contactValue,
+        String contactMethod,
+        String contactValue,
         String phone,
         String instagram
 ) {

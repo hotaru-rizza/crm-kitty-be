@@ -43,6 +43,9 @@ public class DeviceToken {
     @Column(name = "last_used_at")
     private Instant lastUsedAt;
 
+    @Column(name = "app_version", length = 64)
+    private String appVersion;
+
     public enum Platform {
         IOS, ANDROID, WEB
     }

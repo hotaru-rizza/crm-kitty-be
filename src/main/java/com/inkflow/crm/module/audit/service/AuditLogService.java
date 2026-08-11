@@ -117,6 +117,9 @@ public class AuditLogService {
 
             if (actorIds != null && !actorIds.isEmpty()) {
                 predicates.add(root.get("actorId").in(actorIds));
+            } else {
+                // Hide automated system@inkflow rows from the default journal view.
+                predicates.add(cb.isNotNull(root.get("actorId")));
             }
             if (clientId != null) {
                 predicates.add(cb.equal(root.get("subjectClientId"), clientId));

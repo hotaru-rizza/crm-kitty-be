@@ -110,7 +110,7 @@ public class LeaveController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission(Permission.LEAVES_MANAGE)
+    @RequirePermission({Permission.LEAVES_CREATE, Permission.LEAVES_MANAGE})
     public ResponseEntity<ApiResponse<Void>> deleteLeave(@PathVariable UUID id) {
         leaveService.deleteLeave(id);
         log.info("Leave deleted via API: leaveId={}", id);

@@ -221,10 +221,4 @@ public final class ProjectSpecifications {
                 ? cb.greaterThan(cb.size(root.get("photos")), 0)
                 : cb.equal(cb.size(root.get("photos")), 0);
     }
-
-    public static Specification<Project> hasDebt(Boolean value) {
-        if (!Boolean.TRUE.equals(value)) return null;
-        return (root, query, cb) ->
-                cb.greaterThan(root.get("estimatedCost"), root.get("totalPaid"));
-    }
 }
