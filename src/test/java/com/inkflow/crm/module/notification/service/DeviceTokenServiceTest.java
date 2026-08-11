@@ -14,14 +14,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -94,6 +97,56 @@ class DeviceTokenServiceTest {
             assertEquals(DeviceToken.Platform.ANDROID, existing.getPlatform());
             assertEquals("1.1.0", existing.getAppVersion());
             verify(deviceTokenRepository).save(existing);
+        }
+    }
+
+    @Test
+    void register_retriesAsUpdateWhenInsertRacesDuplicateToken() {
+        UUID userId = UUID.randomUUID();
+        DeviceToken existing = DeviceToken.builder()
+                .id(UUID.randomUUID())
+                .userId(UUID.randomUUID())
+                .token("token-abc")
+                .platform(DeviceToken.Platform.ANDROID)
+                .build();
+        RegisterDeviceRequest request = new RegisterDeviceRequest(
+                "token-abc", DeviceToken.Platform.IOS, "2.0.0");
+        DeviceTokenDto dto = new DeviceTokenDto(
+                existing.getId(), DeviceToken.Platform.IOS, "2.0.0", null, null);
+
+        try (MockedStatic<SecurityUtils> security = mockStatic(SecurityUtils.class)) {
+            security.when(SecurityUtils::getCurrentUserId).thenReturn(userId);
+            when(deviceTokenRepository.findByToken(request.token()))
+                    .thenReturn(Optional.empty())
+                    .thenReturn(Optional.of(existing));
+            when(deviceTokenRepository.save(any(DeviceToken.class)))
+                    .thenThrow(new DataIntegrityViolationException("duplicate"))
+                    .thenReturn(existing);
+            when(deviceTokenMapper.toDto(existing)).thenReturn(dto);
+
+            DeviceTokenDto result = deviceTokenService.register(request);
+
+            assertEquals(dto, result);
+            assertEquals(userId, existing.getUserId());
+            assertEquals(DeviceToken.Platform.IOS, existing.getPlatform());
+            assertEquals("2.0.0", existing.getAppVersion());
+            verify(deviceTokenRepository, times(2)).save(any(DeviceToken.class));
+        }
+    }
+
+    @Test
+    void register_rethrowsWhenDuplicateInsertHasNoMatchingRow() {
+        UUID userId = UUID.randomUUID();
+        RegisterDeviceRequest request = new RegisterDeviceRequest(
+                "token-abc", DeviceToken.Platform.ANDROID, "1.0.0");
+        DataIntegrityViolationException duplicate = new DataIntegrityViolationException("duplicate");
+
+        try (MockedStatic<SecurityUtils> security = mockStatic(SecurityUtils.class)) {
+            security.when(SecurityUtils::getCurrentUserId).thenReturn(userId);
+            when(deviceTokenRepository.findByToken(request.token())).thenReturn(Optional.empty());
+            when(deviceTokenRepository.save(any(DeviceToken.class))).thenThrow(duplicate);
+
+            assertThrows(DataIntegrityViolationException.class, () -> deviceTokenService.register(request));
         }
     }
 

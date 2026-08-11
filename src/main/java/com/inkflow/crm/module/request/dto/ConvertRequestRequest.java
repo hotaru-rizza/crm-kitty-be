@@ -19,11 +19,9 @@ public class ConvertRequestRequest {
     @Size(min = 1, max = 50, message = "First name must be between 1 and 50 characters")
     private String firstName;
 
-    @NotBlank(message = "Last name is required")
-    @Size(min = 1, max = 50, message = "Last name must be between 1 and 50 characters")
+    @Size(max = 50, message = "Last name must be at most 50 characters")
     private String lastName;
 
-    @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     @Size(max = 255, message = "Email must be at most 255 characters")
     private String email;

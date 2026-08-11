@@ -67,6 +67,8 @@ class ConsumerBookingServiceTest {
 
         ConsumerUser consumer = new ConsumerUser();
         consumer.setId(consumerId);
+        consumer.setEmail("maria@example.com");
+        consumer.setName("Maria");
 
         ConsumerBookingRequest body = new ConsumerBookingRequest(
                 artistId,
@@ -78,10 +80,10 @@ class ConsumerBookingServiceTest {
                 "Rose tattoo",
                 List.of("https://ref/1.jpg"),
                 "Kyiv",
-                "telegram",
-                "@maria",
-                "+380501112233",
-                "@maria_ink"
+                null,
+                null,
+                null,
+                null
         );
 
         when(staffRepository.findPublicArtistById(artistId)).thenReturn(Optional.of(artist));
@@ -104,6 +106,7 @@ class ConsumerBookingServiceTest {
         assertEquals(RequestSource.APP, saved.getSource());
         assertEquals(consumerId, saved.getConsumerUserId());
         assertEquals("Maria", saved.getClientName());
+        assertEquals("maria@example.com", saved.getEmail());
 
         verify(eventPublisher).publishEvent(any(NewRequestEvent.class));
     }
@@ -113,11 +116,15 @@ class ConsumerBookingServiceTest {
         UUID artistId = UUID.randomUUID();
         when(staffRepository.findPublicArtistById(artistId)).thenReturn(Optional.empty());
 
+        ConsumerUser consumer = new ConsumerUser();
+        consumer.setId(UUID.randomUUID());
+        consumer.setEmail("maria@example.com");
+
         ConsumerBookingRequest body = new ConsumerBookingRequest(
-                artistId, "Maria", null, null, null, null, "idea", null, "Kyiv", "phone", "+38099", null, null);
+                artistId, "Maria", null, null, null, null, "idea", null, "Kyiv", null, null, null, null);
 
         assertThrows(ApiException.class,
-                () -> consumerBookingService.submitBookingRequest(new ConsumerUser(), body));
+                () -> consumerBookingService.submitBookingRequest(consumer, body));
     }
 
     @Test
@@ -145,16 +152,21 @@ class ConsumerBookingServiceTest {
                 "Rose tattoo",
                 null,
                 "Kyiv",
-                "telegram",
-                "@maria",
+                null,
+                null,
                 null,
                 null
         );
 
+        ConsumerUser consumer = new ConsumerUser();
+        consumer.setId(UUID.randomUUID());
+        consumer.setEmail("maria@example.com");
+        consumer.setName("Maria");
+
         when(staffRepository.findPublicArtistById(artistId)).thenReturn(Optional.of(artist));
         when(requestRepository.save(any(Request.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        consumerBookingService.submitBookingRequest(new ConsumerUser(), body);
+        consumerBookingService.submitBookingRequest(consumer, body);
 
         ArgumentCaptor<Request> requestCaptor = ArgumentCaptor.forClass(Request.class);
         verify(requestRepository).save(requestCaptor.capture());
@@ -182,12 +194,17 @@ class ConsumerBookingServiceTest {
                 .build();
 
         ConsumerBookingRequest body = new ConsumerBookingRequest(
-                artistId, "Maria", null, null, null, null, "idea", null, "Kyiv", "phone", "+38099", null, null);
+                artistId, "Maria", null, null, null, null, "idea", null, "Kyiv", null, null, null, null);
+
+        ConsumerUser consumer = new ConsumerUser();
+        consumer.setId(UUID.randomUUID());
+        consumer.setEmail("maria@example.com");
+        consumer.setName("Maria");
 
         when(staffRepository.findPublicArtistById(artistId)).thenReturn(Optional.of(artist));
         when(requestRepository.save(any(Request.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        consumerBookingService.submitBookingRequest(new ConsumerUser(), body);
+        consumerBookingService.submitBookingRequest(consumer, body);
 
         ArgumentCaptor<Request> requestCaptor = ArgumentCaptor.forClass(Request.class);
         verify(requestRepository).save(requestCaptor.capture());

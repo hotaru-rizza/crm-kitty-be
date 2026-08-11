@@ -47,10 +47,16 @@ public class ConsumerBookingService {
 
     @Transactional
     public ConsumerBookingResultDto submitBookingRequest(ConsumerUser consumer, ConsumerBookingRequest body) {
+        ApiResponses.requireConsumer(consumer);
+        if (normalizeEmail(consumer.getEmail()) == null) {
+            throw new ApiException(ErrorCode.BUSINESS_RULE_VIOLATION, "Consumer email is required");
+        }
+
         Staff artist = staffRepository.findPublicArtistById(body.artistId())
                 .orElseThrow(() -> new ApiException(ErrorCode.STAFF_NOT_FOUND, "Artist not found"));
 
-        Request request = buildRequest(body, artist, consumer);
+        String clientName = resolveClientName(body, consumer);
+        Request request = buildRequest(body, artist, consumer, clientName);
         request = requestRepository.save(request);
         requestMessageService.seedInitialThread(request);
 
@@ -60,7 +66,7 @@ public class ConsumerBookingService {
                 request.getId(),
                 artist.getTenantId(),
                 artist.getId(),
-                body.clientName(),
+                clientName,
                 body.idea()
         ));
 
@@ -130,17 +136,22 @@ public class ConsumerBookingService {
         }
     }
 
-    private Request buildRequest(ConsumerBookingRequest body, Staff artist, ConsumerUser consumer) {
+    private Request buildRequest(
+            ConsumerBookingRequest body,
+            Staff artist,
+            ConsumerUser consumer,
+            String clientName) {
         Request request = Request.builder()
                 .tenantId(artist.getTenantId())
                 .source(RequestSource.APP)
-                .clientName(body.clientName())
-                .phone(body.phone())
-                .instagram(body.instagram())
+                .clientName(clientName)
+                .email(normalizeEmail(consumer.getEmail()))
+                .phone(blankToNull(body.phone()))
+                .instagram(blankToNull(body.instagram()))
                 .message(buildMessage(body))
                 .status(RequestStatus.NEW)
                 .assignedStaff(artist)
-                .consumerUserId(consumer != null ? consumer.getId() : null)
+                .consumerUserId(consumer.getId())
                 .tattooTiming(body.timing())
                 .tattooSize(body.size())
                 .bodyZones(body.bodyZones() != null ? String.join(",", body.bodyZones()) : null)
@@ -148,8 +159,8 @@ public class ConsumerBookingService {
                 .idea(body.idea())
                 .referenceUrls(body.references() != null ? String.join("|", body.references()) : null)
                 .city(body.city())
-                .contactMethod(body.contactMethod())
-                .contactValue(body.contactValue())
+                .contactMethod(blankToNull(body.contactMethod()))
+                .contactValue(blankToNull(body.contactValue()))
                 .build();
 
         if (artist.getLocations() != null && !artist.getLocations().isEmpty()) {
@@ -157,6 +168,36 @@ public class ConsumerBookingService {
         }
 
         return request;
+    }
+
+    private String resolveClientName(ConsumerBookingRequest body, ConsumerUser consumer) {
+        String clientName = firstNonBlank(body.clientName(), consumer.getName());
+        if (clientName != null) {
+            return clientName;
+        }
+        throw new ApiException(ErrorCode.BUSINESS_RULE_VIOLATION, "Client name is required");
+    }
+
+    private String firstNonBlank(String primary, String fallback) {
+        String normalizedPrimary = blankToNull(primary);
+        if (normalizedPrimary != null) {
+            return normalizedPrimary;
+        }
+        return blankToNull(fallback);
+    }
+
+    private String blankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        return email.trim().toLowerCase();
     }
 
     private ConsumerBookingListItemDto toListItem(Request request) {

@@ -22,6 +22,8 @@ import com.inkflow.crm.domain.repository.StaffRepository;
 import com.inkflow.crm.module.audit.service.AuditRecorder;
 import com.inkflow.crm.module.client.dto.ClientDto;
 import com.inkflow.crm.module.client.mapper.ClientMapper;
+import com.inkflow.crm.module.consumer.entity.ConsumerUser;
+import com.inkflow.crm.module.consumer.repository.ConsumerUserRepository;
 import com.inkflow.crm.module.notification.event.NewRequestEvent;
 import com.inkflow.crm.module.request.dto.*;
 import com.inkflow.crm.security.LocationScope;
@@ -53,6 +55,7 @@ public class RequestService {
     private final AuditRecorder auditRecorder;
     private final RequestMessageService requestMessageService;
     private final ApplicationEventPublisher eventPublisher;
+    private final ConsumerUserRepository consumerUserRepository;
 
     @Transactional(readOnly = true)
     public PageResult<RequestDto> getAllRequests(PageRequest pageRequest, RequestFilterRequest filter) {
@@ -229,8 +232,8 @@ public class RequestService {
 
         Client client = Client.builder()
                 .tenantId(tenantId)
-                .firstName(convertRequest.getFirstName())
-                .lastName(convertRequest.getLastName())
+                .firstName(convertRequest.getFirstName().trim())
+                .lastName(normalizeOptionalName(convertRequest.getLastName()))
                 .phone(normalizedPhone)
                 .email(email)
                 .instagram(convertRequest.getInstagram())
@@ -369,7 +372,27 @@ public class RequestService {
         if (email != null) {
             return email;
         }
-        return normalizeEmail(request.getEmail());
+
+        email = normalizeEmail(request.getEmail());
+        if (email != null) {
+            return email;
+        }
+
+        if (request.getConsumerUserId() == null) {
+            return null;
+        }
+
+        return consumerUserRepository.findById(request.getConsumerUserId())
+                .map(ConsumerUser::getEmail)
+                .map(this::normalizeEmail)
+                .orElse(null);
+    }
+
+    private String normalizeOptionalName(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        return value.trim();
     }
 
     private String resolveConversionPhone(Request request, ConvertRequestRequest convertRequest) {

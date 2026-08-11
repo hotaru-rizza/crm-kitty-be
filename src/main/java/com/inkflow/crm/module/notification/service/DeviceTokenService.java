@@ -9,6 +9,7 @@ import com.inkflow.crm.module.notification.repository.DeviceTokenRepository;
 import com.inkflow.crm.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,15 +29,35 @@ public class DeviceTokenService {
         UUID userId = SecurityUtils.getCurrentUserId();
         Instant now = Instant.now();
 
-        DeviceToken deviceToken = deviceTokenRepository.findByToken(request.token())
-                .map(existing -> updateExisting(existing, userId, request, now))
-                .orElseGet(() -> createNew(userId, request, now));
-
-        DeviceToken saved = deviceTokenRepository.save(deviceToken);
+        DeviceToken saved = persistRegistration(userId, request, now);
         log.info("Device token registered: userId={} platform={} deviceId={}",
                 userId, saved.getPlatform(), saved.getId());
 
         return deviceTokenMapper.toDto(saved);
+    }
+
+    private DeviceToken persistRegistration(
+            UUID userId,
+            RegisterDeviceRequest request,
+            Instant now) {
+        return deviceTokenRepository.findByToken(request.token())
+                .map(existing -> deviceTokenRepository.save(
+                        updateExisting(existing, userId, request, now)))
+                .orElseGet(() -> insertRegistration(userId, request, now));
+    }
+
+    private DeviceToken insertRegistration(
+            UUID userId,
+            RegisterDeviceRequest request,
+            Instant now) {
+        try {
+            return deviceTokenRepository.save(createNew(userId, request, now));
+        } catch (DataIntegrityViolationException ex) {
+            return deviceTokenRepository.findByToken(request.token())
+                    .map(existing -> deviceTokenRepository.save(
+                            updateExisting(existing, userId, request, now)))
+                    .orElseThrow(() -> ex);
+        }
     }
 
     @Transactional
